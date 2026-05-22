@@ -1,0 +1,109 @@
+{
+  "menu": [
+    {
+      "url": "/",
+      "name": "Dashboard",
+      "icon": "menu-icon icon-base bx bx-home-smile",
+      "slug": "dashboard"
+    },
+    {
+      "menuHeader": "CRM",
+      "roles": ["admin", "manager", "operations", "agent"]
+    },
+    {
+      "url": "javascript:void(0);",
+      "name": "Bookings",
+      "icon": "menu-icon icon-base bx bx-book-content",
+      "slug": "bookings",
+      "roles": ["admin", "manager", "operations", "agent"],
+      "submenu": [
+        {
+          "url": "/bookings",
+          "name": "All Bookings",
+          "icon": "menu-icon icon-base bx bx-list-ul",
+          "slug": "bookings.index"
+        },
+        {
+          "url": "/bookings/create",
+          "name": "New Booking",
+          "icon": "menu-icon icon-base bx bx-plus-circle",
+          "slug": "bookings.create"
+        }
+      ]
+    },
+    {
+      "url": "/customers",
+      "name": "Customers",
+      "icon": "menu-icon icon-base bx bx-user",
+      "slug": "customers",
+      "roles": ["admin", "manager", "operations", "agent"]
+    },
+    {
+      "menuHeader": "Finance",
+      "roles": ["admin", "manager", "accounting"]
+    },
+    {
+      "url": "/payments",
+      "name": "Payments",
+      "icon": "menu-icon icon-base bx bx-credit-card",
+      "slug": "payments",
+      "roles": ["admin", "manager", "accounting"]
+    },
+    {
+      "url": "/refunds",
+      "name": "Refunds",
+      "icon": "menu-icon icon-base bx bx-money-withdraw",
+      "slug": "refunds",
+      "roles": ["admin", "manager", "accounting"]
+    },
+    {
+      "menuHeader": "Reports",
+      "roles": ["admin", "manager", "accounting"]
+    },
+    {
+      "url": "/reports/sales",
+      "name": "Sales Report",
+      "icon": "menu-icon icon-base bx bx-bar-chart",
+      "slug": "reports.sales",
+      "roles": ["admin", "manager", "accounting"]
+    },
+    {
+      "url": "/reports/performance",
+      "name": "Agent Performance",
+      "icon": "menu-icon icon-base bx bx-trending-up",
+      "slug": "reports.performance",
+      "roles": ["admin", "manager"]
+    },
+    {
+      "menuHeader": "System",
+      "roles": ["admin"]
+    },
+    {
+      "url": "/settings",
+      "name": "Settings",
+      "icon": "menu-icon icon-base bx bx-cog",
+      "slug": "settings",
+      "roles": ["admin"]
+    },
+    {
+      "url": "/settings/users",
+      "name": "Users",
+      "icon": "menu-icon icon-base bx bx-group",
+      "slug": "settings.users",
+      "roles": ["admin"]
+    },
+    {
+      "url": "/settings/audit-log",
+      "name": "Audit Log",
+      "icon": "menu-icon icon-base bx bx-history",
+      "slug": "settings.audit-log",
+      "roles": ["admin"]
+    },
+    {
+      "url": "/settings/profile",
+      "name": "Profile",
+      "icon": "menu-icon icon-base bx bx-user-circle",
+      "slug": "settings.profile"
+    }
+  ]
+}

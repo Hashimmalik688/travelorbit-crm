@@ -1,0 +1,31 @@
+<?php
+
+return [
+    "creatorName" => "TravelOrbit",
+    "creatorUrl" => "https://travelorbit.co.uk",
+    "templateName" => "Travel Orbit MIS",
+    "templateSuffix" => "",
+    "templateVersion" => "1.0.0",
+    "templateFree" => true,
+    "templateDescription" => "TravelOrbit CRM",
+    "templateKeyword" => "crm, travel",
+    "licenseUrl" => "",
+    "livePreview" => "",
+    "productPage" => "",
+    "support" => "",
+    "adminTemplates" => "",
+    "bootstrapDashboard" => "",
+    "ogTitle" => "TravelOrbit",
+    "ogImage" => "",
+    "ogType" => "product",
+    "documentation" => "",
+    "repository" => "",
+    "gitRepo" => "",
+    "gitRepoAccess" => "",
+    "githubFreeUrl" => "",
+    "facebookUrl" => "",
+    "twitterUrl" => "",
+    "githubUrl" => "",
+    "dribbbleUrl" => "",
+    "instagramUrl" => ""
+];

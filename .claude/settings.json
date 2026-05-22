@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dig mis.travelorbit.co.uk @8.8.8.8 +short)",
+      "Bash(dig travelorbit.co.uk NS +short)",
+      "Read(//etc/letsencrypt/renewal/**)",
+      "Bash(certbot certificates *)",
+      "Bash(curl -sk --resolve mis.travelorbit.co.uk:443:127.0.0.1 https://mis.travelorbit.co.uk/login -o /dev/null -w \"HTTP status: %{http_code}\\\\n\")",
+      "Bash(tail -20 /var/log/nginx/error.log 2>/dev/null)",
+      "Read(//var/log/nginx/**)",
+      "Bash(ngrok config *)",
+      "Bash(ngrok http *)",
+      "Bash(curl -s http://127.0.0.1:4040/api/tunnels)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(t['public_url']\\) for t in d['tunnels']]\")",
+      "Bash(pkill ngrok *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(t['public_url']\\) for t in d['tunnels'] if t['public_url'].startswith\\('https'\\)]\")",
+      "Bash(pkill -f \"artisan serve\")",
+      "Bash(php artisan *)",
+      "Bash(curl -s http://127.0.0.1:8080 -o /dev/null -w \"Artisan HTTP: %{http_code}\\\\n\")",
+      "Bash(curl -s http://127.0.0.1:8080 -o /dev/null -w \"%{http_code}\")",
+      "Read(//tmp/**)",
+      "Bash(ngrok http 8888 --log=stdout > /tmp/ngrok.log 2>&1 & *)",
+      "Bash(nginx -t)",
+      "Bash(systemctl reload *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(identify /opt/travelorbit-crm/public/logo.png)",
+      "Bash(python3 -c ' *)",
+      "Bash(npm run *)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/etc/nginx/sites-enabled"
+    ]
+  }
+}
