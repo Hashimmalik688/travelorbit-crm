@@ -5,19 +5,24 @@ namespace App\Livewire;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class UserManagement extends Component
 {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     public $name = '';
     public $email = '';
     public $password = '';
+    public $passwordPlaintext = '';
     public $role = 'agent';
     public $is_active = true;
     public $editingUserId = null;
+    public $editingUserPhotoPath = null;
+    public $photo = null;
     public $showModal = false;
 
     public function mount()
@@ -37,14 +42,15 @@ class UserManagement extends Component
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|' . $uniqueRule,
             'password' => $passwordRule,
-            'role' => 'required|in:admin,manager,agent,accounting,operations',
+            'role' => 'required|in:admin,manager,agent,accounts,issuance,operations',
             'is_active' => 'boolean',
+            'photo' => 'nullable|image|max:2048',
         ];
     }
 
     public function create(): void
     {
-        $this->reset(['name', 'email', 'password', 'role', 'is_active', 'editingUserId']);
+        $this->reset(['name', 'email', 'password', 'passwordPlaintext', 'role', 'is_active', 'editingUserId', 'editingUserPhotoPath', 'photo']);
         $this->role = 'agent';
         $this->is_active = true;
         $this->showModal = true;
@@ -54,11 +60,14 @@ class UserManagement extends Component
     {
         $user = User::findOrFail($userId);
         $this->editingUserId = $user->id;
+        $this->editingUserPhotoPath = $user->profile_photo_path;
         $this->name = $user->name;
         $this->email = $user->email;
         $this->password = '';
+        $this->passwordPlaintext = $user->password_plaintext ?? '';
         $this->role = $user->role;
         $this->is_active = (bool) $user->is_active;
+        $this->photo = null;
         $this->showModal = true;
     }
 
@@ -75,10 +84,23 @@ class UserManagement extends Component
 
         if ($this->password) {
             $data['password'] = Hash::make($this->password);
+            $data['password_plaintext'] = $this->password;
+        } elseif ($this->editingUserId && $this->passwordPlaintext) {
+            $data['password'] = Hash::make($this->passwordPlaintext);
+            $data['password_plaintext'] = $this->passwordPlaintext;
         }
 
         if ($this->editingUserId) {
-            User::find($this->editingUserId)->update($data);
+            $user = User::find($this->editingUserId);
+
+            if ($this->photo) {
+                if ($user->profile_photo_path) {
+                    Storage::disk('public')->delete($user->profile_photo_path);
+                }
+                $data['profile_photo_path'] = $this->photo->store('avatars', 'public');
+            }
+
+            $user->update($data);
             session()->flash('success', 'User updated successfully.');
         } else {
             User::create($data);
@@ -86,7 +108,24 @@ class UserManagement extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['name', 'email', 'password', 'role', 'is_active', 'editingUserId']);
+        $this->reset(['name', 'email', 'password', 'passwordPlaintext', 'role', 'is_active', 'editingUserId', 'editingUserPhotoPath', 'photo']);
+        $this->role = 'agent';
+        $this->is_active = true;
+    }
+
+    public function removePhoto(): void
+    {
+        if (!$this->editingUserId) return;
+
+        $user = User::find($this->editingUserId);
+        if ($user->profile_photo_path) {
+            Storage::disk('public')->delete($user->profile_photo_path);
+            $user->update(['profile_photo_path' => null]);
+        }
+
+        $this->editingUserPhotoPath = null;
+        $this->photo = null;
+        session()->flash('success', 'Profile photo removed.');
     }
 
     public function deactivate($userId): void

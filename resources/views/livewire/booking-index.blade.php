@@ -1,64 +1,65 @@
 <div>
-    {{-- Page Header — unified pattern --}}
+    {{-- Page Header --}}
     <div class="to-page-header">
         <div class="to-page-header-left">
-            <h1>All Bookings</h1>
+            <h1>{{ $context === 'mine' ? 'My Bookings' : 'All Bookings' }}</h1>
             <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; Bookings
-            </div>
-        </div>
-        <div class="to-page-header-right">
-            <a href="{{ route('bookings.create') }}" class="btn btn-orange btn-sm">
-                <i class="ph ph-plus me-1"></i> New Booking
-            </a>
-        </div>
-    </div>
-
-    {{-- Filter bar — unified --}}
-    <div class="to-filter-bar">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label">Search</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="ph ph-magnifying-glass"></i></span>
-                    <input type="text" class="form-control" placeholder="Search by booking # or booker name..." wire:model.live.debounce.300ms="search">
-                </div>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Status</label>
-                <select class="form-select" wire:model.live="statusFilter">
-                    <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="issued">Issued</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="refund_queue">Refund Queue</option>
-                    <option value="awaiting_issuance">Awaiting Issuance</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Type</label>
-                <select class="form-select" wire:model.live="typeFilter">
-                    <option value="">All Types</option>
-                    <option value="flight">Flight</option>
-                    <option value="hotel">Hotel</option>
-                    <option value="umrah">Umrah</option>
-                    <option value="holiday">Holiday</option>
-                    <option value="transfers">Transfers</option>
-                    <option value="ancillary_services">Ancillary Services</option>
-                </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end gap-2">
-                @if ($search || $statusFilter || $typeFilter)
-                    <button class="btn btn-outline-primary btn-sm" wire:click="$set('search', ''); $set('statusFilter', ''); $set('typeFilter', '')">
-                        <i class="ph ph-x me-1"></i> Clear Filters
-                    </button>
+                <a href="{{ route('dashboard') }}">Dashboard</a> ›
+                @if($context === 'mine')
+                  @can('viewAny', \App\Models\Booking::class)
+                    <a href="{{ route('bookings.index') }}">Bookings</a> ›
+                  @endcan
+                  My Bookings
+                @else
+                  Bookings
                 @endif
             </div>
         </div>
+        <div class="to-page-header-right">
+            @can('create', \App\Models\Booking::class)
+              <a href="{{ route('bookings.create') }}" class="btn btn-orange btn-sm">
+                  <i class="ph ph-plus me-1"></i> New Booking
+              </a>
+            @endcan
+        </div>
     </div>
 
-    {{-- Table — unified card --}}
+    @if(session()->has('success'))
+      <div class="alert alert-success border-0 py-2 px-3 mb-3" style="font-size:.82rem;">{{ session('success') }}</div>
+    @endif
+
+    {{-- Filter bar --}}
+    <div style="padding:0 0 16px;">
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+          <div style="font-size:.7rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;">Filter</div>
+
+          {{-- Date range - only for My Bookings --}}
+          @if($context === 'mine')
+            <div class="d-flex align-items-center gap-2" style="background:#fff;border:1.5px solid rgba(51,46,158,.15);border-radius:20px;padding:4px 12px;">
+              <i class="ph ph-calendar" style="font-size:.8rem;color:#94A3B8;"></i>
+              <input type="date" wire:model.live="dateFrom" style="border:none;outline:none;font-size:.76rem;color:#374151;background:transparent;width:110px;">
+              <span style="color:#CBD5E1;font-size:.75rem;">→</span>
+              <input type="date" wire:model.live="dateTo"   style="border:none;outline:none;font-size:.76rem;color:#374151;background:transparent;width:110px;">
+            </div>
+          @endif
+
+          <div>
+            @php $statusOpts = array_merge([['value'=>'','label'=>'All Statuses']], collect(\App\Models\Booking::STATUS_LABELS)->map(fn($lbl,$val)=>['value'=>$val,'label'=>$lbl])->values()->toArray()); @endphp
+            <x-styled-select-sm modelName="statusFilter" :options="$statusOpts" placeholder="All Statuses" :live="true" />
+          </div>
+          <div>
+            <x-styled-select-sm modelName="typeFilter" :options="[['value'=>'','label'=>'All Types'],['value'=>'flight','label'=>'Flight'],['value'=>'hotel','label'=>'Hotel'],['value'=>'umrah','label'=>'Umrah'],['value'=>'holiday','label'=>'Holiday'],['value'=>'visa','label'=>'Visa'],['value'=>'transfers','label'=>'Transfers'],['value'=>'excursion','label'=>'Excursion']]" placeholder="All Types" :live="true" />
+          </div>
+          @if($statusFilter || $typeFilter || $search)
+            <button wire:click="$set('search',''); $set('statusFilter',''); $set('typeFilter','')"
+              style="background:none;border:1.5px solid rgba(51,46,158,.15);color:#64748B;border-radius:20px;padding:4px 12px;font-size:.74rem;font-weight:600;cursor:pointer;">
+              ✕ Clear
+            </button>
+          @endif
+        </div>
+    </div>
+
+    {{-- Table - unified card --}}
     <div class="card animate-in">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -80,8 +81,12 @@
                     @forelse ($bookings as $booking)
                         <tr>
                             <td>
-                                <span class="fw-semibold">#{{ $booking->booking_number }}</span>
-                                <small class="d-block text-muted">{{ $booking->booking_ref }}</small>
+                                @if(Auth::user()->role === 'agent')
+                                  <span class="fw-semibold">#{{ $monthlyNumbers[$booking->id] ?? $booking->booking_number }}</span>
+                                  <small class="d-block text-muted" style="font-size:.6rem;">{{ $booking->created_at->format('M Y') }}</small>
+                                @else
+                                  <span class="fw-semibold">#{{ $booking->booking_number }}</span>
+                                @endif
                             </td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
@@ -102,10 +107,10 @@
                                 @if ($fd && ($fd->departure_airport || $fd->arrival_airport))
                                     <span class="badge bg-label-primary">{{ $fd->departure_airport }}→{{ $fd->arrival_airport }}</span>
                                 @else
-                                    <span class="text-muted">—</span>
+                                    <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td>{{ $booking->flightDetail?->departure_date ? \Carbon\Carbon::parse($booking->flightDetail->departure_date)->format('d M Y') : '—' }}</td>
+                            <td>{{ $booking->flightDetail?->departure_date ? \Carbon\Carbon::parse($booking->flightDetail->departure_date)->format('d M Y') : '-' }}</td>
                             <td class="text-end fw-semibold">£{{ number_format($booking->total_sale_price, 0) }}</td>
                             <td class="text-end">
                                 <span class="fw-semibold {{ $booking->total_margin >= 0 ? 'text-success' : 'text-danger' }}">
@@ -123,7 +128,7 @@
                             </td>
                             <td>
                                 @php
-                                    $paymentType = $booking->payment?->payment_type;
+                                    $paymentType = $booking->payment?->booking_plan;
                                     $paymentMap = ['full' => 'success', 'awaiting' => 'warning', 'payment_plan' => 'info', 'dnpl' => 'danger'];
                                     $paymentLabel = ['full' => 'Full', 'awaiting' => 'Awaiting', 'payment_plan' => 'Plan', 'dnpl' => 'DNPL'];
                                 @endphp
@@ -132,17 +137,24 @@
                                         {{ $paymentLabel[$paymentType] ?? $paymentType }}
                                     </span>
                                 @else
-                                    <span class="text-muted">—</span>
+                                    <span class="text-muted">-</span>
                                 @endif
                             </td>
                             <td>
-                                <div class="d-flex gap-1">
-                                    <a href="{{ route('bookings.show', $booking->id) }}" class="btn btn-sm btn-icon btn-outline-primary" title="View">
+                                <div class="d-flex gap-1 align-items-center">
+                                    <a href="{{ route('bookings.show', $booking->id) }}" class="btn btn-sm btn-icon btn-outline-primary" title="View / Edit">
                                         <i class="ph ph-eye"></i>
                                     </a>
-                                    <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-sm btn-icon btn-outline-secondary" title="Edit">
-                                        <i class="ph ph-pencil-simple"></i>
-                                    </a>
+                                    @if(in_array(Auth::user()->role, ['admin','manager']))
+                                    <form method="POST" action="{{ route('bookings.destroy', $booking->id) }}" style="display:inline;"
+                                        onsubmit="return confirm('Delete Booking #{{ $booking->booking_number }}? This cannot be undone.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-icon btn-outline-danger" title="Delete">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -167,7 +179,7 @@
         </div>
         <div class="card-footer d-flex justify-content-between align-items-center">
             <small class="text-muted">
-                Showing {{ $bookings->firstItem() ?? 0 }} – {{ $bookings->lastItem() ?? 0 }} of {{ $bookings->total() }} bookings
+                Showing {{ $bookings->firstItem() ?? 0 }} - {{ $bookings->lastItem() ?? 0 }} of {{ $bookings->total() }} bookings
             </small>
             {{ $bookings->links() }}
         </div>

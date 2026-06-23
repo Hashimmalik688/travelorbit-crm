@@ -77,7 +77,7 @@
                             <td class="text-center fw-semibold">{{ $agent->bookings_count ?? 0 }}</td>
                             <td class="text-end">£{{ number_format($agent->total_revenue ?? 0, 0) }}</td>
                             <td class="text-end {{ ($agent->total_margin ?? 0) >= 0 ? 'text-success' : 'text-danger' }} fw-semibold">£{{ number_format($agent->total_margin ?? 0, 0) }}</td>
-                            <td>{{ $agent->top_route ?? '—' }}</td>
+                            <td>{{ $agent->top_route ?? '-' }}</td>
                         </tr>
                     @empty
                         <tr>

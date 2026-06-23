@@ -3,5 +3,5 @@
 @section('title', 'All Bookings')
 
 @section('content')
-    @livewire('booking-index')
+    @livewire('booking-index', ['filterUserId' => $filterUserId ?? null, 'myBookingsOnly' => $myBookingsOnly ?? false])
 @endsection

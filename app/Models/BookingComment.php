@@ -12,7 +12,11 @@ class BookingComment extends Model
     protected $fillable = [
         'booking_id',
         'user_id',
+        'agent_name',
+        'avatar_url',
+        'action',
         'comment',
+        'is_mandatory',
     ];
 
     public function booking(): BelongsTo

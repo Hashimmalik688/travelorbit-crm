@@ -15,7 +15,7 @@
         </div>
     @endif
 
-    {{-- Stat cards — unified to-stat pattern --}}
+    {{-- Stat cards - unified to-stat pattern --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-3 col-sm-6 animate-in">
             <div class="to-stat accent-indigo">
@@ -64,12 +64,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Status</label>
-                <select class="form-select" wire:model.live="statusFilter">
-                    <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="overdue">Overdue</option>
-                </select>
+                <x-styled-select modelName="statusFilter" :options="[['value'=>'','label'=>'All Statuses'],['value'=>'pending','label'=>'Pending'],['value'=>'paid','label'=>'Paid'],['value'=>'overdue','label'=>'Overdue']]" placeholder="All Statuses" :live="true" />
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 @if ($search || $statusFilter)
@@ -109,8 +104,8 @@
                             <td>{{ $schedule->booking->booker_name ?? 'N/A' }}</td>
                             <td>{{ $schedule->installment_number }}</td>
                             <td class="text-end fw-semibold">£{{ number_format($schedule->amount, 2) }}</td>
-                            <td>{{ $schedule->due_date?->format('d M Y') ?? '—' }}</td>
-                            <td>{{ $schedule->paid_date?->format('d M Y') ?? '—' }}</td>
+                            <td>{{ $schedule->due_date?->format('d M Y') ?? '-' }}</td>
+                            <td>{{ $schedule->paid_date?->format('d M Y') ?? '-' }}</td>
                             <td>
                                 @if ($schedule->status === 'paid')
                                     <span class="badge bg-label-success">Paid</span>
@@ -120,7 +115,7 @@
                                     <span class="badge bg-label-danger">Overdue</span>
                                 @endif
                             </td>
-                            <td>{{ $schedule->payment_mode ? ucfirst(str_replace('_', ' ', $schedule->payment_mode)) : '—' }}</td>
+                            <td>{{ $schedule->payment_mode ? ucfirst(str_replace('_', ' ', $schedule->payment_mode)) : '-' }}</td>
                             <td>
                                 <div class="d-flex gap-1">
                                     @if (in_array($schedule->status, ['pending', 'overdue']))
@@ -167,15 +162,8 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Payment Mode <span class="text-danger">*</span></label>
-                            <select class="form-select @error('paymentMode') is-invalid @enderror" wire:model="paymentMode">
-                                <option value="">Select Payment Mode</option>
-                                <option value="cash">Cash</option>
-                                <option value="bank_transfer">Bank Transfer</option>
-                                <option value="stripe">Stripe</option>
-                                <option value="klarna">Klarna</option>
-                                <option value="card">Card</option>
-                            </select>
-                            @error('paymentMode') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            <x-styled-select modelName="paymentMode" :options="[['value'=>'','label'=>'Select Payment Mode'],['value'=>'cash','label'=>'Cash'],['value'=>'bank_transfer','label'=>'Bank Transfer'],['value'=>'stripe','label'=>'Stripe'],['value'=>'klarna','label'=>'Klarna'],['value'=>'card','label'=>'Card']]" placeholder="Select Payment Mode" />
+                            @error('paymentMode') <div class="text-danger" style="font-size:.78rem;margin-top:4px;">{{ $message }}</div> @enderror
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Paid Date <span class="text-danger">*</span></label>

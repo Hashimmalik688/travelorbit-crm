@@ -1,0 +1,14 @@
+# Design
+- Use "booking" terminology, not "sale"/"sales" — the system refers to bookings, not sales. Never label booking activity as "sales" in any UI element. Confidence: 0.70
+- When modifying cost/margin displays, make minimal targeted changes — don't redesign the entire box or transform the layout. Only change what's explicitly requested. Confidence: 0.70
+- Use custom-styled UI dropdowns matching the design system instead of native browser `<select>` elements. Confidence: 0.65
+- Maintain consistent design language across all pages in the CRM; avoid pages that look visually different from each other. Confidence: 0.70
+- In multi-step booking wizards, conditionally show steps based on booking type selection (e.g., only show flight-related steps when "flight" is selected, only hotel steps when "hotel" is selected). Confidence: 0.60
+- Prefer minimalist design: reduce visual clutter, use ample whitespace, keep interfaces simple, and avoid unnecessary UI elements. Strive for unique, enterprise-grade aesthetics that don't look generic or AI-generated. Confidence: 0.80
+- Reconsider placement of +/- counter buttons when they cause confusion; seek intuitive alternatives that don't clutter the interface. Confidence: 0.70
+- When dropdown selects are positioned low in a form where they might get clipped, use dropup (open upward) instead of making the form scrollable. Confidence: 0.75
+- Replace native browser date pickers with custom-styled date pickers that match the design system. Confidence: 0.65
+- For date inputs, use masked input fields showing the format (e.g., DD/MM/YYYY) that users fill by typing numbers, not plain text inputs. Confidence: 0.75
+- Prefer per-field inline edit buttons (pencil icons) on view pages rather than section-wide edit toggles. Each field should have its own edit toggle so individual fields can be locked (read-only) or unlocked for editing independently. Confidence: 0.80
+- For booking status display on the view page, use a "taper" — a large, fully-colored horizontal rectangular bar at the very top of the form (on top of everything else), with the status label centered in the middle. Not a multi-step workflow stepper or progress bar. Confidence: 0.75
+- Prefer actual profile photos (profile_photo_path) over generated color-block initials in agent/user display cards — use large portrait-style images with object-fit:cover when photos exist, falling back to gradient initials only when no photo is available. Avoid small icon-sized avatar blocks; aim for substantial portrait-style visuals. Confidence: 0.75

@@ -26,22 +26,12 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Booking Type</label>
-                <select class="form-select" wire:model.live="bookingType">
-                    <option value="">All Types</option>
-                    <option value="flight">Flight</option>
-                    <option value="flight_hotel">Flight + Hotel</option>
-                    <option value="umrah">Umrah</option>
-                    <option value="group">Group</option>
-                </select>
+                <x-styled-select modelName="bookingType" :options="[['value'=>'','label'=>'All Types'],['value'=>'flight','label'=>'Flight'],['value'=>'flight_hotel','label'=>'Flight + Hotel'],['value'=>'umrah','label'=>'Umrah'],['value'=>'group','label'=>'Group']]" placeholder="All Types" :live="true" />
             </div>
             <div class="col-md-3">
                 <label class="form-label">Agent</label>
-                <select class="form-select" wire:model.live="agentId">
-                    <option value="">All Agents</option>
-                    @foreach ($agents as $agent)
-                        <option value="{{ $agent->id }}">{{ $agent->name }}</option>
-                    @endforeach
-                </select>
+                @php $agentOpts = array_merge([['value'=>'','label'=>'All Agents']], collect($agents)->map(fn($a)=>['value'=>(string)$a->id,'label'=>$a->name])->toArray()); @endphp
+                <x-styled-select modelName="agentId" :options="$agentOpts" placeholder="All Agents" :live="true" />
             </div>
         </div>
     </div>
@@ -124,7 +114,7 @@
                                 </a>
                             </td>
                             <td>{{ $booking->booker_name }}</td>
-                            <td>{{ $booking->flightDetail ? ($booking->flightDetail->departure_airport . ' → ' . $booking->flightDetail->arrival_airport) : '—' }}</td>
+                            <td>{{ $booking->flightDetail ? ($booking->flightDetail->departure_airport . ' → ' . $booking->flightDetail->arrival_airport) : '-' }}</td>
                             <td>{{ ucfirst(str_replace('_', ' ', $booking->booking_type)) }}</td>
                             <td class="text-end">£{{ number_format($booking->total_sale_price, 0) }}</td>
                             <td class="text-end">£{{ number_format($booking->total_cost_price, 0) }}</td>
@@ -136,7 +126,7 @@
                                     {{ ucfirst(str_replace('_', ' ', $booking->booking_status)) }}
                                 </span>
                             </td>
-                            <td>{{ $booking->user->name ?? '—' }}</td>
+                            <td>{{ $booking->user->name ?? '-' }}</td>
                             <td>{{ $booking->created_at->format('d M Y') }}</td>
                         </tr>
                     @empty

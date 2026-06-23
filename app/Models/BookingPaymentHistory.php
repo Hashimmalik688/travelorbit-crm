@@ -16,6 +16,9 @@ class BookingPaymentHistory extends Model
         'payment_method',
         'amount',
         'receipt_number',
+        'payment_details',
+        'status',
+        'approved_by',
     ];
 
     protected function casts(): array
@@ -23,6 +26,7 @@ class BookingPaymentHistory extends Model
         return [
             'payment_date' => 'date',
             'amount' => 'decimal:2',
+            'payment_details' => 'array',
         ];
     }
 

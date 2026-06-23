@@ -12,7 +12,7 @@
 </div>
 @endif
 
-{{-- Floating nav container — full-width with content inside --}}
+{{-- Floating nav container - full-width with content inside --}}
 <div class="to-navbar w-100 d-flex align-items-center justify-content-between">
 
     {{-- Left: Search --}}
@@ -23,10 +23,7 @@
     {{-- Right: Utility icons --}}
     <div class="to-navbar-actions d-flex align-items-center gap-2">
         {{-- Notification bell --}}
-        <button type="button" class="to-nav-btn" title="Notifications">
-            <i class="ph ph-bell"></i>
-            <span class="to-nav-badge">3</span>
-        </button>
+        @livewire('notification-bell')
 
 
     </div>

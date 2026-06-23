@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BookingHotel extends Model
 {
@@ -13,11 +14,9 @@ class BookingHotel extends Model
         'booking_id',
         'hotel_name',
         'city',
-        'room_type',
         'booking_status',
         'check_in',
         'check_out',
-        'occupants',
         'actual_cost',
         'selling_price',
     ];
@@ -35,5 +34,10 @@ class BookingHotel extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function rooms(): HasMany
+    {
+        return $this->hasMany(BookingHotelRoom::class);
     }
 }

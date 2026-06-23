@@ -62,13 +62,13 @@
                                 </div>
                             </td>
                             <td>{{ $customer->booker_mobile }}</td>
-                            <td>{{ $customer->booker_whatsapp ?? '—' }}</td>
-                            <td>{{ $customer->booker_email ?? '—' }}</td>
+                            <td>{{ $customer->booker_whatsapp ?? '-' }}</td>
+                            <td>{{ $customer->booker_email ?? '-' }}</td>
                             <td class="text-center">
                                 <span class="badge bg-label-primary rounded-pill">{{ $customer->total_bookings }}</span>
                             </td>
                             <td class="text-end fw-semibold">£{{ number_format($customer->total_spent, 0) }}</td>
-                            <td>{{ $customer->last_booking_date ? \Carbon\Carbon::parse($customer->last_booking_date)->format('d M Y') : '—' }}</td>
+                            <td>{{ $customer->last_booking_date ? \Carbon\Carbon::parse($customer->last_booking_date)->format('d M Y') : '-' }}</td>
                             <td>
                                 <a href="{{ route('bookings.index', ['search' => $customer->booker_mobile]) }}" class="btn btn-sm btn-icon btn-outline-primary" title="View bookings">
                                     <i class="ph ph-arrow-right"></i>

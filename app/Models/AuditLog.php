@@ -7,23 +7,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AuditLog extends Model
 {
+    protected $table = 'audit_logs';
+
     protected $fillable = [
-        'user_id',
-        'booking_id',
-        'action',
-        'description',
-        'old_values',
-        'new_values',
-        'ip_address',
+        'user_id', 'user_email', 'action', 'model', 'model_id',
+        'ip_address', 'user_agent', 'changes', 'description',
+        // legacy booking-specific fields
+        'booking_id', 'old_values', 'new_values',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'old_values' => 'array',
-            'new_values' => 'array',
-        ];
-    }
+    protected $casts = [
+        'changes'    => 'array',
+        'old_values' => 'array',
+        'new_values' => 'array',
+        'created_at' => 'datetime',
+    ];
 
     public function user(): BelongsTo
     {
@@ -33,5 +31,31 @@ class AuditLog extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    // Adapted from Taurus - static helper used everywhere
+    public static function logAction(
+        string  $action,
+        ?User   $user        = null,
+        ?string $model       = null,
+        ?int    $model_id    = null,
+        ?string $description = null,
+        ?array  $changes     = null
+    ): void {
+        try {
+            static::create([
+                'user_id'     => $user?->id,
+                'user_email'  => $user?->email ?? 'system',
+                'action'      => $action,
+                'model'       => $model,
+                'model_id'    => $model_id,
+                'ip_address'  => request()->ip(),
+                'user_agent'  => substr(request()->userAgent() ?? '', 0, 500),
+                'changes'     => $changes,
+                'description' => $description,
+            ]);
+        } catch (\Throwable) {
+            // Never let audit logging crash the app
+        }
     }
 }

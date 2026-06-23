@@ -3,15 +3,20 @@
 namespace App\Livewire;
 
 use App\Models\Booking;
-use App\Models\Customer;
 use Livewire\Component;
 
 class GlobalSearch extends Component
 {
-    public $query = '';
-    public $isOpen = false;
+    public string $query = '';
+    public string $filter = 'booking_reference';
+    public bool $isOpen = false;
 
     public function updatedQuery(): void
+    {
+        $this->isOpen = strlen($this->query) >= 2;
+    }
+
+    public function updatedFilter(): void
     {
         $this->isOpen = strlen($this->query) >= 2;
     }
@@ -19,28 +24,62 @@ class GlobalSearch extends Component
     public function closeDropdown(): void
     {
         $this->isOpen = false;
-        $this->query = '';
+        $this->query  = '';
     }
 
     public function render()
     {
-        $results = ['bookings' => collect(), 'customers' => collect()];
+        $bookings = collect();
 
         if (strlen($this->query) >= 2) {
-            $results['bookings'] = Booking::query()
-                ->where('booking_number', 'ILIKE', "%{$this->query}%")
-                ->orWhere('booker_name', 'ILIKE', "%{$this->query}%")
-                ->orderByDesc('created_at')
-                ->limit(5)
-                ->get();
+            $q = $this->query;
 
-            $results['customers'] = Customer::query()
-                ->where('name', 'ILIKE', "%{$this->query}%")
-                ->orWhere('phone', 'ILIKE', "%{$this->query}%")
-                ->limit(5)
-                ->get();
+            $bookings = match ($this->filter) {
+                'booking_reference' => Booking::query()
+                    ->where('booking_number', 'ILIKE', "%{$q}%")
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get(),
+
+                'name' => Booking::query()
+                    ->where(function ($b) use ($q) {
+                        $b->where('booker_first_name', 'ILIKE', "%{$q}%")
+                          ->orWhere('booker_last_name', 'ILIKE', "%{$q}%");
+                    })
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get(),
+
+                'locator' => Booking::query()
+                    ->whereHas('flightDetail', fn($f) => $f->where('locator', 'ILIKE', "%{$q}%"))
+                    ->with('flightDetail')
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get(),
+
+                'email' => Booking::query()
+                    ->where('booker_email', 'ILIKE', "%{$q}%")
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get(),
+
+                'phone' => Booking::query()
+                    ->where('booker_mobile', 'ILIKE', "%{$q}%")
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get(),
+
+                'airline_reference' => Booking::query()
+                    ->whereHas('flightDetail', fn($f) => $f->where('airline_locator', 'ILIKE', "%{$q}%"))
+                    ->with('flightDetail')
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get(),
+
+                default => collect(),
+            };
         }
 
-        return view('livewire.global-search', $results);
+        return view('livewire.global-search', compact('bookings'));
     }
 }

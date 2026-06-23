@@ -1,246 +1,1267 @@
 <div>
-    <div class="to-page-header">
-        <div class="to-page-header-left">
-            <h1>Booking #{{ $booking->booking_number }}</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="{{ route('bookings.index') }}">Bookings</a> &rsaquo; #{{ $booking->booking_number }}
-            </div>
-        </div>
-        <div class="to-page-header-right">
-            <a href="{{ route('bookings.index') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="ph ph-arrow-left me-1"></i> Back
-            </a>
-            <a href="{{ route('bookings.edit', $booking) }}" class="btn btn-orange btn-sm">
-                <i class="ph ph-pencil-simple me-1"></i> Edit
-            </a>
-        </div>
-    </div>
+<style>
+.bv-section { background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);margin-bottom:16px;overflow:visible; }
+.bv-section-hdr { padding:14px 20px;border-bottom:1px solid rgba(51,46,158,.06);display:flex;align-items:center;gap:8px; }
+.bv-section-hdr .bv-icon { width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+.bv-section-hdr h2 { font-size:.85rem;font-weight:700;color:#0F172A;margin:0;letter-spacing:-.01em; }
+.bv-section-body { padding:16px 20px; }
+.bv-label { font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:2px; }
+.bv-value { font-size:.8rem;font-weight:500;color:#1E293B; }
+.bv-divider { height:1px;background:rgba(51,46,158,.05);margin:14px 0; }
+.bv-pill { display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;font-size:.66rem;font-weight:700; }
+.bv-action { padding:5px 14px;border-radius:9px;font-size:.72rem;font-weight:600;border:1.5px solid;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-decoration:none;transition:all .15s; }
+.bv-action:hover { opacity:.85; }
+.bv-edit-pencil { display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;border:1px solid rgba(51,46,158,.12);background:transparent;color:#94A3B8;cursor:pointer;font-size:.66rem;flex-shrink:0;margin-left:3px;transition:all .12s; }
+.bv-edit-pencil:hover { background:rgba(51,46,158,.06);color:#332E9E;border-color:rgba(51,46,158,.25); }
+.bv-edit-pencil.locked { opacity:.35;cursor:not-allowed;pointer-events:none; }
+.bv-field-row { display:flex;align-items:flex-start;gap:3px; }
+.bv-input-inline { border:1.5px solid #332E9E;border-radius:7px;padding:3px 7px;font-size:.74rem;background:#fff;outline:none;width:100%; }
+.bv-input-inline:focus { box-shadow:0 0 0 3px rgba(51,46,158,.10); }
+.bv-select-inline { border:1.5px solid #332E9E;border-radius:7px;padding:3px 7px;font-size:.74rem;background:#fff;outline:none;width:100%; }
+.bv-lock-badge { display:inline-flex;align-items:center;gap:2px;font-size:.56rem;color:#94A3B8;background:rgba(148,163,184,.08);padding:1px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em; }
+.bv-pax-counter { display:flex;align-items:center;gap:6px;background:rgba(51,46,158,.03);border:1px solid rgba(51,46,158,.08);border-radius:12px;padding:6px 14px; }
+.bv-pax-counter .bv-pax-type { font-size:.65rem;font-weight:800;letter-spacing:.06em;min-width:24px; }
+.bv-pax-counter .bv-pax-btn { width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;line-height:1;border:none;cursor:pointer; }
+.bv-pax-counter .bv-pax-num { font-size:.95rem;font-weight:800;min-width:16px;text-align:center; }
+.bv-pax-total { background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border-radius:12px;padding:6px 16px;text-align:center;min-width:56px; }
+.bv-pax-total .bv-pax-total-num { font-size:1rem;font-weight:800;line-height:1; }
+.bv-pax-total .bv-pax-total-label { font-size:.56rem;opacity:.7;text-transform:uppercase; }
+.bv-seg-card { border-radius:12px;border:1px solid rgba(51,46,158,.12);overflow:visible;margin-bottom:10px; }
+.bv-seg-hdr { padding:8px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(51,46,158,.06); }
+.bv-seg-body { padding:10px 14px; }
+.bv-pay-row { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:6px;font-size:.74rem; }
+.bv-pay-row.approved { background:rgba(22,163,74,.06);border:1px solid rgba(22,163,74,.15); }
+.bv-pay-row.sent { background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15); }
+.bv-pay-row.pending { background:rgba(220,38,38,.04);border:1px solid rgba(220,38,38,.12); }
+.bv-pay-number { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex-shrink:0; }
+.bv-pay-number.approved { background:#16A34A;color:#fff; }
+.bv-pay-number.sent { background:#F59E0B;color:#fff; }
+.bv-pay-number.pending { background:#DC2626;color:#fff; }
+.bv-pay-detail { flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center; }
+.bv-pay-detail span { font-size:.7rem; }
+.bv-pay-status { font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:10px;white-space:nowrap; }
+.bv-pay-status.approved { background:rgba(22,163,74,.12);color:#15803D; }
+.bv-pay-status.sent { background:rgba(245,158,11,.12);color:#B45309; }
+.bv-pay-status.pending { background:rgba(220,38,38,.10);color:#DC2626; }
+.bv-pay-btn { font-size:.62rem;font-weight:600;padding:3px 10px;border-radius:7px;border:none;cursor:pointer;white-space:nowrap; }
+.bv-pay-btn.send { background:#F59E0B;color:#fff; }
+.bv-pay-btn.approve { background:#16A34A;color:#fff; }
+.bv-activity-row { display:flex;gap:8px;padding:4px 0;font-size:.7rem;border-bottom:1px solid rgba(51,46,158,.03); }
+.bv-activity-dot { width:6px;height:6px;border-radius:50%;margin-top:6px;flex-shrink:0; }
+[x-cloak] { display: none !important; }
+</style>
 
-    @if (session()->has('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+@php
+  $role       = Auth::user()->role;
+  $status     = $booking->booking_status;
+  $btype      = $booking->booking_type ?? 'flight';
+  $isPrivileged = in_array($role, ['admin', 'manager']);
+  $isAdmin    = $role === 'admin';
+
+  // ── Core form lock (booking info, passengers, flight, hotel sections) ──
+  // Editable only when pending/confirmed, or by privileged roles always
+  $canEditCore    = $isPrivileged || in_array($status, ['pending', 'confirmed']);
+  $isLocked       = !$canEditCore;
+
+  // ── Booking type: manager/admin only, regardless of status ──
+  $canEditBookingType = in_array($role, ['admin', 'manager']);
+
+  // ── E-ticket number: always editable once booking is live, locks on cancelled ──
+  // Available: pending, ticket_in_process, issued*, even while issuance is in progress
+  $canEditEticket = $isPrivileged || in_array($status, [
+      'pending', 'confirmed', 'ticket_in_process',
+      'issued', 'issued_payment_awaiting', 'issued_payment_plan',
+  ]);
+
+  // ── Payment section (structure + request charge button) ──
+  // Always editable for agents when awaiting payment charge approval
+  $canEditPayment = $isPrivileged || in_array($status, [
+      'pending', 'confirmed', 'ticket_in_process',
+      'issued_payment_awaiting', 'issued_payment_plan',
+      'payment_charge_request',
+  ]);
+
+  // ── Flight/hotel section fields (needs operations/issuance role + core unlock) ──
+  $canEditFlightHotel = $canEditCore && in_array($role, ['admin', 'manager', 'operations', 'issuance']);
+
+  // ── Add buttons visibility: depends on booking type AND lock ──
+  $canAddPNR      = $canEditFlightHotel && in_array($btype, ['flight', 'holiday', 'umrah']);
+  $canAddHotel    = $canEditFlightHotel && in_array($btype, ['hotel', 'holiday', 'umrah']);
+  $canAddVisa     = $canEditFlightHotel && in_array($btype, ['umrah', 'holiday']);
+  $canAddTransfer = $canEditFlightHotel && in_array($btype, ['transfers', 'umrah', 'holiday']);
+  $canAddExcursion= $canEditFlightHotel && in_array($btype, ['excursion', 'holiday', 'umrah']);
+
+  // ── Payment approvals ──
+  $canApprovePayments     = in_array($role, ['admin', 'manager', 'accounts']);
+
+  // ── Viewer-only override: locks everything except Request Payment Charge ──
+  $viewerOnly = Auth::id() !== $booking->user_id;
+  if ($viewerOnly) {
+      $canEditCore         = false;
+      $isLocked            = true;
+      $canEditBookingType  = false;
+      $canEditEticket      = false;
+      $canEditPayment      = false;
+      $canEditFlightHotel  = false;
+      $canAddPNR           = false;
+      $canAddHotel         = false;
+      $canAddVisa          = false;
+      $canAddTransfer      = false;
+      $canAddExcursion     = false;
+      $canApprovePayments  = false;
+  }
+
+  // ── Request Payment Charge button: always available for viewers, follows canEditPayment otherwise ──
+  $canRequestChargeButton = $viewerOnly || $canEditPayment;
+
+  $canEditBooking = $canEditCore && Auth::user()->can('update', $booking);
+
+  // ── Lock reason for banner (only shown to non-privileged roles) ──
+  $lockReason = null;
+  if (!$isPrivileged) {
+      $lockReason = match($status) {
+          'payment_charge_request'  => ['icon'=>'ph-credit-card',        'color'=>'#D83F87','title'=>'Awaiting Payment Approval',   'body'=>'A payment charge request is pending. The form is locked until the accounts manager approves it. Payment structure remains editable.'],
+          'issuance_queue'          => ['icon'=>'ph-ticket',              'color'=>'#B45309','title'=>'In Issuance Queue',            'body'=>'This booking is in the issuance queue. The form is locked — you can still edit e-ticket numbers once processing begins.'],
+          'ticket_in_process'       => ['icon'=>'ph-airplane-takeoff',   'color'=>'#0369A1','title'=>'Ticket In Process',            'body'=>'The issuance team is processing this ticket. Most fields are locked — e-ticket numbers remain editable.'],
+          'issued'                  => ['icon'=>'ph-check-fat',           'color'=>'#047857','title'=>'Ticket Issued',               'body'=>'This booking has been fully issued. The form is locked — contact a manager to make changes.'],
+          'issued_payment_awaiting' => ['icon'=>'ph-hourglass',           'color'=>'#C2410C','title'=>'Issued — Payment Awaiting',   'body'=>'Ticket issued. Payment is still outstanding. Payment structure and e-ticket remain editable.'],
+          'issued_payment_plan'     => ['icon'=>'ph-calendar-check',      'color'=>'#0E7490','title'=>'Issued — Payment Plan',       'body'=>'Ticket issued on a payment plan. Payment structure and e-ticket remain editable.'],
+          'cancelled'               => ['icon'=>'ph-x-circle',            'color'=>'#DC2626','title'=>'Booking Cancelled',           'body'=>'This booking has been cancelled and is fully locked.'],
+          'refund_queue'            => ['icon'=>'ph-arrows-counter-clockwise','color'=>'#B91C1C','title'=>'Refund In Progress',      'body'=>'A refund request is being processed. The form is locked.'],
+          default                   => null,
+      };
+  }
+@endphp
+
+@php
+  $stStatus = $booking->booking_status;
+  $stColors = \App\Models\Booking::STATUS_COLORS[$stStatus] ?? ['bg'=>'#64748B','text'=>'#fff','badge_bg'=>'rgba(148,163,184,.12)','badge_color'=>'#64748B'];
+  $stLabel  = \App\Models\Booking::STATUS_LABELS[$stStatus] ?? ucfirst(str_replace('_',' ',$stStatus));
+  $stIcon   = \App\Models\Booking::STATUS_ICONS[$stStatus] ?? 'ph-circle';
+  $typeIcons = ['flight'=>'ph-airplane','hotel'=>'ph-buildings','holiday'=>'ph-island','umrah'=>'ph-mosque','visa'=>'ph-identification-card','transfers'=>'ph-van','excursion'=>'ph-binoculars'];
+  $typeIcon  = $typeIcons[$booking->booking_type ?? ''] ?? 'ph-ticket';
+  $fd = $booking->flightDetail;
+  $leadLabels = ['to_returning'=>'TO Returning','to_referral'=>'TO Referral','referral_client'=>'Referral Client','returning_client'=>'Returning Client','fb'=>'Facebook','wa'=>'WhatsApp','email'=>'Email','diaspora_group'=>'Diaspora Group','instagram'=>'Instagram','tiktok'=>'TikTok','website'=>'Website','google'=>'Google'];
+  $natureLabels = ['new_booking'=>'New Booking','date_change'=>'Date Change','refund_booking'=>'Refund Booking','previous_booking'=>'Previous Booking'];
+  // Status → next action config
+  $statusFlow = [
+    'pending'                 => ['next'=>'issuance_queue',    'action'=>'requestIssuance',        'btn_label'=>'Request Issuance',       'btn_icon'=>'ph-ticket',            'btn_color'=>'#7C3AED'],
+    'issuance_queue'          => ['next'=>'ticket_in_process', 'action'=>'markTicketInProcess',    'btn_label'=>'Mark: Ticket In Process','btn_icon'=>'ph-airplane-takeoff',  'btn_color'=>'#0369A1'],
+    'ticket_in_process'       => ['next'=>'issued',            'action'=>null,                     'btn_label'=>null,                    'btn_icon'=>null,                    'btn_color'=>null],
+  ];
+  $nextFlow = $statusFlow[$stStatus] ?? null;
+@endphp
+
+{{-- STATUS BANNER — status label only, centered --}}
+<div style="background:{{ $stColors['bg'] }};padding:12px 20px;border-radius:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:10px;">
+  <i class="ph {{ $stIcon }}" style="font-size:1.1rem;color:{{ $stColors['text'] }};opacity:.85;"></i>
+  <span style="font-size:1rem;font-weight:800;color:{{ $stColors['text'] }};letter-spacing:.01em;">{{ $stLabel }}</span>
+</div>
+
+{{-- BOOKING CARD --}}
+<div style="background:#fff;border-radius:14px;border:1px solid rgba(51,46,158,.08);padding:18px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+  <div class="d-flex align-items-center gap-20" style="gap:24px;">
+    <div>
+      <div class="bv-label">Booking</div>
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        @if(in_array(Auth::user()->role, ['admin','manager','operations','accounts','issuance']))
+          <span style="font-size:1.2rem;font-weight:800;color:#0F172A;letter-spacing:-.02em;">#{{ $booking->booking_number }}</span>
+        @else
+          <span style="font-size:1.2rem;font-weight:800;color:#0F172A;letter-spacing:-.02em;">#{{ $this->agentMonthlyNumber }}</span>
+          <span style="font-size:.58rem;font-weight:600;color:#64748B;padding:2px 8px;border-radius:8px;background:rgba(51,46,158,.06);border:1px solid rgba(51,46,158,.10);">{{ $booking->created_at->format('M Y') }}</span>
+        @endif
+        <span class="d-flex align-items-center gap-1" style="font-size:.64rem;font-weight:500;color:#64748B;background:rgba(148,163,184,.08);padding:3px 8px;border-radius:10px;">
+          <i class="ph {{ $typeIcon }}" style="color:#332E9E;font-size:.7rem;"></i> {{ ucfirst($booking->booking_type ?? '-') }}
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+
+    {{-- ── Action buttons: REQUEST dispositions only. Approvals/marking happen on dedicated dashboards. ── --}}
+
+    {{-- Request Issuance: all roles except accounts, when booking is editable --}}
+    @if(in_array($status, ['pending','confirmed']) && !in_array($role, ['accounts']))
+      <button type="button" wire:click="requestIssuance" class="bv-action" style="background:rgba(124,58,237,.08);border-color:rgba(124,58,237,.3);color:#7C3AED;">
+        <i class="ph ph-ticket"></i> Request Issuance
+      </button>
     @endif
 
-    {{-- Status badges row --}}
-    <div class="d-flex gap-2 mb-4 flex-wrap animate-in">
-        <span class="badge bg-label-{{ $booking->booking_status === 'confirmed' ? 'primary' : ($booking->booking_status === 'pending' ? 'warning' : ($booking->booking_status === 'cancelled' ? 'danger' : 'secondary')) }}">{{ ucfirst($booking->booking_status) }}</span>
-        <span class="badge bg-label-secondary">{{ ucfirst($booking->booking_type) }}</span>
-        @if($booking->issuance_requested_at)<span class="badge bg-label-warning">Issuance Requested</span>@endif
-        @if($booking->refund_requested_at)<span class="badge bg-label-danger">Refund Requested</span>@endif
-        <small class="text-muted ms-1">{{ $booking->created_at->format('d M Y H:i') }} · {{ $booking->user?->name ?? 'N/A' }}</small>
+    {{-- Request Refund: when ticket has been issued or booking is active --}}
+    @if(in_array($status, ['pending','confirmed','issued','issued_payment_awaiting','issued_payment_plan']) && !in_array($role, ['accounts','issuance']))
+      <button type="button" wire:click="requestRefund" class="bv-action" style="background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2);color:#DC2626;">
+        <i class="ph ph-arrows-counter-clockwise"></i> Request Refund
+      </button>
+    @endif
+
+    {{-- Cancel PNR: operations/manager/admin when form is editable --}}
+    @if(in_array($role, ['admin','manager','operations']) && $canEditCore)
+      <button type="button" wire:click="cancelPnr" wire:confirm="Cancel all PNR segments? This cannot be undone." class="bv-action" style="background:rgba(185,28,28,.05);border-color:rgba(185,28,28,.18);color:#B91C1C;">
+        <i class="ph ph-x-circle"></i> Cancel PNR
+      </button>
+    @endif
+
+    {{-- separator --}}
+    <div style="width:1px;height:28px;background:rgba(51,46,158,.1);margin:0 2px;"></div>
+
+    <a href="{{ route('bookings.index') }}" class="bv-action" style="background:transparent;border-color:rgba(51,46,158,.2);color:#374151;"><i class="ph ph-arrow-left"></i> Back</a>
+    @if($canEditBooking || ($isLocked && in_array(Auth::user()->role, ['admin','manager','accounts'])))
+      <button type="button" wire:click="save" class="bv-action" style="background:linear-gradient(135deg,#332E9E,#4A45B5);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(51,46,158,.2);"><i class="ph ph-floppy-disk"></i> Save</button>
+    @endif
+  </div>
+</div>
+
+@if (session()->has('success'))
+  <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2" style="background:rgba(22,163,74,.08);border-radius:10px;border:1px solid rgba(22,163,74,.15);color:#15803D;font-size:.78rem;"><i class="ph ph-check-circle" style="font-size:1rem;"></i> {{ session('success') }}</div>
+@endif
+
+<div class="row g-3">
+  <div class="col-lg-8">
+
+    {{-- LOCKED NOTICE --}}
+    @if($isLocked && !$isPrivileged && !$viewerOnly)
+      <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2" style="background:rgba(180,83,9,.07);border:1.5px solid rgba(180,83,9,.2);border-radius:10px;">
+        <i class="ph ph-lock-simple-open" style="color:#B45309;font-size:1rem;flex-shrink:0;"></i>
+        <div>
+          <div style="font-size:.72rem;font-weight:700;color:#B45309;">Form Locked</div>
+          <div style="font-size:.65rem;color:#64748B;">This booking is locked for your role at its current status.
+            @if($canEditEticket) E-ticket numbers remain editable.@endif
+            @if($canEditPayment) Payment section remains editable.@endif
+          </div>
+        </div>
+      </div>
+    @endif
+
+    {{-- VIEWER-ONLY NOTICE --}}
+    @if($viewerOnly)
+      <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2" style="background:rgba(51,46,158,.06);border:1.5px solid rgba(51,46,158,.15);border-radius:10px;">
+        <i class="ph ph-eye" style="color:#332E9E;font-size:1rem;flex-shrink:0;"></i>
+        <div>
+          <div style="font-size:.72rem;font-weight:700;color:#332E9E;">View-Only Access</div>
+          <div style="font-size:.65rem;color:#64748B;">You are viewing a booking created by another agent. Only the Request Payment Charge function is available.</div>
+        </div>
+      </div>
+    @endif
+
+    {{-- LEAD & CALLER --}}
+    <div class="bv-section">
+      <div class="bv-section-hdr"><div class="bv-icon" style="background:rgba(51,46,158,.08);"><i class="ph ph-user-circle" style="color:#332E9E;font-size:.9rem;"></i></div><h2>Lead &amp; Caller</h2></div>
+      <div class="bv-section-body">
+        <div class="row g-2">
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Source','model'=>'lead_source','val'=>$leadLabels[$booking->lead_source ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_source ?? '')),'type'=>'select','options'=>[['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google']],'locked'=>true])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Nature','model'=>'lead_nature','val'=>$natureLabels[$booking->lead_nature ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_nature ?? '')),'type'=>'select','options'=>[['value'=>'new_booking','label'=>'New Booking'],['value'=>'date_change','label'=>'Date Change'],['value'=>'refund_booking','label'=>'Refund Booking'],['value'=>'previous_booking','label'=>'Previous Booking']],'locked'=>true])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Booking Type','model'=>'booking_type','val'=>ucfirst($booking->booking_type ?? ''),'type'=>'select','options'=>[['value'=>'flight','label'=>'Flight'],['value'=>'hotel','label'=>'Hotel'],['value'=>'holiday','label'=>'Holidays'],['value'=>'umrah','label'=>'Umrah'],['value'=>'visa','label'=>'Visa'],['value'=>'transfers','label'=>'Transfers'],['value'=>'excursion','label'=>'Excursion']],'locked'=>!$canEditBookingType])</div>
+          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Title','model'=>'booker_title','val'=>\App\Models\Booking::TITLES[$booking->booker_title] ?? $booking->booker_title ?? '','type'=>'select','options'=>[['value'=>'1','label'=>'Mr.'],['value'=>'2','label'=>'Ms.'],['value'=>'3','label'=>'Mrs.'],['value'=>'4','label'=>'Mstr'],['value'=>'5','label'=>'Miss'],['value'=>'6','label'=>'Dr.']],'locked'=>true])</div>
+          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'First Name','model'=>'booker_first_name','val'=>$booking->booker_first_name ?? '','locked'=>true])</div>
+          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'Last Name','model'=>'booker_last_name','val'=>$booking->booker_last_name ?? '','locked'=>true])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Mobile','model'=>'booker_mobile','val'=>$booking->booker_mobile ?? '','locked'=>true])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Landline','model'=>'booker_landline','val'=>$booking->booker_landline ?? '','locked'=>true])</div>
+          <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Email','model'=>'booker_email','val'=>$booking->booker_email ?? '','type'=>'email','locked'=>true])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Address','model'=>'booker_address','val'=>$booking->booker_address ?? '','type'=>'textarea','locked'=>true])</div>
+          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>true])</div>
+        </div>
+      </div>
     </div>
 
-    <div class="row g-3">
-
-        {{-- Lead + Booker --}}
-        <div class="col-md-6 animate-in">
-            <div class="card h-100">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Lead Info</h6></div>
-                <div class="card-body py-2">
-                    <div class="row g-2 small">
-                        <div class="col-6"><span class="text-muted">Source:</span> {{ str_replace('_', ' ', ucfirst($booking->lead_source)) }}</div>
-                        <div class="col-6"><span class="text-muted">Type:</span> {{ ucfirst($booking->booking_type) }}</div>
-                        @if($booking->referral_name)<div class="col-12"><span class="text-muted">Referral:</span> {{ $booking->referral_name }}</div>@endif
-                    </div>
-                </div>
+    {{-- PASSENGERS --}}
+    <div class="bv-section">
+      <div class="bv-section-hdr">
+        <div class="bv-icon" style="background:rgba(22,163,74,.08);"><i class="ph ph-users" style="color:#16A34A;font-size:.9rem;"></i></div>
+        <h2>Passengers</h2>
+        <div class="d-flex align-items-center gap-1 ms-auto">
+          @foreach (['adult'=>['ADT','#332E9E'],'gbe'=>['GBE','#D83F87'],'child'=>['CNN','#D97706'],'infant'=>['INF','#16A34A']] as $type => [$code,$color])
+            @php $count = ${$type.'Count'}; @endphp
+            <div class="bv-pax-counter">
+              <span class="bv-pax-type" style="color:{{ $count > 0 ? $color : '#9CA3AF' }};">{{ $code }}</span>
+              <button type="button" wire:click="dec('{{ $type }}')" class="bv-pax-btn" style="background:transparent;border:1.5px solid {{ $count > 0 ? $color.'55' : '#D1D5DB' }};color:{{ $count > 0 ? $color : '#9CA3AF' }};{{ $isLocked ? 'opacity:.35;cursor:not-allowed;pointer-events:none;' : '' }}">-</button>
+              <span class="bv-pax-num" style="color:{{ $count > 0 ? $color : '#374151' }};">{{ $count }}</span>
+              <button type="button" wire:click="inc('{{ $type }}')" class="bv-pax-btn" style="background:{{ $color }};color:#fff;{{ $isLocked ? 'opacity:.35;cursor:not-allowed;pointer-events:none;' : '' }}">+</button>
             </div>
+          @endforeach
+          <div class="bv-pax-total"><div class="bv-pax-total-num">{{ $this->totalPassengers }}</div><div class="bv-pax-total-label">pax</div></div>
         </div>
-        <div class="col-md-6 animate-in" style="animation-delay:0.06s;">
-            <div class="card h-100">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Booker Info</h6></div>
-                <div class="card-body py-2">
-                    <div class="row g-2 small">
-                        <div class="col-6"><span class="text-muted">Name:</span> {{ $booking->booker_name }}</div>
-                        <div class="col-6"><span class="text-muted">Mobile:</span> {{ $booking->booker_mobile }}</div>
-                        @if($booking->booker_title)<div class="col-6"><span class="text-muted">Title:</span> {{ \App\Models\Booking::TITLES[$booking->booker_title] ?? $booking->booker_title }}</div>@endif
-                        @if($booking->booker_landline)<div class="col-6"><span class="text-muted">Landline:</span> {{ $booking->booker_landline }}</div>@endif
-                        @if($booking->booker_whatsapp)<div class="col-6"><span class="text-muted">WhatsApp:</span> {{ $booking->booker_whatsapp }}</div>@endif
-                        @if($booking->booker_email)<div class="col-6"><span class="text-muted">Email:</span> {{ $booking->booker_email }}</div>@endif
-                        @if($booking->booker_address)<div class="col-12"><span class="text-muted">Address:</span> {{ $booking->booker_address }}{{ $booking->booker_postcode ? ', '.$booking->booker_postcode : '' }}{{ $booking->booker_country ? ', '.$booking->booker_country : '' }}</div>@endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Flight Detail --}}
-        @if($booking->flightDetail)
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Flight Detail</h6></div>
-                <div class="card-body py-2">
-                    <div class="row g-2 small">
-                        @if($booking->flightDetail->pnr)<div class="col-4"><span class="text-muted">PNR:</span> {{ $booking->flightDetail->pnr }}</div>@endif
-                        @if($booking->flightDetail->airline)<div class="col-4"><span class="text-muted">Airline:</span> {{ $booking->flightDetail->airline }}</div>@endif
-                        @if($booking->flightDetail->vendor)<div class="col-4"><span class="text-muted">Vendor:</span> {{ $booking->flightDetail->vendor }}</div>@endif
-                        @if($booking->flightDetail->gds)<div class="col-4"><span class="text-muted">GDS:</span> {{ $booking->flightDetail->gds }}</div>@endif
-                        @if($booking->flightDetail->city_code)<div class="col-4"><span class="text-muted">City Code:</span> {{ $booking->flightDetail->city_code }}</div>@endif
-                        @if($booking->flightDetail->ticket_issue_limit)<div class="col-4"><span class="text-muted">Ticket Limit:</span> {{ $booking->flightDetail->ticket_issue_limit->format('d M Y H:i') }}</div>@endif
-                        <div class="col-4"><span class="text-muted">ATOL:</span> {{ $booking->flightDetail->atol ? 'Yes' : 'No' }}</div>
-                        <div class="col-4"><span class="text-muted">SAFI:</span> {{ $booking->flightDetail->safi ? 'Yes' : 'No' }}</div>
-                        @if($booking->flightDetail->departure_airport || $booking->flightDetail->arrival_airport)
-                            <div class="col-12"><span class="text-muted">Route:</span> {{ $booking->flightDetail->departure_airport }} → {{ $booking->flightDetail->arrival_airport }}</div>
+      </div>
+      @if($this->totalPassengers > 0)
+        <div class="bv-section-body" style="padding-top:8px;">
+          <div class="table-responsive">
+            <table class="table mb-0" style="font-size:.76rem;">
+              <thead><tr style="background:rgba(51,46,158,.03);">@foreach(['#','Type','Name','DOB','Passport','E-Ticket'] as $h)<th style="font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;font-weight:700;padding:8px 10px;border:none;white-space:nowrap;">{{ $h }}</th>@endforeach</tr></thead>
+              <tbody>
+                @foreach ($passengers as $i => $p)
+                  @php
+                    $ptc = !empty($p['date_of_birth']) ? $this->computePtc($p['date_of_birth'], $p['type']) : '';
+                    $typeColor = ['adult'=>'#332E9E','gbe'=>'#D83F87','child'=>'#D97706','infant'=>'#16A34A'][$p['type']] ?? '#6B7280';
+                    $name = trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? ''));
+                  @endphp
+                  <tr style="border-color:rgba(51,46,158,.04);{{ $loop->even ? 'background:#FAFBFF;' : '' }}" x-data="{ open: false }">
+                    <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);color:#94A3B8;font-weight:600;">{{ $i+1 }}</td>
+                    <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);"><span class="bv-pill" style="background:{{ $typeColor }}15;color:{{ $typeColor }};font-size:.6rem;">{{ $this->passengerTypeLabel($p['type']) }}</span></td>
+                    <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);">
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold" style="color:#1E293B;cursor:pointer;" @click="open = !open">{{ $name ?: $this->passengerTypeFullName($p['type']).' '.$this->getPassengerNumber($i, $p['type']) }}</span>
+                        @php
+                          $ageInfo = $this->computeAgeInfo($p['date_of_birth'] ?? '');
+                        @endphp
+                        @if($ptc)<span style="background:{{ ['ADT'=>'#332E9E','GBE'=>'#D83F87','CNN'=>'#D97706','INF'=>'#16A34A'][$ptc] ?? '#6B7280' }};color:#fff;border-radius:5px;font-size:.58rem;font-weight:800;padding:1px 6px;">{{ $ptc }}</span>@endif
+                        @if($ageInfo['years'] > 0 || $ageInfo['months'] > 0)
+                          <span style="background:rgba(51,46,158,0.05);color:#332E9E;border-radius:5px;font-size:.58rem;font-weight:600;padding:1px 6px;white-space:nowrap;">
+                            {{ $ageInfo['years'] }}y{{ $ageInfo['years'] < 2 ? ' ' . $ageInfo['months'] . 'm' : '' }}
+                          </span>
                         @endif
-                        @if($booking->flightDetail->departure_date)<div class="col-6"><span class="text-muted">Departure:</span> {{ $booking->flightDetail->departure_date->format('d M Y') }}</div>@endif
-                        @if($booking->flightDetail->return_date)<div class="col-6"><span class="text-muted">Return:</span> {{ $booking->flightDetail->return_date->format('d M Y') }}</div>@endif
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        {{-- Flight Costs --}}
-        @if($booking->flightCosts->isNotEmpty())
-        <div class="col-md-{{ $booking->flightDetail ? '6' : '12' }}">
-            <div class="card h-100">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Flight Costs</h6></div>
-                <div class="card-body py-2">
-                    <table class="table table-sm table-borderless small mb-0">
-                        <thead><tr><th>Type</th><th>Cost (£)</th><th>Qty</th><th class="text-end">Subtotal</th></tr></thead>
-                        <tbody>
-                            @foreach($booking->flightCosts as $c)
-                                <tr>
-                                    <td>{{ ucfirst($c->cost_type) }}</td>
-                                    <td>{{ number_format($c->cost, 2) }}</td>
-                                    <td>{{ $c->quantity }}</td>
-                                    <td class="text-end">{{ number_format($c->cost * $c->quantity, 2) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                    <div class="d-flex justify-content-between small mt-2 pt-1 border-top">
-                        <span class="fw-semibold">Total Cost:</span><span class="fw-bold">{{ number_format($booking->total_cost_price, 2) }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between small mt-1">
-                        <span class="fw-semibold">Selling:</span><span class="fw-bold">{{ number_format($booking->flightDetail->selling_price ?? 0, 2) }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between small mt-1">
-                        <span class="fw-semibold text-success">Margin:</span><span class="fw-bold text-success">{{ number_format($booking->total_margin, 2) }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        {{-- Hotels --}}
-        @if($booking->hotels->isNotEmpty())
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Hotels ({{ $booking->hotels->count() }})</h6></div>
-                <div class="card-body py-2">
-                    @foreach($booking->hotels as $hotel)
-                        <div class="row g-2 small mb-2 pb-2 border-bottom">
-                            <div class="col-3"><span class="text-muted">Name:</span> {{ $hotel->hotel_name }}</div>
-                            <div class="col-2"><span class="text-muted">City:</span> {{ $hotel->city }}</div>
-                            <div class="col-2"><span class="text-muted">Room:</span> {{ $hotel->room_type }}</div>
-                            <div class="col-2"><span class="text-muted">Status:</span> {{ ucfirst($hotel->booking_status) }}</div>
-                            <div class="col-2"><span class="text-muted">Check In:</span> {{ $hotel->check_in?->format('d M Y') }}</div>
-                            <div class="col-1"><span class="text-muted">Out:</span> {{ $hotel->check_out?->format('d M Y') }}</div>
-                            <div class="col-2"><span class="text-muted">Occupants:</span> {{ $hotel->occupants }}</div>
-                            <div class="col-2"><span class="text-muted">Cost:</span> £{{ number_format($hotel->actual_cost, 2) }}</div>
-                            <div class="col-2"><span class="text-muted">Selling:</span> £{{ number_format($hotel->selling_price, 2) }}</div>
-                            <div class="col-2"><span class="text-muted">Margin:</span> <span class="{{ ($hotel->selling_price - $hotel->actual_cost) >= 0 ? 'text-success' : 'text-danger' }}">£{{ number_format($hotel->selling_price - $hotel->actual_cost, 2) }}</span></div>
+                        @if (!empty($ageInfo['next_ptc']) && !empty($ageInfo['next_ptc_date']))
+                          <span style="background:rgba(51,46,158,0.08);color:#332E9E;border-radius:5px;font-size:.58rem;font-weight:600;padding:1px 6px;white-space:nowrap;display:inline-flex;align-items:center;gap:2px;">
+                            <i class="ph ph-arrow-up-right" style="font-size:.52rem;"></i>
+                            {{ str_replace(['Child (CNN)','Youth (GBE)','Adult (ADT)'], ['CNN','GBE','ADT'], $ageInfo['next_ptc']) }} on {{ $ageInfo['next_ptc_date'] }}
+                          </span>
+                        @endif
+                        @if(!$isLocked || $canEditEticket)<button type="button" @click="open = !open" class="bv-edit-pencil"><i class="ph ph-pencil-simple"></i></button>@endif
+                      </div>
+                      <div x-show="open" x-cloak class="mt-2 p-3" style="background:#F8FAFF;border-radius:10px;border:1px solid rgba(51,46,158,.08);">
+                        @if($isLocked && $canEditEticket)
+                          <div style="font-size:.62rem;color:#D97706;background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.2);border-radius:6px;padding:4px 8px;margin-bottom:8px;display:flex;align-items:center;gap:5px;"><i class="ph ph-lock-simple"></i> Only e-ticket number is editable in this status.</div>
+                        @endif
+                        <div class="row g-2">
+                          @php $titleOpts = [['value'=>'','label'=>'-'],['value'=>'Mr.','label'=>'Mr.'],['value'=>'Ms.','label'=>'Ms.'],['value'=>'Mrs.','label'=>'Mrs.'],['value'=>'Mstr','label'=>'Mstr'],['value'=>'Miss','label'=>'Miss'],['value'=>'Dr.','label'=>'Dr.']]; @endphp
+                          <div class="col-md-3"><label class="bv-label">Title</label><x-styled-select-sm :modelName="'passengers.'.$i.'.title'" :options="$titleOpts" placeholder="-" :disabled="$isLocked" /></div>
+                          <div class="col-md-5"><label class="bv-label">First Name</label><input type="text" wire:model="passengers.{{ $i }}.first_name" class="bv-input-inline" style="font-size:.72rem;{{ $isLocked ? 'opacity:.45;pointer-events:none;' : '' }}"></div>
+                          <div class="col-md-4"><label class="bv-label">Last Name</label><input type="text" wire:model="passengers.{{ $i }}.last_name" class="bv-input-inline" style="font-size:.72rem;{{ $isLocked ? 'opacity:.45;pointer-events:none;' : '' }}"></div>
+                          <div class="col-md-3"><label class="bv-label">DOB @if($ageInfo['years'] > 0 || $ageInfo['months'] > 0)<span style="font-weight:400;color:#94A3B8;">· {{ $ageInfo['years'] }}y{{ $ageInfo['years'] < 2 ? ' ' . $ageInfo['months'] . 'm' : '' }}</span>@endif</label><x-date-picker :modelName="'passengers.'.$i.'.date_of_birth'" :compact="true" />@error("passengers.{$i}.date_of_birth")<small style="color:#DC2626;font-size:.62rem;">{{ $message }}</small>@enderror</div>
+                          <div class="col-md-3"><label class="bv-label">Passport #</label><input type="text" wire:model="passengers.{{ $i }}.passport_number" class="bv-input-inline" style="font-size:.72rem;{{ $isLocked ? 'opacity:.45;pointer-events:none;' : '' }}"></div>
+                          <div class="col-md-2"><label class="bv-label">Contact</label><input type="tel" wire:model="passengers.{{ $i }}.contact_number" class="bv-input-inline" style="font-size:.72rem;{{ $isLocked ? 'opacity:.45;pointer-events:none;' : '' }}" oninput="this.value=this.value.replace(/[^0-9+]/g,'')"></div>
+                          <div class="col-md-4"><label class="bv-label">E-Ticket</label><input type="text" wire:model="passengers.{{ $i }}.e_ticket_number" class="bv-input-inline" style="font-size:.72rem;{{ !$canEditEticket ? 'opacity:.45;pointer-events:none;' : '' }}" placeholder="176-1234567890"></div>
+                          @php $countryOpts = array_merge([['value'=>'','label'=>'-']], collect($countries)->map(fn($name,$code)=>['value'=>$code,'label'=>$name])->values()->toArray()); @endphp
+                          <div class="col-md-3"><label class="bv-label">Issuing Country</label><x-styled-select-sm :modelName="'passengers.'.$i.'.passport_issuing_country'" :options="$countryOpts" placeholder="-" :searchable="true" /></div>
+                          <div class="col-md-3"><label class="bv-label">Nationality</label><x-styled-select-sm :modelName="'passengers.'.$i.'.nationality'" :options="$countryOpts" placeholder="-" :searchable="true" /></div>
                         </div>
-                    @endforeach
-                </div>
-            </div>
+                        <button type="button" @click="open = false" class="mt-2" style="border:none;background:rgba(51,46,158,.06);color:#332E9E;border-radius:6px;padding:3px 12px;cursor:pointer;font-size:.7rem;font-weight:600;">Done</button>
+                      </div>
+                    </td>
+                    <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);font-family:monospace;font-size:.72rem;">{{ $p['date_of_birth'] ? \Carbon\Carbon::parse($p['date_of_birth'])->format('d/m/Y') : '-' }}</td>
+                    <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);font-family:monospace;font-size:.72rem;">{{ $p['passport_number'] ?? '-' }}</td>
+                    <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);font-family:monospace;font-size:.7rem;color:#332E9E;">{{ $p['e_ticket_number'] ?? '-' }}</td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
         </div>
+      @else
+        <div class="bv-section-body text-center py-3"><p style="color:#C4C9D4;font-size:.76rem;">No passengers added. Use counters above.</p></div>
+      @endif
+    </div>
+
+    {{-- FLIGHT / PNR --}}
+    <div class="bv-section">
+      <div class="bv-section-hdr">
+        <div class="bv-icon" style="background:rgba(14,165,233,.08);"><i class="ph ph-airplane" style="color:#0EA5E9;font-size:.9rem;"></i></div>
+        <h2>Flight &amp; PNR</h2>
+        @if($fd)<span class="bv-pill ms-auto" style="background:rgba(14,165,233,.08);color:#0369A1;font-size:.64rem;">{{ strtoupper($fd->departure_airport ?? '-') }} - {{ strtoupper($fd->arrival_airport ?? '-') }}</span>@endif
+      </div>
+      <div class="bv-section-body">
+        @foreach ($flightSegments as $si => $seg)
+          <div class="bv-seg-card" style="border-color:rgba(51,46,158,{{ $si === 0 ? '0.10' : '0.16' }});">
+            <div class="bv-seg-hdr" style="background:{{ $si === 0 ? 'rgba(51,46,158,0.03)' : 'rgba(51,46,158,0.06)' }};">
+              <span class="fw-bold" style="font-size:.74rem;color:#332E9E;">{{ $this->getPnrLabel($si) }} @if(!empty($seg['departure_airport']) && !empty($seg['arrival_airport']))<span class="text-muted fw-normal" style="font-size:.68rem;"> - {{ strtoupper($seg['departure_airport']) }} - {{ strtoupper($seg['arrival_airport']) }}</span>@endif</span>
+              @if($si > 0 && $canEditFlightHotel)<button type="button" wire:click="removeFlightSegment({{ $si }})" class="btn btn-sm" style="background:rgba(220,38,38,.08);color:#DC2626;border:none;border-radius:6px;font-size:.66rem;padding:2px 8px;">Remove</button>@endif
+            </div>
+            <div class="bv-seg-body">
+              <div class="row g-2 mb-2">
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Locator','model'=>"flightSegments.{$si}.locator",'val'=>$seg['locator'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Airline Locator','model'=>"flightSegments.{$si}.airline_locator",'val'=>$seg['airline_locator'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Vendor','model'=>"flightSegments.{$si}.vendor",'val'=>$seg['vendor'] ?? '','type'=>'select','options'=>$vendorOptions,'locked'=>!$canEditFlightHotel])</div>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Airline','model'=>"flightSegments.{$si}.airline",'val'=>$seg['airline'] ? strtoupper($seg['airline']) : '','locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'GDS','model'=>"flightSegments.{$si}.gds",'val'=>$seg['gds'] ?? '','type'=>'select','options'=>[['value'=>'AMADEUS','label'=>'Amadeus'],['value'=>'GALILEO','label'=>'Galileo'],['value'=>'SABRE','label'=>'Sabre'],['value'=>'WORLDSPAN','label'=>'Worldspan'],['value'=>'APOLLO','label'=>'Apollo'],['value'=>'TRAVELPORT','label'=>'Travelport']],'locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Cabin','model'=>"flightSegments.{$si}.cabin",'val'=>$seg['cabin'] ?? '','type'=>'select','options'=>[['value'=>'Economy','label'=>'Economy'],['value'=>'Premium Economy','label'=>'Premium Economy'],['value'=>'Business','label'=>'Business'],['value'=>'First Class','label'=>'First Class']],'locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Reservation','model'=>"flightSegments.{$si}.reservation_status",'val'=>$seg['reservation_status'] ?? '','type'=>'select','options'=>[['value'=>'Confirmed','label'=>'Confirmed'],['value'=>'Ticketed','label'=>'Ticketed'],['value'=>'Pending','label'=>'Pending'],['value'=>'On Hold','label'=>'On Hold'],['value'=>'Cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Ticket Limit','model'=>"flightSegments.{$si}.ticket_issue_limit",'val'=>$seg['ticket_issue_limit'] ? \Carbon\Carbon::parse($seg['ticket_issue_limit'])->format('d M Y, H:i') : '','type'=>'datetime-local','locked'=>!$canEditFlightHotel])</div>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Dep. Airport','model'=>"flightSegments.{$si}.departure_airport",'val'=>$seg['departure_airport'] ? strtoupper($seg['departure_airport']) : '','locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Arr. Airport','model'=>"flightSegments.{$si}.arrival_airport",'val'=>$seg['arrival_airport'] ? strtoupper($seg['arrival_airport']) : '','locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Flight Type','model'=>"flightSegments.{$si}.flight_type",'val'=>($seg['flight_type'] ?? 'return') === 'one_way' ? 'One Way' : 'Return','type'=>'select','options'=>[['value'=>'return','label'=>'Return'],['value'=>'one_way','label'=>'One Way']],'locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Dep. Date','model'=>"flightSegments.{$si}.departure_date",'val'=>$seg['departure_date'] ? \Carbon\Carbon::parse($seg['departure_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel])</div>
+                @if (($seg['flight_type'] ?? 'return') !== 'one_way')
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Return Date','model'=>"flightSegments.{$si}.return_date",'val'=>$seg['return_date'] ? \Carbon\Carbon::parse($seg['return_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel])</div>
+                @endif
+              </div>
+              {{-- Passenger Pricing (above PNR details, aggregated by type) --}}
+              @if(count($passengers) > 0)
+                @php
+                  $pPtcOrder  = ['adult','gbe','child','infant'];
+                  $pPtcLabels = ['adult'=>'Adult','gbe'=>'Youth','child'=>'Child','infant'=>'Infant'];
+                  $pPtcColors = ['adult'=>'#332E9E','gbe'=>'#D83F87','child'=>'#D97706','infant'=>'#16A34A'];
+                  $pPtcBg     = ['adult'=>'rgba(51,46,158,.07)','gbe'=>'rgba(216,63,135,.07)','child'=>'rgba(217,119,6,.07)','infant'=>'rgba(22,163,74,.07)'];
+                @endphp
+                <div class="mb-3 pb-3" style="border-bottom:2px solid rgba(51,46,158,.07);">
+                  <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;margin-bottom:8px;">Cost per Passenger Type</div>
+                  {{-- per-pax input rows --}}
+                  @foreach($passengers as $pi => $p)
+                    @php
+                      $pType = $p['type'] ?? 'adult';
+                      $pColor = $pPtcColors[$pType] ?? '#332E9E';
+                      $pBg    = $pPtcBg[$pType] ?? 'rgba(51,46,158,.07)';
+                      $pNum   = 1; for ($j=0; $j<$pi; $j++) { if(($passengers[$j]['type']??'')===$pType) $pNum++; }
+                      $pLabel = ($pPtcLabels[$pType]??'Pax').' '.$pNum;
+                    @endphp
+                    <div style="display:grid;grid-template-columns:1fr 120px 120px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(51,46,158,.04);">
+                      <span style="padding:2px 9px;border-radius:20px;background:{{ $pBg }};color:{{ $pColor }};font-size:.62rem;font-weight:700;display:inline-block;width:fit-content;">{{ $pLabel }}</span>
+                      <div>
+                        <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Cost</div>
+                        @if($canEditFlightHotel)
+                          <input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.cost" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00">
+                        @else
+                          <span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span>
+                        @endif
+                      </div>
+                      <div>
+                        <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Sold</div>
+                        @if($canEditFlightHotel)
+                          <input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.sold" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00">
+                        @else
+                          <span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span>
+                        @endif
+                      </div>
+                    </div>
+                  @endforeach
+                </div>
+              @endif
+              <label class="bv-label">PNR Details</label>
+              @if($canEditFlightHotel)
+                <div class="d-flex gap-2 align-items-start"><textarea wire:model="flightSegments.{{ $si }}.pnr" rows="12" class="form-control form-control-sm flex-grow-1" style="border-radius:10px;font-family:monospace;font-size:.72rem;resize:vertical;min-height:180px;" placeholder="Paste PNR here - RP/LONBA1234..."></textarea><button type="button" class="btn btn-sm fw-semibold flex-shrink-0" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:9px;font-size:.7rem;white-space:nowrap;padding:5px 10px;">Fetch PNR</button></div>
+              @else
+                <div style="font-family:monospace;font-size:.74rem;color:#1E293B;background:#F8FAFF;border-radius:10px;padding:10px;min-height:100px;white-space:pre-wrap;border:1px solid rgba(51,46,158,.06);">{{ $seg['pnr'] ?? 'No PNR recorded' }}</div>
+              @endif
+            </div>
+          </div>
+        @endforeach
+        @if($canAddPNR)
+          <button type="button" wire:click="addFlightSegment" class="btn btn-sm d-flex align-items-center gap-1 w-100 justify-content-center" style="background:rgba(51,46,158,.05);color:#332E9E;border:1.5px dashed rgba(51,46,158,.2);border-radius:10px;padding:8px;font-size:.74rem;font-weight:600;"><i class="ph ph-plus-circle"></i> Add Another PNR</button>
+        @endif
+        @if($canAddHotel || $canAddVisa || $canAddTransfer || $canAddExcursion)
+          <div class="d-flex gap-2 flex-wrap {{ $canAddPNR ? 'mt-2' : '' }} w-100">
+            @if($canAddHotel)<button type="button" wire:click="addHotel" class="btn btn-sm d-flex align-items-center gap-1 flex-grow-1 justify-content-center" style="background:rgba(124,58,237,.06);color:#7C3AED;border:1.5px solid rgba(124,58,237,.2);border-radius:9px;padding:6px 14px;font-size:.72rem;font-weight:600;"><i class="ph ph-buildings"></i> Add Hotel</button>@endif
+            @if($canAddVisa)<button type="button" wire:click="addVisa" class="btn btn-sm d-flex align-items-center gap-1 flex-grow-1 justify-content-center" style="background:rgba(22,163,74,.06);color:#16A34A;border:1.5px solid rgba(22,163,74,.2);border-radius:9px;padding:6px 14px;font-size:.72rem;font-weight:600;"><i class="ph ph-identification-card"></i> Add Visa</button>@endif
+            @if($canAddTransfer)<button type="button" wire:click="addPickup" class="btn btn-sm d-flex align-items-center gap-1 flex-grow-1 justify-content-center" style="background:rgba(51,46,158,.06);color:#332E9E;border:1.5px solid rgba(51,46,158,.2);border-radius:9px;padding:6px 14px;font-size:.72rem;font-weight:600;"><i class="ph ph-van"></i> Add Transfer</button>@endif
+            @if($canAddExcursion)<button type="button" wire:click="addExcursion" class="btn btn-sm d-flex align-items-center gap-1 flex-grow-1 justify-content-center" style="background:rgba(255,107,53,.06);color:#FF6B35;border:1.5px solid rgba(255,107,53,.2);border-radius:9px;padding:6px 14px;font-size:.72rem;font-weight:600;"><i class="ph ph-binoculars"></i> Add Excursion</button>@endif
+          </div>
+        @endif
+        @if($canEditFlightHotel)
+          <div class="d-flex align-items-center gap-3 mt-2 pt-2" style="border-top:1px solid rgba(51,46,158,.06);">
+            <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;"><div class="form-check form-switch mb-0 ps-0"><input type="checkbox" wire:model.live="flight_atol" role="switch" class="form-check-input ms-0" style="width:28px;height:15px;cursor:pointer;"></div><span style="font-size:.7rem;font-weight:700;color:{{ $flight_atol ? '#FF6B35' : '#374151' }};">ATOL</span></label>
+            <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;"><div class="form-check form-switch mb-0 ps-0"><input type="checkbox" wire:model.live="flight_safi" role="switch" class="form-check-input ms-0" style="width:28px;height:15px;cursor:pointer;"></div><span style="font-size:.7rem;font-weight:700;color:{{ $flight_safi ? '#332E9E' : '#374151' }};">SAFI</span></label>
+          </div>
+        @endif
+      </div>
+    </div>
+
+    {{-- VISA section --}}
+    @if(count($visas) > 0)
+    <div class="bv-section">
+      <div class="bv-section-hdr">
+        <div class="bv-icon" style="background:rgba(22,163,74,.08);"><i class="ph ph-identification-card" style="color:#16A34A;font-size:.9rem;"></i></div>
+        <h2>Visa</h2>
+        <span class="bv-pill ms-auto" style="background:rgba(22,163,74,.08);color:#16A34A;font-size:.64rem;">{{ count($visas) }} visa{{ count($visas) !== 1 ? 's' : '' }}</span>
+      </div>
+      @foreach($visas as $vi => $visa)
+        <div wire:key="visa-{{ $vi }}" class="bv-section-body" style="{{ !$loop->last ? 'border-bottom:1px solid rgba(22,163,74,.06);' : '' }}">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span style="font-size:.68rem;font-weight:700;color:#16A34A;">Visa {{ $vi + 1 }}</span>
+            @if($canEditFlightHotel)<button type="button" wire:click="removeVisa({{ $vi }})" style="background:rgba(220,38,38,.08);color:#DC2626;border:none;border-radius:6px;font-size:.66rem;padding:2px 8px;cursor:pointer;">Remove</button>@endif
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Passenger Name','model'=>"visas.{$vi}.passenger_name",'val'=>$visa['passenger_name'] ?? '','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Visa Type','model'=>"visas.{$vi}.visa_type",'val'=>ucfirst($visa['visa_type'] ?? 'tourist'),'type'=>'select','options'=>[['value'=>'umrah','label'=>'Umrah'],['value'=>'tourist','label'=>'Tourist'],['value'=>'business','label'=>'Business'],['value'=>'transit','label'=>'Transit'],['value'=>'student','label'=>'Student']],'locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Status','model'=>"visas.{$vi}.status",'val'=>ucfirst($visa['status'] ?? 'pending'),'type'=>'select','options'=>[['value'=>'pending','label'=>'Pending'],['value'=>'applied','label'=>'Applied'],['value'=>'approved','label'=>'Approved'],['value'=>'rejected','label'=>'Rejected'],['value'=>'collected','label'=>'Collected']],'locked'=>!$canEditFlightHotel])</div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Visa Reference','model'=>"visas.{$vi}.visa_reference",'val'=>$visa['visa_reference'] ?? '','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Visa Number','model'=>"visas.{$vi}.visa_number",'val'=>$visa['visa_number'] ?? '','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Application Date','model'=>"visas.{$vi}.application_date",'val'=>$visa['application_date'] ? \Carbon\Carbon::parse($visa['application_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Expiry Date','model'=>"visas.{$vi}.expiry_date",'val'=>$visa['expiry_date'] ? \Carbon\Carbon::parse($visa['expiry_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel])</div>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Cost (£)','model'=>"visas.{$vi}.actual_cost",'val'=>$visa['actual_cost'] ? '£'.number_format((float)$visa['actual_cost'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Selling (£)','model'=>"visas.{$vi}.selling_price",'val'=>$visa['selling_price'] ? '£'.number_format((float)$visa['selling_price'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Notes','model'=>"visas.{$vi}.notes",'val'=>$visa['notes'] ?? '','locked'=>!$canEditFlightHotel])</div>
+          </div>
+        </div>
+      @endforeach
+      @if($canEditFlightHotel)
+        <div class="px-4 pb-3">
+          <button type="button" wire:click="addVisa" class="btn btn-sm d-flex align-items-center gap-1 w-100 justify-content-center" style="background:rgba(22,163,74,.05);color:#16A34A;border:1.5px dashed rgba(22,163,74,.2);border-radius:10px;padding:7px;font-size:.72rem;font-weight:600;"><i class="ph ph-plus-circle"></i> Add Another Visa</button>
+        </div>
+      @endif
+    </div>
+    @endif
+
+    {{-- EXCURSION section --}}
+    @if(($booking_type === 'excursion' || $booking_type === 'holiday') && $showExcursion)
+    <div class="bv-section">
+      <div class="bv-section-hdr">
+        <div class="bv-icon" style="background:rgba(255,107,53,.08);"><i class="ph ph-binoculars" style="color:#FF6B35;font-size:.9rem;"></i></div>
+        <h2>Excursion</h2>
+        @if(!empty($excursion_status))<span class="bv-pill ms-auto" style="background:rgba(255,107,53,.08);color:#FF6B35;font-size:.64rem;">{{ ucfirst($excursion_status) }}</span>@endif
+      </div>
+      <div class="bv-section-body">
+        <div class="row g-2 mb-2">
+          <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Excursion Name','model'=>'excursion_name','val'=>$excursion_name,'locked'=>!$canEditFlightHotel])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Destination','model'=>'excursion_destination','val'=>$excursion_destination,'locked'=>!$canEditFlightHotel])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Supplier','model'=>'excursion_supplier','val'=>$excursion_supplier,'locked'=>!$canEditFlightHotel])</div>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Date','model'=>'excursion_date','val'=>$excursion_date ? \Carbon\Carbon::parse($excursion_date)->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Cost (£)','model'=>'excursion_actual_cost','val'=>$excursion_actual_cost ? '£'.number_format((float)$excursion_actual_cost,2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Selling (£)','model'=>'excursion_selling_price','val'=>$excursion_selling_price ? '£'.number_format((float)$excursion_selling_price,2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Status','model'=>'excursion_status','val'=>ucfirst($excursion_status ?? 'confirmed'),'type'=>'select','options'=>[['value'=>'confirmed','label'=>'Confirmed'],['value'=>'pending','label'=>'Pending'],['value'=>'cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel])</div>
+        </div>
+      </div>
+    </div>
+    @endif
+
+    {{-- HOTEL --}}
+    @if(!empty($hotels))
+    <div class="bv-section">
+      <div class="bv-section-hdr">
+        <div class="bv-icon" style="background:rgba(124,58,237,.08);"><i class="ph ph-buildings" style="color:#7C3AED;font-size:.9rem;"></i></div>
+        <h2>Hotel</h2>
+        <span class="bv-pill ms-auto" style="background:rgba(124,58,237,.08);color:#7C3AED;font-size:.64rem;">{{ count($hotels) }} hotel{{ count($hotels) !== 1 ? 's' : '' }}</span>
+      </div>
+      @foreach($hotels as $hi => $hotel)
+        <div wire:key="show-hotel-{{ $hi }}" class="bv-section-body" style="{{ !$loop->last ? 'padding-bottom:8px;' : '' }}">
+          <div class="row g-2 mb-2">
+            <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Hotel Name','model'=>"hotels.{$hi}.hotel_name",'val'=>$hotel['hotel_name'] ?? '','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'City','model'=>"hotels.{$hi}.city",'val'=>$hotel['city'] ?? '','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Status','model'=>"hotels.{$hi}.status",'val'=>ucfirst($hotel['status'] ?? ''),'type'=>'select','options'=>[['value'=>'confirmed','label'=>'Confirmed'],['value'=>'on_holding','label'=>'On Holding'],['value'=>'cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Check In','model'=>"hotels.{$hi}.check_in",'val'=>$hotel['check_in'] ? \Carbon\Carbon::parse($hotel['check_in'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Check Out','model'=>"hotels.{$hi}.check_out",'val'=>$hotel['check_out'] ? \Carbon\Carbon::parse($hotel['check_out'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel])</div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Cost (£)','model'=>"hotels.{$hi}.actual_cost",'val'=>$hotel['actual_cost'] ? '£'.number_format((float)$hotel['actual_cost'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Selling (£)','model'=>"hotels.{$hi}.selling_price",'val'=>$hotel['selling_price'] ? '£'.number_format((float)$hotel['selling_price'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+            <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Rooms','model'=>"hotels.{$hi}.number_of_rooms",'val'=>$hotel['number_of_rooms'] ?? '1','type'=>'rooms','locked'=>!$canEditFlightHotel,'rawModel'=>"hotels.{$hi}.number_of_rooms"])</div>
+          </div>
+          @foreach($hotel['rooms'] as $ri => $room)
+            <div wire:key="show-hotel-{{ $hi }}-room-{{ $ri }}" class="p-2 mb-1" style="background:rgba(124,58,237,.02);border-radius:8px;border:1px solid rgba(124,58,237,.05);">
+              <div class="row g-2">
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Room '.($ri+1).' Type','model'=>"hotels.{$hi}.rooms.{$ri}.room_type",'val'=>$room['room_type'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Occupants','model'=>"hotels.{$hi}.rooms.{$ri}.occupants",'val'=>$room['occupants'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'Meal Basis','model'=>"hotels.{$hi}.rooms.{$ri}.meal_basis",'val'=>ucwords(str_replace('_',' ',$room['meal_basis'] ?? '')),'type'=>'select','options'=>[['value'=>'room_only','label'=>'Room Only'],['value'=>'breakfast','label'=>'Breakfast'],['value'=>'half_board','label'=>'Half Board'],['value'=>'full_board','label'=>'Full Board'],['value'=>'all_inclusive','label'=>'All Inclusive']],'locked'=>!$canEditFlightHotel])</div>
+              </div>
+            </div>
+          @endforeach
+          @if($canEditFlightHotel)<div class="d-flex justify-content-end mt-1"><button type="button" wire:click="removeHotel({{ $hi }})" class="btn btn-sm" style="background:rgba(220,38,38,.06);color:#DC2626;border:none;border-radius:6px;font-size:.66rem;padding:2px 10px;">Remove Hotel</button></div>@endif
+          @if(!$loop->last)<div class="bv-divider"></div>@endif
+        </div>
+      @endforeach
+    </div>
+    @endif
+
+    {{-- TRANSFERS --}}
+    @if(!empty($transferPickups) || !empty($transferDropoffs))
+    <div class="bv-section">
+      <div class="bv-section-hdr">
+        <div class="bv-icon" style="background:rgba(51,46,158,.08);"><i class="ph ph-van" style="color:#332E9E;font-size:.9rem;"></i></div>
+        <h2>Transfers</h2>
+        <span class="bv-pill ms-auto" style="background:rgba(51,46,158,.08);color:#332E9E;font-size:.64rem;">{{ count($transferPickups) }} pickup / {{ count($transferDropoffs) }} dropoff</span>
+      </div>
+      <div class="bv-section-body">
+        @php
+          $statusColors = ['confirmed'=>'#16A34A','pending'=>'#D97706','cancelled'=>'#DC2626'];
+          $vehicleIcons = ['Minicab'=>'ph-car','Executive Car'=>'ph-car','Minibus'=>'ph-van','Coach'=>'ph-bus','Limo'=>'ph-car-profile','Other'=>'ph-van'];
+        @endphp
+
+        {{-- Pickups --}}
+        @if(!empty($transferPickups))
+          <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#332E9E;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="ph ph-arrow-up-right"></i> Pickups</div>
+          @foreach($transferPickups as $ti => $t)
+            <div wire:key="bv-pickup-{{ $ti }}" class="mb-2" style="background:rgba(51,46,158,.02);border-radius:10px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
+              <div style="padding:7px 12px;background:rgba(51,46,158,.04);border-bottom:1px solid rgba(51,46,158,.06);display:flex;align-items:center;justify-content:space-between;">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="ph ph-map-pin-line" style="color:#332E9E;font-size:.8rem;"></i>
+                  <span style="font-size:.72rem;font-weight:700;color:#332E9E;">{{ $t['location'] ?: 'Pickup '.($ti+1) }}</span>
+                  @if(!empty($t['status']))<span style="font-size:.58rem;font-weight:700;color:{{ $statusColors[$t['status']] ?? '#64748B' }};background:{{ $statusColors[$t['status']].'15' ?? 'rgba(148,163,184,.08)' }};padding:1px 7px;border-radius:10px;text-transform:capitalize;">{{ $t['status'] }}</span>@endif
+                </div>
+                @if($canEditFlightHotel)<button type="button" wire:click="removePickup({{ $ti }})" style="background:rgba(220,38,38,.07);color:#DC2626;border:none;border-radius:5px;font-size:.63rem;padding:2px 7px;cursor:pointer;">Remove</button>@endif
+              </div>
+              <div class="p-2">
+                <div class="row g-2 mb-1">
+                  <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Location','model'=>"transferPickups.{$ti}.location",'val'=>$t['location'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Date & Time','model'=>"transferPickups.{$ti}.date_time",'val'=>$t['date_time'] ? \Carbon\Carbon::parse($t['date_time'])->format('d M Y H:i') : '','type'=>'datetime-local','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Flight #','model'=>"transferPickups.{$ti}.flight_number",'val'=>$t['flight_number'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                </div>
+                <div class="row g-2 mb-1">
+                  <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Route','model'=>"transferPickups.{$ti}.route",'val'=>$t['route'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Vehicle','model'=>"transferPickups.{$ti}.vehicle_type",'val'=>$t['vehicle_type'] ?? '','type'=>'select','options'=>[['value'=>'Minicab','label'=>'Minicab'],['value'=>'Executive Car','label'=>'Executive Car'],['value'=>'Minibus','label'=>'Minibus'],['value'=>'Coach','label'=>'Coach'],['value'=>'Limo','label'=>'Limousine'],['value'=>'Other','label'=>'Other']],'locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Supplier','model'=>"transferPickups.{$ti}.supplier",'val'=>$t['supplier'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Cost (£)','model'=>"transferPickups.{$ti}.actual_cost",'val'=>$t['actual_cost'] !== '' && $t['actual_cost'] !== null ? '£'.number_format((float)$t['actual_cost'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Selling (£)','model'=>"transferPickups.{$ti}.selling_price",'val'=>$t['selling_price'] !== '' && $t['selling_price'] !== null ? '£'.number_format((float)$t['selling_price'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Status','model'=>"transferPickups.{$ti}.status",'val'=>ucfirst($t['status'] ?? 'confirmed'),'type'=>'select','options'=>[['value'=>'confirmed','label'=>'Confirmed'],['value'=>'pending','label'=>'Pending'],['value'=>'cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Notes','model'=>"transferPickups.{$ti}.notes",'val'=>$t['notes'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                </div>
+              </div>
+            </div>
+          @endforeach
+          @if($canEditFlightHotel)
+            <button type="button" wire:click="addPickup" class="btn btn-sm d-flex align-items-center gap-1 mb-3" style="background:rgba(51,46,158,.05);color:#332E9E;border:1.5px dashed rgba(51,46,158,.18);border-radius:8px;padding:5px 14px;font-size:.7rem;font-weight:600;"><i class="ph ph-plus-circle"></i> Add Pickup</button>
+          @endif
         @endif
 
-        {{-- Passengers --}}
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="card-title mb-0 small">Passengers ({{ $booking->passengers->count() }})</h6>
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-label-primary">Adults: {{ $booking->passengers->where('passenger_type','adult')->count() }}</span>
-                        <span class="badge bg-label-info">Youth: {{ $booking->passengers->where('passenger_type','youth')->count() }}</span>
-                        <span class="badge bg-label-warning">Child: {{ $booking->passengers->where('passenger_type','child')->count() }}</span>
-                        <span class="badge bg-label-secondary">Infant: {{ $booking->passengers->where('passenger_type','infant')->count() }}</span>
-                    </div>
+        {{-- Dropoffs --}}
+        @if(!empty($transferDropoffs))
+          <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#D83F87;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><i class="ph ph-arrow-down-right"></i> Dropoffs</div>
+          @foreach($transferDropoffs as $ti => $t)
+            <div wire:key="bv-dropoff-{{ $ti }}" class="mb-2" style="background:rgba(216,63,135,.02);border-radius:10px;border:1px solid rgba(216,63,135,.10);overflow:hidden;">
+              <div style="padding:7px 12px;background:rgba(216,63,135,.04);border-bottom:1px solid rgba(216,63,135,.06);display:flex;align-items:center;justify-content:space-between;">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="ph ph-map-pin" style="color:#D83F87;font-size:.8rem;"></i>
+                  <span style="font-size:.72rem;font-weight:700;color:#D83F87;">{{ $t['location'] ?: 'Dropoff '.($ti+1) }}</span>
+                  @if(!empty($t['status']))<span style="font-size:.58rem;font-weight:700;color:{{ $statusColors[$t['status']] ?? '#64748B' }};background:{{ $statusColors[$t['status']].'15' ?? 'rgba(148,163,184,.08)' }};padding:1px 7px;border-radius:10px;text-transform:capitalize;">{{ $t['status'] }}</span>@endif
                 </div>
-                <div class="card-body py-2">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered small align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th><th>Type</th><th>Name</th><th>DOB</th><th>Passport</th><th>Iss. Country</th><th>Nationality</th><th>NIC</th><th>Status</th><th>Ticket #</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($booking->passengers as $i => $pax)
-                                    <tr>
-                                        <td>{{ $i + 1 }}</td>
-                                        <td><span class="badge bg-secondary">{{ $pax->type_label }}</span></td>
-                                        <td>{{ $pax->display_name }}</td>
-                                        <td>{{ $pax->date_of_birth?->format('d/m/Y') }}</td>
-                                        <td>{{ $pax->passport_number }}</td>
-                                        <td>{{ $pax->passport_issuing_country }}</td>
-                                        <td>{{ $pax->nationality }}</td>
-                                        <td>{{ $pax->national_id_number }}</td>
-                                        <td>{{ $pax->passenger_status_label }}</td>
-                                        <td>{{ $pax->ticket_number }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                @if($canEditFlightHotel)<button type="button" wire:click="removeDropoff({{ $ti }})" style="background:rgba(220,38,38,.07);color:#DC2626;border:none;border-radius:5px;font-size:.63rem;padding:2px 7px;cursor:pointer;">Remove</button>@endif
+              </div>
+              <div class="p-2">
+                <div class="row g-2 mb-1">
+                  <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Location','model'=>"transferDropoffs.{$ti}.location",'val'=>$t['location'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Date & Time','model'=>"transferDropoffs.{$ti}.date_time",'val'=>$t['date_time'] ? \Carbon\Carbon::parse($t['date_time'])->format('d M Y H:i') : '','type'=>'datetime-local','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Flight #','model'=>"transferDropoffs.{$ti}.flight_number",'val'=>$t['flight_number'] ?? '','locked'=>!$canEditFlightHotel])</div>
                 </div>
+                <div class="row g-2 mb-1">
+                  <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Route','model'=>"transferDropoffs.{$ti}.route",'val'=>$t['route'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Vehicle','model'=>"transferDropoffs.{$ti}.vehicle_type",'val'=>$t['vehicle_type'] ?? '','type'=>'select','options'=>[['value'=>'Minicab','label'=>'Minicab'],['value'=>'Executive Car','label'=>'Executive Car'],['value'=>'Minibus','label'=>'Minibus'],['value'=>'Coach','label'=>'Coach'],['value'=>'Limo','label'=>'Limousine'],['value'=>'Other','label'=>'Other']],'locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Supplier','model'=>"transferDropoffs.{$ti}.supplier",'val'=>$t['supplier'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Cost (£)','model'=>"transferDropoffs.{$ti}.actual_cost",'val'=>$t['actual_cost'] !== '' && $t['actual_cost'] !== null ? '£'.number_format((float)$t['actual_cost'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Selling (£)','model'=>"transferDropoffs.{$ti}.selling_price",'val'=>$t['selling_price'] !== '' && $t['selling_price'] !== null ? '£'.number_format((float)$t['selling_price'],2) : '','type'=>'cost','locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Status','model'=>"transferDropoffs.{$ti}.status",'val'=>ucfirst($t['status'] ?? 'confirmed'),'type'=>'select','options'=>[['value'=>'confirmed','label'=>'Confirmed'],['value'=>'pending','label'=>'Pending'],['value'=>'cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel])</div>
+                  <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Notes','model'=>"transferDropoffs.{$ti}.notes",'val'=>$t['notes'] ?? '','locked'=>!$canEditFlightHotel])</div>
+                </div>
+              </div>
             </div>
-        </div>
+          @endforeach
+          @if($canEditFlightHotel)
+            <button type="button" wire:click="addDropoff" class="btn btn-sm d-flex align-items-center gap-1" style="background:rgba(216,63,135,.05);color:#D83F87;border:1.5px dashed rgba(216,63,135,.2);border-radius:8px;padding:5px 14px;font-size:.7rem;font-weight:600;"><i class="ph ph-plus-circle"></i> Add Dropoff</button>
+          @endif
+        @endif
 
-        {{-- Payment + Documents + Comments --}}
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Payment</h6></div>
-                <div class="card-body py-2">
-                    @if($booking->payment)
-                        <div class="small"><span class="text-muted">Type:</span> {{ ucfirst(str_replace('_',' ',$booking->payment->payment_type)) }}</div>
-                        <div class="small"><span class="text-muted">Mode:</span> {{ str_replace('_',' ',ucfirst($booking->payment->payment_mode)) }}</div>
-                        <div class="small"><span class="text-muted">Total:</span> {{ number_format($booking->payment->total_amount,2) }}</div>
-                        <div class="small"><span class="text-muted">Paid:</span> {{ number_format($booking->payment->amount_paid,2) }}</div>
-                        <div class="small"><span class="text-muted">Balance:</span> <span class="{{ $booking->payment->balance_remaining > 0 ? 'text-danger fw-bold' : '' }}">{{ number_format($booking->payment->balance_remaining,2) }}</span></div>
-                        @if($booking->payment->due_date)<div class="small"><span class="text-muted">Due:</span> {{ $booking->payment->due_date->format('d M Y') }}</div>@endif
-                        @if($booking->payment->is_deposit_nonrefundable)<div class="small text-danger">Non-refundable deposit</div>@endif
-                    @else <p class="text-muted small mb-0">No payment recorded</p> @endif
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Documents</h6></div>
-                <div class="card-body py-2">
-                    @if($booking->documents->isNotEmpty())
-                        @foreach($booking->documents as $doc)
-                            <div class="d-flex justify-content-between align-items-center mb-2 small">
-                                <span><i class="bx bx-file me-1"></i>{{ $doc->file_name }}</span>
-                                <a href="{{ Storage::url($doc->file_path) }}" target="_blank" class="btn btn-xs btn-outline-primary"><i class="bx bx-download"></i></a>
-                            </div>
-                        @endforeach
-                    @else <p class="text-muted small mb-0">None</p> @endif
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-header py-2"><h6 class="card-title mb-0 small">Comments</h6></div>
-                <div class="card-body py-2">
-                    @if($booking->comments->isNotEmpty())
-                        @foreach($booking->comments as $c)
-                            <div class="border-bottom mb-2 pb-2 small">
-                                <div class="fw-semibold">{{ $c->user?->name ?? 'System' }} <span class="text-muted">{{ $c->created_at->format('d M H:i') }}</span></div>
-                                <p class="mb-0">{{ $c->comment }}</p>
-                            </div>
-                        @endforeach
-                    @else <p class="text-muted small mb-0">No comments</p> @endif
-                </div>
-            </div>
-        </div>
-
-        {{-- Actions --}}
-        <div class="col-12">
-            <div class="d-flex justify-content-end gap-2">
-                <a href="{{ route('bookings.index') }}" class="btn btn-outline-secondary btn-sm">Back</a>
-                <a href="{{ route('bookings.edit', $booking) }}" class="btn btn-warning btn-sm"><i class="bx bx-edit"></i> Edit</a>
-            </div>
-        </div>
+        @if($canEditFlightHotel && empty($transferPickups) && empty($transferDropoffs))
+          <div class="d-flex gap-2">
+            <button type="button" wire:click="addPickup" class="btn btn-sm flex-grow-1" style="background:rgba(51,46,158,.05);color:#332E9E;border:1.5px dashed rgba(51,46,158,.2);border-radius:8px;padding:7px;font-size:.72rem;font-weight:600;"><i class="ph ph-arrow-up-right me-1"></i> Add Pickup</button>
+            <button type="button" wire:click="addDropoff" class="btn btn-sm flex-grow-1" style="background:rgba(216,63,135,.05);color:#D83F87;border:1.5px dashed rgba(216,63,135,.2);border-radius:8px;padding:7px;font-size:.72rem;font-weight:600;"><i class="ph ph-arrow-down-right me-1"></i> Add Dropoff</button>
+          </div>
+        @endif
+      </div>
     </div>
+    @endif
+
+    {{-- ACTIVITY LOG (left column, full-width) --}}
+    <div class="bv-section">
+      <div class="bv-section-hdr" style="background:linear-gradient(135deg,#332E9E,#4A45B5);border-radius:16px 16px 0 0;">
+        <div class="bv-icon" style="background:rgba(255,255,255,.15);"><i class="ph ph-clock-countdown" style="color:#fff;font-size:.9rem;"></i></div>
+        <h2 style="color:#fff;">Activity Log</h2>
+        <span class="ms-auto" style="font-size:.64rem;color:rgba(255,255,255,.45);">{{ count($activityLog) }} event{{ count($activityLog)!==1?'s':'' }}</span>
+      </div>
+      <div class="bv-section-body" style="max-height:460px;overflow-y:auto;padding:14px 16px 8px;">
+        @if(empty($activityLog))
+          <p style="color:#C4C9D4;font-size:.72rem;padding:4px 0;">No activity yet.</p>
+        @else
+          @foreach($activityLog as $entry)
+            @php
+              $c = $entry['color'] ?? $this->getActivityColorConfig($entry['action'] ?? '', $entry['type'] ?? 'info');
+              $isFullRow = !empty($c['full_row']);
+            @endphp
+            <div x-data="{ open: false, text: '' }" style="display:flex;gap:0;">
+              {{-- Rail column: avatar circle + connecting line --}}
+              <div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0;">
+                @if(!empty($entry['avatar_url']))
+                  <img src="{{ $entry['avatar_url'] }}" alt="{{ $entry['avatar_initials'] ?? '?' }}"
+                    style="width:{{ $isFullRow ? '30px' : '24px' }};height:{{ $isFullRow ? '30px' : '24px' }};border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid {{ $c['border'] }};box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">
+                @else
+                  <div style="width:{{ $isFullRow ? '30px' : '24px' }};height:{{ $isFullRow ? '30px' : '24px' }};border-radius:50%;background:{{ $c['border'] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:{{ $isFullRow ? '.63rem' : '.52rem' }};font-weight:800;color:#fff;box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">{{ $entry['avatar_initials'] ?? '?' }}</div>
+                @endif
+                @if(!$loop->last)
+                  <div style="width:2px;flex:1;min-height:10px;background:linear-gradient(to bottom,{{ $c['border'] }}28,rgba(51,46,158,.06));margin-top:3px;"></div>
+                @endif
+              </div>
+
+              {{-- Content --}}
+              <div style="flex:1;min-width:0;padding-left:10px;padding-bottom:{{ $loop->last ? '4px' : '18px' }};padding-top:{{ $isFullRow ? '1px' : '2px' }};">
+                {{-- Action line --}}
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.3;">
+                  @if($isFullRow)
+                    <span style="font-size:.73rem;font-weight:800;color:{{ $c['border'] }};">{{ $entry['action'] }}</span>
+                  @else
+                    <span style="font-size:.69rem;font-weight:700;color:#1E293B;">{{ $entry['agent'] }}</span>
+                    <span style="font-size:.68rem;font-weight:400;color:#64748B;">{{ $entry['action'] }}</span>
+                  @endif
+                  @if(!empty($c['label']) && $c['label'] !== 'Edit' && $c['label'] !== '')
+                    <span style="font-size:.54rem;font-weight:700;color:{{ $c['border'] }};background:{{ $c['border'] }}18;border:1px solid {{ $c['border'] }}44;padding:1px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;">{{ $c['label'] }}</span>
+                  @endif
+                </div>
+                {{-- Agent + timestamp --}}
+                @if($isFullRow)
+                  <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+                    <span style="font-size:.65rem;font-weight:600;color:#475569;">{{ $entry['agent'] }}</span>
+                    <span style="font-size:.6rem;color:#CBD5E1;">·</span>
+                    <span style="font-size:.62rem;color:#94A3B8;">{{ $entry['timestamp'] }}</span>
+                  </div>
+                @else
+                  <div style="font-size:.6rem;color:#94A3B8;margin-top:1px;">{{ $entry['timestamp'] }}</div>
+                @endif
+                {{-- Detail --}}
+                @if(!empty($entry['detail']))
+                  <div style="font-size:.63rem;color:#64748B;margin-top:3px;font-style:italic;line-height:1.4;">{{ $entry['detail'] }}</div>
+                @endif
+                {{-- Comments --}}
+                @if(!empty($entry['is_json']))
+                  @foreach($entry['reasons'] ?? [] as $r)
+                    <div style="margin-top:7px;display:flex;gap:7px;align-items:flex-start;">
+                      @if(!empty($r['avatar_url']))
+                        <img src="{{ $r['avatar_url'] }}" alt="{{ $r['avatar_initials'] ?? '?' }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(51,46,158,.22);margin-top:1px;">
+                      @else
+                        <div style="width:20px;height:20px;border-radius:50%;background:#332E9E;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.46rem;font-weight:800;color:#fff;margin-top:1px;">{{ $r['avatar_initials'] ?? '?' }}</div>
+                      @endif
+                      <div style="flex:1;min-width:0;background:rgba(51,46,158,.04);border:1px solid rgba(51,46,158,.1);border-radius:8px;padding:5px 9px;">
+                        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
+                          @if($r['agent'])<span style="font-size:.62rem;font-weight:700;color:#332E9E;">{{ $r['agent'] }}</span>@endif
+                          @if($r['at'])<span style="font-size:.58rem;color:#94A3B8;">{{ $r['at'] }}</span>@endif
+                        </div>
+                        <div style="font-size:.65rem;color:#374151;line-height:1.5;">{{ $r['text'] }}</div>
+                      </div>
+                    </div>
+                  @endforeach
+                  <div style="margin-top:6px;">
+                    <button type="button" @click="open = !open" style="font-size:.6rem;color:#94A3B8;background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;gap:3px;line-height:1;">
+                      <i class="ph ph-chat-circle-plus" style="font-size:.7rem;"></i>
+                      <span x-text="open ? 'Cancel' : 'Add Comment'"></span>
+                    </button>
+                    <div x-show="open" x-transition style="display:flex;flex-direction:column;gap:5px;margin-top:6px;" x-cloak>
+                      <textarea x-model="text" placeholder="Add a comment..."
+                        @keydown.ctrl.enter="if(text.trim()){ $wire.saveLogEntryComment({{ $entry['json_index'] }}, text); open=false; text=''; }"
+                        style="width:100%;font-size:.7rem;border:1px solid rgba(51,46,158,.2);border-radius:8px;padding:7px 9px;outline:none;background:#fff;resize:vertical;min-height:58px;line-height:1.5;" rows="3"></textarea>
+                      <div style="display:flex;justify-content:flex-end;gap:6px;">
+                        <button type="button" @click="open=false;text=''" style="background:none;color:#94A3B8;border:1px solid rgba(148,163,184,.3);border-radius:7px;padding:3px 11px;font-size:.64rem;font-weight:600;cursor:pointer;">Cancel</button>
+                        <button type="button"
+                          @click="if(text.trim()){ $wire.saveLogEntryComment({{ $entry['json_index'] }}, text); open=false; text=''; }"
+                          style="background:#332E9E;color:#fff;border:none;border-radius:7px;padding:3px 11px;font-size:.64rem;font-weight:600;cursor:pointer;">Save</button>
+                      </div>
+                    </div>
+                  </div>
+                @endif
+              </div>
+            </div>
+          @endforeach
+        @endif
+      </div>
+      @if(!$isLocked || $isPrivileged)
+      <div class="d-flex gap-1 align-items-center px-4 py-2" style="border-top:1px solid rgba(51,46,158,.06);background:#FAFBFF;">
+        <input type="text" wire:model="newComment" placeholder="Add a comment..." class="form-control form-control-sm" style="border-radius:20px;font-size:.7rem;border-color:rgba(51,46,158,.12);" wire:keydown.enter="addComment">
+        <button type="button" wire:click="addComment" class="btn btn-sm flex-shrink-0" style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:.68rem;font-weight:600;">Add Comment</button>
+      </div>
+      @endif
+    </div>
+
+  </div>{{-- end left col --}}
+
+  {{-- RIGHT COLUMN --}}
+  <div class="col-lg-4">
+
+    @if($isLocked && !$isPrivileged && $lockReason)
+      <div class="bv-section mb-3" style="border:1.5px solid {{ $lockReason['color'] }}33;">
+        <div class="bv-section-hdr" style="background:{{ $lockReason['color'] }}12;">
+          <div class="bv-icon" style="background:{{ $lockReason['color'] }}18;"><i class="ph {{ $lockReason['icon'] }}" style="color:{{ $lockReason['color'] }};font-size:.9rem;"></i></div>
+          <h2 style="color:{{ $lockReason['color'] }};">{{ $lockReason['title'] }}</h2>
+        </div>
+        <div class="bv-section-body">
+          <div style="font-size:.68rem;color:#64748B;line-height:1.5;">{{ $lockReason['body'] }}</div>
+          @if($status === 'ticket_in_process' || in_array($status, ['issued_payment_awaiting','issued_payment_plan']))
+            <div style="font-size:.64rem;color:#16A34A;margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> Payment section and e-ticket numbers remain editable.</div>
+          @elseif($status === 'payment_charge_request')
+            <div style="font-size:.64rem;color:#16A34A;margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> Payment structure remains editable.</div>
+          @elseif($status === 'issued')
+            <div style="font-size:.64rem;color:#16A34A;margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> E-ticket numbers remain editable.</div>
+          @endif
+        </div>
+      </div>
+    @endif
+
+    {{-- PAYMENT STRUCTURE --}}
+    <div class="bv-section mb-3" style="{{ !$canEditPayment ? 'opacity:.5;pointer-events:none;' : '' }}">
+      <div class="bv-section-hdr">
+        <div class="bv-icon" style="background:rgba(14,165,233,.08);"><i class="ph ph-credit-card" style="color:#0EA5E9;font-size:.9rem;"></i></div>
+        <h2>Payment Structure</h2>
+        @if($selected_payment_method)
+          @php $planLabel = ['full'=>'Full Payment','awaiting'=>'Payment Awaiting','payment_plan'=>'Payment Plan','dnpl'=>'DNPL'][$selected_payment_method] ?? ''; @endphp
+          <span style="font-size:.64rem;font-weight:700;color:#fff;background:{{ $planLabel ? '#332E9E' : '#64748B' }};border-radius:8px;padding:3px 10px;margin-left:auto;">{{ $planLabel }}</span>
+        @endif
+      </div>
+      <div class="bv-section-body">
+        <x-styled-select modelName="selected_payment_method" placeholder="Choose plan..." :options="[
+          ['value'=>'full','label'=>'Full Payment'],
+          ['value'=>'awaiting','label'=>'Payment Awaiting'],
+          ['value'=>'payment_plan','label'=>'Payment Plan'],
+          ['value'=>'dnpl','label'=>'DNPL'],
+        ]" live="true" />
+        @if($selected_payment_method)
+          <div style="margin-top:14px;padding:14px 16px;background:linear-gradient(135deg,#F8FAFF,#EEF2FF);border-radius:12px;border:1px solid rgba(51,46,158,.10);">
+            <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#332E9E;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ph ph-calendar-blank"></i> Instalments</div>
+            @foreach($payment_instalments as $i => $inst)
+              <div wire:key="show-pay-inst-{{ $i }}" class="d-flex align-items-center gap-3 mb-2" style="background:#fff;border-radius:10px;padding:8px 12px;border:1px solid rgba(51,46,158,.08);">
+                <input type="checkbox" wire:model="instalment_paid.{{ $i }}" style="width:16px;height:16px;accent-color:#16A34A;cursor:pointer;flex-shrink:0;">
+                <span style="width:22px;height:22px;border-radius:50%;background:rgba(51,46,158,.08);display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $i + 1 }}</span>
+                @if($inst['editing'])
+                  <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:.68rem;color:#64748B;">&pound;</span>
+                    <input type="number" wire:model="payment_instalments.{{ $i }}.amount" step="0.01" min="0" placeholder="0.00" style="width:80px;" class="bv-input-inline">
+                    <x-date-picker :modelName="'payment_instalments.'.$i.'.date'" :compact="true" />
+                    <button type="button" wire:click="toggleEditInstalment({{ $i }})" class="bv-action" style="background:#332E9E;color:#fff;border-color:transparent;padding:3px 10px;"><i class="ph ph-check"></i></button>
+                  </div>
+                @else
+                  <span class="fw-bold" style="color:#1E293B;font-size:.78rem;">&pound;{{ $inst['amount'] ? number_format((float)$inst['amount'],2) : '0.00' }}</span>
+                  <span style="color:#94A3B8;font-size:.66rem;">{{ $inst['date'] ? \Carbon\Carbon::parse($inst['date'])->format('d M Y') : 'No date' }}</span>
+                  <button type="button" wire:click="toggleEditInstalment({{ $i }})" class="bv-edit-pencil" style="margin-left:auto;"><i class="ph ph-pencil-simple"></i></button>
+                @endif
+              </div>
+            @endforeach
+            <div class="d-flex gap-2 mt-3">
+              <button type="button" wire:click="addPaymentInstalment" style="border:1.5px dashed rgba(51,46,158,.25);background:transparent;color:#332E9E;border-radius:10px;padding:6px 16px;font-size:.68rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><i class="ph ph-plus-circle"></i> Add Instalment</button>
+              @if(count($payment_instalments) > 1)
+                <button type="button" wire:click="removePaymentInstalment" style="border:1.5px solid rgba(220,38,38,.15);background:transparent;color:#DC2626;border-radius:10px;padding:6px 12px;font-size:.68rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><i class="ph ph-minus-circle"></i> Remove</button>
+              @endif
+            </div>
+          </div>
+        @endif
+      </div>
+    </div>
+
+    {{-- COST & MARGINS --}}
+    <div class="bv-section" style="position:sticky;top:20px;">
+      <div style="border-radius:16px 16px 0 0;background:#fff;border:1px solid rgba(51,46,158,.08);">
+        <div class="bv-section-hdr"><div class="bv-icon" style="background:rgba(255,107,53,.08);"><i class="ph ph-currency-circle-dollar" style="color:#FF6B35;font-size:.85rem;"></i></div><h2>Cost &amp; Margins</h2></div>
+        @php
+          $bvTypeOrder  = ['adult','gbe','child','infant'];
+          $bvTypeLabels = ['adult'=>'Adult','gbe'=>'Youth','child'=>'Child','infant'=>'Infant'];
+          $bvTypeColors = ['adult'=>'#332E9E','gbe'=>'#D83F87','child'=>'#D97706','infant'=>'#16A34A'];
+          $bvTypeBg     = ['adult'=>'rgba(51,46,158,.09)','gbe'=>'rgba(216,63,135,.09)','child'=>'rgba(217,119,6,.09)','infant'=>'rgba(22,163,74,.09)'];
+          $bvTypeGroups = [];
+          foreach ($this->passengers as $pi => $pax) {
+              $t = $pax['type'] ?? 'adult';
+              if (!isset($bvTypeGroups[$t])) $bvTypeGroups[$t] = ['count'=>0,'cost'=>0,'sold'=>0];
+              $bvTypeGroups[$t]['count']++;
+              foreach ($flightSegments as $seg) {
+                  $pc = $seg['passenger_costs'][$pi] ?? [];
+                  $bvTypeGroups[$t]['cost'] += (float)($pc['cost'] ?? 0);
+                  $bvTypeGroups[$t]['sold'] += (float)($pc['sold'] ?? 0);
+              }
+          }
+          $flightCost = array_sum(array_column($bvTypeGroups, 'cost'));
+          $flightSold = array_sum(array_column($bvTypeGroups, 'sold'));
+          $hotelCost  = collect($hotels)->sum(fn($h)=>(float)($h['actual_cost']??0));
+          $hotelSold  = collect($hotels)->sum(fn($h)=>(float)($h['selling_price']??0));
+          $visaCost   = collect($visas)->sum(fn($v)=>(float)($v['actual_cost']??0));
+          $visaSold   = collect($visas)->sum(fn($v)=>(float)($v['selling_price']??0));
+          $excCost    = (float)($excursion_actual_cost ?: 0);
+          $excSold    = (float)($excursion_selling_price ?: 0);
+          $ccAmt      = (float)($cc_charges ?: 0);
+          $ccRate     = $booking->payment?->cc_charge_rate ?? null;
+        @endphp
+        <div style="border-top:1px solid rgba(51,46,158,.06);">
+
+          {{-- ── FLIGHT section (aggregated by type) ── --}}
+          <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(51,46,158,.03);border-bottom:1px solid rgba(51,46,158,.07);">
+            <i class="ph ph-airplane-tilt" style="font-size:.72rem;color:#332E9E;"></i>
+            <span style="font-size:.57rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#332E9E;">Flight</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;padding:4px 20px;background:rgba(248,250,255,.9);border-bottom:1px solid rgba(51,46,158,.05);">
+            <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;">Type</span>
+            <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:center;">Pax</span>
+            <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:right;">Cost</span>
+            <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:right;">Sold</span>
+          </div>
+          @foreach ($bvTypeOrder as $t)
+            @php
+              $tData  = $bvTypeGroups[$t] ?? ['count'=>0,'cost'=>0,'sold'=>0];
+              $tColor = $bvTypeColors[$t];
+              $tMgn   = $tData['sold'] - $tData['cost'];
+            @endphp
+            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(51,46,158,.05);border-left:3px solid {{ $tData['count'] > 0 ? $tColor : 'transparent' }};{{ $tData['count'] == 0 ? 'opacity:.35;' : '' }}">
+              <div>
+                <span style="font-size:.64rem;font-weight:700;color:{{ $tColor }};">{{ $bvTypeLabels[$t] }}</span>
+                @if($tData['count'] > 0 && $tMgn != 0)
+                  <span style="font-size:.54rem;font-weight:700;color:{{ $tMgn >= 0 ? '#16A34A' : '#DC2626' }};display:block;">{{ $tMgn >= 0 ? '+' : '' }}&pound;{{ number_format($tMgn,2) }}</span>
+                @endif
+              </div>
+              <span style="font-size:.64rem;font-weight:700;color:{{ $tData['count'] > 0 ? $tColor : '#94A3B8' }};text-align:center;">{{ $tData['count'] > 0 ? $tData['count'] : '–' }}</span>
+              <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">{{ $tData['count'] > 0 ? '£'.number_format($tData['cost'],2) : '—' }}</span>
+              <span style="font-size:.68rem;font-weight:700;color:#111827;text-align:right;">{{ $tData['count'] > 0 ? '£'.number_format($tData['sold'],2) : '—' }}</span>
+            </div>
+          @endforeach
+          @if($this->safiTax > 0)
+            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(51,46,158,.03);border-bottom:1px solid rgba(51,46,158,.06);border-left:3px solid #332E9E;">
+              <span style="font-size:.62rem;font-weight:700;color:#332E9E;">SAFI</span>
+              <span style="font-size:.62rem;font-weight:700;color:#332E9E;text-align:center;">{{ $this->nonInfantPassengerCount }}</span>
+              <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">&pound;{{ number_format($this->safiTax,2) }}</span>
+              <span style="font-size:.68rem;font-weight:600;color:#94A3B8;text-align:right;">—</span>
+            </div>
+          @endif
+          @if($this->atolTax > 0)
+            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(255,107,53,.04);border-bottom:1px solid rgba(255,107,53,.10);border-left:3px solid #FF6B35;">
+              <span style="font-size:.62rem;font-weight:700;color:#FF6B35;">ATOL</span>
+              <span style="font-size:.62rem;font-weight:700;color:#FF6B35;text-align:center;">{{ $this->nonInfantPassengerCount }}</span>
+              <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">&pound;{{ number_format($this->atolTax,2) }}</span>
+              <span style="font-size:.68rem;font-weight:600;color:#94A3B8;text-align:right;">—</span>
+            </div>
+          @endif
+          <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(51,46,158,.04);border-bottom:1px solid rgba(51,46,158,.08);">
+            <span style="font-size:.6rem;font-weight:800;color:#1E293B;">Total</span>
+            <span></span>
+            <span style="font-size:.7rem;font-weight:800;color:#1E293B;text-align:right;">&pound;{{ number_format($flightCost + $this->atolSafiTax,2) }}</span>
+            <span style="font-size:.7rem;font-weight:800;color:#1E293B;text-align:right;">&pound;{{ number_format($flightSold,2) }}</span>
+          </div>
+
+          {{-- ── HOTEL section ── --}}
+          @if(count($hotels) > 0)
+            <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(124,58,237,.04);border-bottom:1px solid rgba(124,58,237,.08);border-top:1px solid rgba(124,58,237,.08);">
+              <i class="ph ph-buildings" style="font-size:.72rem;color:#7C3AED;"></i>
+              <span style="font-size:.57rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#7C3AED;">Hotel</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;padding:4px 20px;background:rgba(124,58,237,.06);border-bottom:1px solid rgba(124,58,237,.08);">
+              <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;">Hotel</span>
+              <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:center;">Rms</span>
+              <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:right;">Cost</span>
+              <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:right;">Sold</span>
+            </div>
+            @foreach($hotels as $hi => $h)
+              @php $hCost = (float)($h['actual_cost']??0); $hSold = (float)($h['selling_price']??0); $hMgn = $hSold - $hCost; $hRooms = (int)($h['number_of_rooms']??1); @endphp
+              <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(124,58,237,.05);border-left:3px solid #7C3AED;">
+                <div>
+                  <span style="font-size:.66rem;font-weight:600;color:#1E293B;display:block;">{{ $h['hotel_name']?:'Hotel '.($hi+1) }}</span>
+                  @if($hMgn != 0)<span style="font-size:.54rem;font-weight:700;color:{{ $hMgn >= 0 ? '#16A34A' : '#DC2626' }};">{{ $hMgn >= 0 ? '+' : '' }}£{{ number_format($hMgn,2) }}</span>@endif
+                </div>
+                <span style="font-size:.64rem;font-weight:700;color:#7C3AED;text-align:center;">{{ $hRooms }}</span>
+                <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">£{{ number_format($hCost,2) }}</span>
+                <span style="font-size:.68rem;font-weight:700;color:#111827;text-align:right;">£{{ number_format($hSold,2) }}</span>
+              </div>
+            @endforeach
+            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(124,58,237,.04);border-bottom:1px solid rgba(124,58,237,.08);">
+              <span style="font-size:.6rem;font-weight:800;color:#1E293B;">Total</span>
+              <span></span>
+              <span style="font-size:.7rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($hotelCost,2) }}</span>
+              <span style="font-size:.7rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($hotelSold,2) }}</span>
+            </div>
+          @endif
+
+          {{-- ── VISA section ── --}}
+          @if(count($visas) > 0)
+            <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(22,163,74,.04);border-bottom:1px solid rgba(22,163,74,.08);border-top:1px solid rgba(22,163,74,.08);">
+              <i class="ph ph-identification-card" style="font-size:.72rem;color:#16A34A;"></i>
+              <span style="font-size:.57rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#16A34A;">Visa</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 76px 76px;padding:4px 20px;background:rgba(22,163,74,.06);border-bottom:1px solid rgba(22,163,74,.08);">
+              <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;">Passenger</span>
+              <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:right;">Cost</span>
+              <span style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#CBD5E1;text-align:right;">Sold</span>
+            </div>
+            @foreach($visas as $vi => $v)
+              @php $vCost = (float)($v['actual_cost']??0); $vSold = (float)($v['selling_price']??0); @endphp
+              <div style="display:grid;grid-template-columns:1fr 76px 76px;align-items:center;padding:6px 20px;border-bottom:1px solid rgba(22,163,74,.05);border-left:3px solid #16A34A;">
+                <span style="font-size:.65rem;font-weight:600;color:#1E293B;">{{ $v['passenger_name'] ?: 'Visa '.($vi+1) }}</span>
+                <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">£{{ number_format($vCost,2) }}</span>
+                <span style="font-size:.68rem;font-weight:700;color:#111827;text-align:right;">£{{ number_format($vSold,2) }}</span>
+              </div>
+            @endforeach
+            @if(count($visas) > 1)
+              <div style="display:grid;grid-template-columns:1fr 76px 76px;align-items:center;padding:6px 20px;background:rgba(22,163,74,.04);border-bottom:1px solid rgba(22,163,74,.08);">
+                <span style="font-size:.6rem;font-weight:800;color:#1E293B;">Total</span>
+                <span style="font-size:.7rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($visaCost,2) }}</span>
+                <span style="font-size:.7rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($visaSold,2) }}</span>
+              </div>
+            @endif
+          @endif
+
+          {{-- ── EXCURSION section ── --}}
+          @if($excCost > 0 || $excSold > 0)
+            <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(255,107,53,.04);border-bottom:1px solid rgba(255,107,53,.08);border-top:1px solid rgba(255,107,53,.08);">
+              <i class="ph ph-binoculars" style="font-size:.72rem;color:#FF6B35;"></i>
+              <span style="font-size:.57rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#FF6B35;">Excursion</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(255,107,53,.06);border-left:3px solid #FF6B35;">
+              <span style="font-size:.66rem;font-weight:600;color:#1E293B;">{{ $excursion_name ?: 'Excursion' }}</span>
+              <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">£{{ number_format($excCost,2) }}</span>
+              <span style="font-size:.68rem;font-weight:700;color:#111827;text-align:right;">£{{ number_format($excSold,2) }}</span>
+            </div>
+          @endif
+
+          {{-- ── Grand Totals + CC + Dual Margin ── --}}
+          @php
+            $totCost  = $flightCost + $this->atolSafiTax + $hotelCost + $visaCost + $excCost;
+            $totSold  = $flightSold + $hotelSold + $visaSold + $excSold;
+            $grossMgn = $totSold - $totCost;
+            $netMgn   = $grossMgn - $ccAmt;
+            $netPct   = $totSold > 0 ? round(($netMgn / $totSold) * 100, 1) : 0;
+          @endphp
+          <div style="padding:16px 20px;border-top:2px solid rgba(51,46,158,.08);">
+
+            {{-- Payment Mode display --}}
+            @if($payment_mode || $payment_mode_2)
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                @if($payment_mode)
+                  <span style="font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(51,46,158,.07);color:#332E9E;border:1px solid rgba(51,46,158,.14);">{{ ucfirst(str_replace('_',' ',$payment_mode)) }}</span>
+                @endif
+                @if($payment_mode_2)
+                  <span style="font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(51,46,158,.07);color:#332E9E;border:1px solid rgba(51,46,158,.14);">{{ ucfirst(str_replace('_',' ',$payment_mode_2)) }}</span>
+                @endif
+              </div>
+            @endif
+
+            <div style="background:rgba(51,46,158,.03);border-radius:10px;padding:10px 14px;margin-bottom:10px;border:1px solid rgba(51,46,158,.07);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <span style="font-size:.62rem;font-weight:700;color:#64748B;">Grand Total Cost</span>
+                <span style="font-size:.76rem;font-weight:800;color:#1E293B;">£{{ number_format($totCost,2) }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:.62rem;font-weight:700;color:#64748B;">Grand Total Sold</span>
+                <span style="font-size:.76rem;font-weight:800;color:#1E293B;">£{{ number_format($totSold,2) }}</span>
+              </div>
+            </div>
+
+            {{-- CC Charges --}}
+            @if($ccAmt > 0)
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);margin-bottom:10px;">
+                <div>
+                  <span style="font-size:.62rem;font-weight:700;color:#DC2626;">CC Charges</span>
+                  @if($ccRate)
+                    <span style="font-size:.56rem;color:#94A3B8;margin-left:4px;">({{ $ccRate }}%)</span>
+                  @endif
+                </div>
+                <span style="font-size:.72rem;font-weight:800;color:#DC2626;">–&pound;{{ number_format($ccAmt,2) }}</span>
+              </div>
+            @endif
+
+            {{-- Gross margin (before CC) --}}
+            @if($ccAmt > 0)
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;background:rgba(51,46,158,.04);border:1px solid rgba(51,46,158,.08);margin-bottom:8px;">
+                <span style="font-size:.6rem;font-weight:700;color:#64748B;">Margin (excl. CC)</span>
+                <span style="font-size:.7rem;font-weight:700;color:{{ $grossMgn >= 0 ? '#16A34A' : '#DC2626' }};">&pound;{{ number_format($grossMgn,2) }}</span>
+              </div>
+            @endif
+
+            {{-- Net Margin box --}}
+            <div style="padding:14px;border-radius:12px;{{ $netMgn >= 0 ? 'background:linear-gradient(135deg,rgba(22,163,74,.12),rgba(22,163,74,.05));border:2px solid rgba(22,163,74,.22);' : 'background:linear-gradient(135deg,rgba(220,38,38,.12),rgba(220,38,38,.05));border:2px solid rgba(220,38,38,.22);' }}">
+              <div style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $netMgn >= 0 ? '#15803D' : '#DC2626' }};margin-bottom:2px;">{{ $ccAmt > 0 ? 'Net Margin (incl. CC)' : 'Total Margin' }}</div>
+              <div style="font-size:1.6rem;font-weight:800;color:{{ $netMgn >= 0 ? '#16A34A' : '#DC2626' }};line-height:1;letter-spacing:-.02em;">&pound;{{ number_format($netMgn,2) }}</div>
+              <div style="font-size:.64rem;font-weight:700;color:{{ $netMgn >= 0 ? '#16A34A' : '#DC2626' }};margin-top:3px;opacity:.8;">{{ $netPct }}% margin</div>
+            </div>
+
+            {{-- Balance Due --}}
+            @php $bal = $this->runningBalance; @endphp
+            <div style="margin-top:10px;padding:12px;border-radius:12px;{{ $bal <= 0 ? 'background:linear-gradient(135deg,rgba(22,163,74,.07),rgba(22,163,74,.02));border:1.5px solid rgba(22,163,74,.14);' : 'background:linear-gradient(135deg,rgba(220,38,38,.07),rgba(220,38,38,.02));border:1.5px solid rgba(220,38,38,.14);' }}">
+              <div style="font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $bal <= 0 ? '#15803D' : '#DC2626' }};margin-bottom:2px;">{{ $bal <= 0 ? 'Fully Settled' : 'Balance Due' }}</div>
+              <div style="font-size:1.1rem;font-weight:800;color:{{ $bal <= 0 ? '#16A34A' : '#DC2626' }};line-height:1;letter-spacing:-.01em;">&pound;{{ number_format($bal <= 0 ? 0 : $bal, 2) }}</div>
+            </div>
+          </div>
+        </div>
+
+        {{-- PAYMENT HISTORY --}}
+        <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;">Payment History</span>
+          </div>
+          @if($booking->paymentHistory?->isNotEmpty())
+            @php $paymentNum = 0; @endphp
+            @foreach($booking->paymentHistory as $ph)
+              @php
+                $paymentNum++;
+                $status = $ph->status ?? 'pending';
+                $statusLabel = ['pending'=>'Pending Approval','approved'=>'Approved'][$status] ?? 'Pending Approval';
+              @endphp
+              <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1" style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);">
+                <span style="width:20px;height:20px;border-radius:50%;background:rgba(51,46,158,.06);display:inline-flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $paymentNum }}</span>
+                <div class="flex-grow-1">
+                  <span class="fw-semibold" style="font-size:.7rem;color:#1E293B;">&pound;{{ number_format($ph->amount,2) }}</span>
+                  <span class="d-block" style="font-size:.6rem;color:#64748B;">{{ ucfirst(str_replace('_',' ',$ph->payment_method ?? 'N/A')) }} · {{ \Carbon\Carbon::parse($ph->payment_date)->format('d M Y') }}</span>
+                </div>
+                <span style="font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:10px;{{ $status==='approved' ? 'color:#16A34A;background:rgba(22,163,74,.08);' : 'color:#F59E0B;background:rgba(245,158,11,.08);' }}">{{ $statusLabel }}</span>
+
+              </div>
+            @endforeach
+          @else
+            <p style="color:#C4C9D4;font-size:.7rem;">No payments recorded yet.</p>
+          @endif
+
+          @if($canRequestChargeButton)
+            <button type="button" wire:click="openChargeModal" class="w-100 mt-2" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:10px;padding:8px;font-size:.68rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i class="ph ph-plus-circle"></i> Request Payment Charge
+            </button>
+          @endif
+        </div>
+
+        {{-- DOCUMENTS --}}
+        <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
+          <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:6px;">Documents</div>
+          @if($booking->documents?->isNotEmpty())
+            @foreach($booking->documents as $doc)
+              <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:6px;font-size:.66rem;">
+                <span><i class="ph ph-file me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }}</span>
+                <a href="{{ Storage::url($doc->file_path) }}" target="_blank" style="color:#7C3AED;font-size:.9rem;"><i class="ph ph-download-simple"></i></a>
+              </div>
+            @endforeach
+          @else
+            <p style="color:#C4C9D4;font-size:.68rem;margin-bottom:6px;">No documents uploaded yet.</p>
+          @endif
+
+          {{-- Upload new documents --}}
+          @if(!$isLocked || $isPrivileged)
+          @foreach($newDocuments as $di => $nd)
+            <div class="d-flex gap-2 align-items-center mb-2">
+              <input type="file" wire:model="newDocuments.{{ $di }}" class="form-control form-control-sm" style="font-size:.68rem;border-radius:7px;flex:1;">
+              <select wire:model="newDocumentTypes.{{ $di }}" class="form-control form-control-sm" style="font-size:.68rem;border-radius:7px;width:110px;flex-shrink:0;">
+                <option value="">Type</option>
+                <option value="passport">Passport</option>
+                <option value="visa">Visa</option>
+                <option value="itinerary">Itinerary</option>
+                <option value="invoice">Invoice</option>
+                <option value="other">Other</option>
+              </select>
+              <button type="button" wire:click="removeDocument({{ $di }})" style="background:rgba(220,38,38,.08);color:#DC2626;border:none;border-radius:6px;font-size:.7rem;padding:3px 8px;cursor:pointer;">✕</button>
+            </div>
+          @endforeach
+          <button type="button" wire:click="addDocument" style="font-size:.64rem;font-weight:600;padding:4px 12px;border-radius:7px;background:rgba(124,58,237,.07);color:#7C3AED;border:1.5px dashed rgba(124,58,237,.25);cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px;">
+            <i class="ph ph-upload-simple"></i> Upload Document
+          </button>
+          @endif
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{{-- REQUEST PAYMENT CHARGE MODAL --}}
+@if($showChargeModal)
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);" wire:click="closeChargeModal">
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:600px;box-shadow:0 32px 96px rgba(0,0,0,.35),0 8px 32px rgba(51,46,158,.15);overflow:hidden;max-height:92vh;display:flex;flex-direction:column;" wire:click.stop="">
+      <div style="padding:22px 28px;background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <h5 class="fw-bold mb-0" style="font-size:.95rem;display:flex;align-items:center;gap:10px;"><i class="ph ph-credit-card" style="font-size:1.1rem;"></i> Request Payment Charge</h5>
+        <button type="button" wire:click="closeChargeModal" style="background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;transition:all .15s;">✕</button>
+      </div>
+      <div style="overflow-y:auto;padding:24px 28px;">
+
+        {{-- Payment Method radio cards --}}
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;margin-bottom:14px;">Payment Method</div>
+        @php
+          $modalMethods = [
+            'epay_debit'      => ['label'=>'Epay Debit',       'icon'=>'ph-credit-card',  'color'=>'#332E9E'],
+            'epay_credit'     => ['label'=>'Epay Credit',      'icon'=>'ph-credit-card',  'color'=>'#7C3AED'],
+            'bank_transfer'   => ['label'=>'Bank Transfer',    'icon'=>'ph-bank',         'color'=>'#16A34A'],
+            'debit_card'      => ['label'=>'Debit Card',       'icon'=>'ph-credit-card',  'color'=>'#0EA5E9'],
+            'credit_card'     => ['label'=>'Credit Card',      'icon'=>'ph-credit-card',  'color'=>'#D97706'],
+            'amex'            => ['label'=>'AMEX',             'icon'=>'ph-credit-card',  'color'=>'#1E40AF'],
+            'klarna'          => ['label'=>'Klarna',           'icon'=>'ph-storefront',   'color'=>'#FF69B4'],
+            'superpay'        => ['label'=>'SuperPay',         'icon'=>'ph-lightning',    'color'=>'#DC2626'],
+            'clearpay'        => ['label'=>'ClearPay',         'icon'=>'ph-arrows-clockwise','color'=>'#047857'],
+            'stripe'          => ['label'=>'Stripe',           'icon'=>'ph-lightning',    'color'=>'#6366F1'],
+            'cash'            => ['label'=>'Cash',             'icon'=>'ph-money',        'color'=>'#15803D'],
+          ];
+        @endphp
+        <div class="row g-2 mb-4">
+          @foreach($modalMethods as $val => $m)
+            <div class="col-4 col-md-3">
+              <label style="cursor:pointer;display:block;">
+                <input type="radio" wire:model.live="chargeMethod" value="{{ $val }}" style="display:none;" class="pm-radio">
+                <div class="px-3 py-3 d-flex flex-column align-items-center gap-2 text-center"
+                  style="border-radius:12px;border:2px solid {{ $chargeMethod === $val ? $m['color'] : 'rgba(51,46,158,.08)' }};background:{{ $chargeMethod === $val ? $m['color'].'12' : '#fff' }};transition:all .2s ease;cursor:pointer;"
+                  onmouseover="if(!this.querySelector('input:checked')){this.style.borderColor='{{ $m['color'] }}';this.style.background='{{ $m['color'] }}08';}"
+                  onmouseout="if(!this.querySelector('input:checked')){this.style.borderColor='rgba(51,46,158,.08)';this.style.background='#fff';}">
+                  <i class="ph {{ $m['icon'] }}" style="font-size:1.1rem;color:{{ $chargeMethod === $val ? $m['color'] : '#94A3B8' }};flex-shrink:0;transition:all .2s ease;"></i>
+                  <span style="font-size:.7rem;font-weight:{{ $chargeMethod === $val ? '700' : '600' }};color:{{ $chargeMethod === $val ? $m['color'] : '#374151' }};line-height:1.2;">{{ $m['label'] }}</span>
+                </div>
+              </label>
+            </div>
+          @endforeach
+        </div>
+        @error('chargeMethod') <small class="text-danger d-block mb-3" style="margin-top:-8px;">{{ $message }}</small> @enderror
+
+        {{-- Card details when debit/credit/amex selected --}}
+        @if(in_array($chargeMethod, ['debit_card','credit_card','amex']))
+          <div style="padding:16px;border-radius:14px;background:linear-gradient(135deg,#F8FAFF,#EEF2FF);border:1px solid rgba(51,46,158,.10);margin-bottom:16px;">
+            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#332E9E;margin-bottom:12px;">Card Details</div>
+            <div class="mb-3">
+              <label class="bv-label">Card Number</label>
+              <input type="text" wire:model="card_number" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.82rem;" placeholder="1234 5678 9012 3456" maxlength="19">
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-6"><label class="bv-label">Expiry</label><input type="text" wire:model="card_expiry" class="bv-input-inline" style="padding:8px 12px;font-size:.82rem;" placeholder="MM/YY" maxlength="5"></div>
+              <div class="col-6"><label class="bv-label">CVV</label><input type="text" wire:model="card_cvv" class="bv-input-inline" style="padding:8px 12px;font-size:.82rem;" placeholder="123" maxlength="4"></div>
+            </div>
+            <div>
+              <label class="bv-label">Cardholder Name</label>
+              <input type="text" wire:model="card_holder_name" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.82rem;" placeholder="Name on card">
+            </div>
+          </div>
+        @endif
+
+        {{-- Amount & Receipt --}}
+        <div class="row g-3 mb-2">
+          <div class="col-6">
+            <label class="bv-label">Amount (&pound;)</label>
+            <input type="number" wire:model="chargeAmount" step="0.01" min="1" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.85rem;font-weight:700;" placeholder="0.00">
+            @error('chargeAmount') <small class="text-danger">{{ $message }}</small> @enderror
+          </div>
+          <div class="col-6">
+            <label class="bv-label">Receipt # (optional)</label>
+            <input type="text" wire:model="chargeReceipt" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.82rem;" placeholder="Receipt number">
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.08);">
+          <button type="button" wire:click="closeChargeModal" style="background:transparent;border:1.5px solid rgba(51,46,158,.18);color:#64748B;border-radius:10px;padding:9px 24px;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s;">Cancel</button>
+          <button type="button" wire:click="requestPaymentCharge" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:10px;padding:9px 28px;font-size:.78rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(255,107,53,.3);transition:all .15s;">Request Charge</button>
+        </div>
+      </div>
+    </div>
+  </div>
+@endif
+
+{{-- REQUEST REFUND MODAL --}}
+@if($showRefundModal)
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
+        <h5 class="fw-bold mb-0" style="font-size:.9rem;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-arrows-counter-clockwise" style="font-size:1rem;"></i> Request Refund</h5>
+        <button type="button" wire:click="$set('showRefundModal',false)" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;">✕</button>
+      </div>
+      <div class="p-4">
+        <div class="mb-3">
+          <label class="bv-label">Refund Amount (£) <span style="color:#DC2626;">*</span></label>
+          <input type="number" wire:model="refundAmount" class="bv-input-inline" style="width:100%;font-size:.78rem;" placeholder="0.00" min="0.01" step="0.01">
+          @error('refundAmount') <div style="font-size:.68rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="mb-3">
+          <label class="bv-label">Refund Method <span style="color:#DC2626;">*</span></label>
+          <select wire:model="refundMethod" class="bv-select-inline" style="width:100%;font-size:.78rem;">
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="cash">Cash</option>
+            <option value="stripe">Stripe</option>
+            <option value="klarna">Klarna</option>
+          </select>
+          @error('refundMethod') <div style="font-size:.68rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="mb-3">
+          <label class="bv-label">Reason for Refund <span style="color:#DC2626;">*</span></label>
+          <textarea wire:model="refundReason" rows="3" class="bv-input-inline" style="width:100%;font-size:.78rem;" placeholder="Explain the reason for this refund…"></textarea>
+          @error('refundReason') <div style="font-size:.68rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
+          <button type="button" wire:click="$set('showRefundModal',false)" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#64748B;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:600;cursor:pointer;">Cancel</button>
+          <button type="button" wire:click="submitRefund" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Submit Refund Request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+@endif
 </div>

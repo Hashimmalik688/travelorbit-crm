@@ -1,0 +1,16 @@
+# Code Preferences
+- Keep related dropdown options in sync — when two selects reference the same domain (e.g., booking_type and previous_booking_type), they must have identical value sets. Confidence: 0.70
+- Remove emojis from select option labels in forms. Confidence: 0.75
+- Do not use emoji characters anywhere in the CRM UI — no emojis in section headers, labels, buttons, or any rendered text. Confidence: 0.88
+- Remove demo/PRO pages and boilerplate content when requested; user prefers minimal clean starting point for custom development. Confidence: 0.80
+- Remove copyright notices, attribution text (e.g., "made by ThemeSelection"), and license information from internal MIS systems. Confidence: 0.85
+- Use "TravelOrbit" branding only (not "TravelOrbit MIS") for cleaner, simpler naming. Confidence: 0.85
+- Keep code simple, clean, and clutter-free; remove unnecessary elements and redundant labels like "Internal System". Confidence: 0.85
+- Skip licensing and documentation boilerplate unless explicitly requested. Confidence: 0.80
+- In booking form at every stage, restrict numeric-only fields (mobile phone, phone number, etc.) to accept only numbers, not letters. Confidence: 0.75
+- In booking forms, all fields are mandatory/required except: e-ticket number, old reference field, and type. Confidence: 0.80
+- When fixing form validation errors caused by hidden-but-required fields, first identify and present the problematic fields to the user; do not add, remove, or modify field requirements without explicit approval. Confidence: 0.70
+- When upgrading UI components (e.g., dropdowns, inputs) across a form, apply the change to ALL instances of that component — don't leave some as native while converting others, even if they're in tight layouts or inline tables. Consistency is expected. Confidence: 0.65
+- For booking form DOB calculations: Infant (0-1y 364d), Child (2-11y 364d), Youth (12-15y 364d), Adult (16y+). Round days to integers, show ONLY the next PTC transition date (not all future transitions). Confidence: 0.80
+- Validate passenger DOB matches selected passenger type — prevent mismatched entries (e.g., child's age in adult field, adult age in infant field). Confidence: 0.70
+- Do not repurpose placeholder buttons (e.g., renamed "Fetch PNR" to "Add PNR") — some buttons are intentionally left as future API integration placeholders. Ask before changing button labels or functionality. Confidence: 0.65

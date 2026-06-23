@@ -21,8 +21,8 @@ class SettingsController extends Controller
         return view('content.settings.audit-log');
     }
 
-    public function profile()
+    public function vendors()
     {
-        return view('content.settings.profile');
+        return view('content.settings.vendors');
     }
 }

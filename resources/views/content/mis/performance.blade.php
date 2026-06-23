@@ -18,7 +18,7 @@
             <div class="to-empty">
                 <div class="to-empty-icon"><i class="ph ph-presentation-chart"></i></div>
                 <h5>MIS Performance Reports</h5>
-                <p>Coming soon — KPI dashboards and agent analytics.</p>
+                <p>Coming soon - KPI dashboards and agent analytics.</p>
             </div>
         </div>
     </div>

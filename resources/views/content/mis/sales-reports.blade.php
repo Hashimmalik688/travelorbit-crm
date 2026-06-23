@@ -18,7 +18,7 @@
             <div class="to-empty">
                 <div class="to-empty-icon"><i class="ph ph-chart-bar-horizontal"></i></div>
                 <h5>MIS Sales Reports</h5>
-                <p>Coming soon — detailed business intelligence reports.</p>
+                <p>Coming soon - detailed business intelligence reports.</p>
             </div>
         </div>
     </div>

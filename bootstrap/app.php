@@ -11,9 +11,20 @@ return Application::configure(basePath: dirname(__DIR__))
     health: '/up',
   )
   ->withMiddleware(function (Middleware $middleware) {
+
+    // ── Named middleware aliases ─────────────────────────────────────
     $middleware->alias([
-        'role' => \App\Http\Middleware\CheckRole::class,
+        'role'     => \App\Http\Middleware\CheckRole::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
     ]);
+
+    // ── Global web middleware stack ──────────────────────────────────
+    $middleware->web(append: [
+        \App\Http\Middleware\SecurityHeaders::class,   // X-Frame, CSP, HSTS etc.
+        \App\Http\Middleware\BotDetection::class,      // Block scanners & crawlers
+        \App\Http\Middleware\LogUserActivity::class,   // Track login IP/time
+    ]);
+
   })
   ->withExceptions(function (Exceptions $exceptions) {
     //

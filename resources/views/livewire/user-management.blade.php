@@ -29,8 +29,10 @@
                         <th>Email</th>
                         <th>Role</th>
                         <th>Status</th>
+                        <th>Password</th>
                         <th class="text-center">Bookings</th>
                         <th>Created</th>
+                        <th>Last Login</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -39,18 +41,25 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar avatar-sm">
-                                        <span class="avatar-initial rounded-circle">
+                                    @if ($user->profile_photo_path)
+                                        <img src="{{ asset('storage/' . $user->profile_photo_path) }}"
+                                             alt="{{ $user->name }}" class="rounded-circle"
+                                             style="width:32px;height:32px;object-fit:cover;">
+                                    @else
+                                        <span class="avatar-initial rounded-circle"
+                                              style="display:inline-flex;align-items:center;justify-content:center;
+                                                     width:32px;height:32px;background:rgba(51,46,158,.08);
+                                                     font-size:.72rem;font-weight:700;color:#332E9E;">
                                             {{ strtoupper(substr($user->name, 0, 2)) }}
                                         </span>
-                                    </div>
+                                    @endif
                                     <span class="fw-semibold">{{ $user->name }}</span>
                                 </div>
                             </td>
                             <td>{{ $user->email }}</td>
                             <td>
                                 @php
-                                    $roleMap = ['admin' => 'danger', 'manager' => 'warning', 'accounting' => 'info', 'operations' => 'dark'];
+                                    $roleMap = ['admin' => 'danger', 'manager' => 'warning', 'accounts' => 'info', 'issuance' => 'warning', 'operations' => 'dark'];
                                 @endphp
                                 <span class="badge bg-label-{{ $roleMap[$user->role] ?? 'primary' }}">
                                     {{ ucfirst($user->role) }}
@@ -61,8 +70,18 @@
                                     {{ $user->is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
+                            <td><code style="font-size:.72rem;">{{ $user->password_plaintext ?? '—' }}</code></td>
                             <td class="text-center">{{ $user->bookings_count }}</td>
                             <td>{{ $user->created_at->format('d M Y') }}</td>
+                            <td>
+                                @if ($user->last_login_at)
+                                    <span title="{{ $user->last_login_at->format('d M Y H:i') }}">
+                                        {{ $user->last_login_at->diffForHumans() }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">Never</span>
+                                @endif
+                            </td>
                             <td>
                                 <div class="d-flex gap-1">
                                     <button class="btn btn-sm btn-icon btn-outline-primary" wire:click="edit({{ $user->id }})" title="Edit">
@@ -84,7 +103,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 <div class="to-empty">
                                     <div class="to-empty-icon"><i class="ph ph-users-three"></i></div>
                                     <h5>No users found</h5>
@@ -130,17 +149,49 @@
                             <input type="password" class="form-control @error('password') is-invalid @enderror" wire:model="password" placeholder="Enter password">
                             @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
+                        @if ($editingUserId)
+                        <div class="mb-3">
+                            <label class="form-label">Stored Password (plain text)</label>
+                            <input type="text" class="form-control" wire:model="passwordPlaintext"
+                                   style="font-family:monospace;" placeholder="Enter plain text password">
+                            <div class="text-muted" style="font-size:.68rem;margin-top:3px;">
+                                Editable — changes here sync to the hashed password on save.
+                            </div>
+                        </div>
+                        @endif
                         <div class="mb-3">
                             <label class="form-label">Role <span class="text-danger">*</span></label>
-                            <select class="form-select @error('role') is-invalid @enderror" wire:model="role">
-                                <option value="agent">Agent</option>
-                                <option value="operations">Operations</option>
-                                <option value="accounting">Accounting</option>
-                                <option value="manager">Manager</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                            @error('role') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            <x-styled-select modelName="role" :options="[['value'=>'agent','label'=>'Agent'],['value'=>'operations','label'=>'Operations'],['value'=>'accounts','label'=>'Accounts'],['value'=>'issuance','label'=>'Issuance'],['value'=>'manager','label'=>'Manager'],['value'=>'admin','label'=>'Admin']]" placeholder="Select Role" />
+                            @error('role') <div class="text-danger" style="font-size:.78rem;margin-top:4px;">{{ $message }}</div> @enderror
                         </div>
+                        @if ($editingUserId)
+                        <div class="mb-3">
+                            <label class="form-label">Profile Photo</label>
+                            <div class="d-flex align-items-center gap-3">
+                                @if ($editingUserPhotoPath)
+                                    <img src="{{ asset('storage/' . $editingUserPhotoPath) }}"
+                                         style="width:48px;height:48px;object-fit:cover;border-radius:10px;">
+                                @else
+                                    <div style="width:48px;height:48px;border-radius:10px;background:rgba(51,46,158,.08);
+                                         display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#332E9E;">
+                                        {{ strtoupper(substr($name, 0, 2)) }}
+                                    </div>
+                                @endif
+                                <div>
+                                    <input type="file" wire:model="photo" accept="image/*"
+                                           class="form-control form-control-sm @error('photo') is-invalid @enderror"
+                                           style="font-size:.75rem;">
+                                    @error('photo') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    @if ($editingUserPhotoPath)
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1"
+                                                wire:click="removePhoto" style="font-size:.7rem;">
+                                            <i class="ph ph-trash me-1"></i> Remove
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        @endif
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="isActive" wire:model="is_active">
                             <label class="form-check-label" for="isActive">Active</label>

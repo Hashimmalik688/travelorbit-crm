@@ -3,14 +3,29 @@
 namespace App\Livewire;
 
 use App\Models\Booking;
+use App\Models\BookingActivityLog;
 use App\Models\BookingComment;
+use App\Models\BookingDocument;
+use App\Models\BookingFlightCost;
+use App\Models\BookingFlightDetail;
+use App\Models\BookingHotel;
+use App\Models\BookingHotelRoom;
+use App\Models\BookingPassenger;
+use App\Models\BookingPayment;
+use App\Models\BookingPaymentHistory;
+use App\Models\BookingTransfer;
 use App\Models\Refund;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class BookingShow extends Component
 {
+    use WithFileUploads;
+
     public Booking $booking;
     public $newComment = '';
     public $bookingStatus;
@@ -21,66 +36,1344 @@ class BookingShow extends Component
     public $refundReason = '';
     public $refundMethod = 'bank_transfer';
 
+    public array $activityLog = [];
+
+    // Booking Info
+    public $lead_source = '';
+    public $lead_nature = '';
+    public $is_returning_or_referral = false;
+    public $old_booking_reference = '';
+    public $last_payment_date = '';
+    public $last_issue_date = '';
+    public $referral_name = '';
+    public $booking_type = '';
+
+    // Caller
+    public $booker_title = null;
+    public $booker_first_name = '';
+    public $booker_last_name = '';
+    public $booker_mobile = '';
+    public $booker_landline = '';
+    public $booker_email = '';
+    public $booker_address = '';
+    public $booker_postcode = '';
+    public $booker_country = 'UK';
+
+    // Passengers
+    public $adultCount = 0;
+    public $gbeCount = 0;
+    public $childCount = 0;
+    public $infantCount = 0;
+    public $passengers = [];
+
+    // Flight
+    public $flightSegments = [];
+    public $flight_folder_number = '';
+    public $flight_atol = false;
+    public $flight_safi = false;
+    public $flight_selling_price = '';
+    public $flight_costs = [
+        'adult' => ['cost' => '', 'qty' => 0, 'sold' => ''],
+        'child' => ['cost' => '', 'qty' => 0, 'sold' => ''],
+        'gbe'   => ['cost' => '', 'qty' => 0, 'sold' => ''],
+        'infant' => ['cost' => '', 'qty' => 0, 'sold' => ''],
+    ];
+
+    // Hotel
+    public $hotels = [];
+
+    // Visas
+    public array $visas = [];
+
+    // Excursion
+    public bool $showExcursion = false;
+    public $excursion_name = '';
+    public $excursion_destination = '';
+    public $excursion_date = '';
+    public $excursion_supplier = '';
+    public $excursion_actual_cost = '';
+    public $excursion_selling_price = '';
+    public $excursion_notes = '';
+    public $excursion_status = 'confirmed';
+
+    // Transfers
+    public $transferPickups = [];
+    public $transferDropoffs = [];
+
+    // Payment
+    public $payment_method = '';
+    public $booking_plan = '';
+    public $amount_paid = '';
+    public $due_date = '';
+    public $installment_count = 2;
+    public $instalments = [];
+    public $payment_history = [];
+    public $payment_date = '';
+    public $receipt_number = '';
+    public $deposit_amount = '';
+    public $payment_mode = '';
+    public $payment_mode_2 = '';
+    public $installment_period = 'none';
+    public $installment_first_amount = '';
+    public $debit_card_change = false;
+    public $cc_charges = '';
+    public $selected_payment_method = '';
+    public $payment_instalments = [];
+
+    // Charge popup
+    public $showChargeModal = false;
+    public $chargeAmount = '';
+    public $chargeMethod = '';
+    public $chargeReceipt = '';
+
+    // Card payment fields
+    public $card_number = '';
+    public $card_expiry = '';
+    public $card_cvv = '';
+    public $card_holder_name = '';
+
+    // Instalment payment tracking
+    public $instalment_paid = [];
+    public $billing_address = '';
+    public $billing_postcode = '';
+
+    // Documents
+    public $newDocuments = [];
+    public $newDocumentTypes = [];
+
+    // Activity
+    public $mandatory_comment = '';
+    public array $activity_log_entries = [];
+    public ?int $reasonEditIndex = null;
+    public string $reasonEditText = '';
+
     public function mount(Booking $booking)
     {
         $this->booking = $booking->load([
-            'passengers', 'payment', 'documents', 'flightDetail', 'flightCosts', 'hotels',
-            'comments' => function ($query) {
-                $query->with('user')->orderBy('created_at');
-            }
+            'passengers', 'payment', 'paymentHistory', 'documents',
+            'flightDetail', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
+            'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
         ]);
         $this->bookingStatus = $booking->booking_status;
+        $this->activityLog = $this->buildActivityLog($booking);
+        $this->loadBookingData();
     }
 
-    public function updatedBookingStatus($value)
+    public function getPnrLabel(int $index): string
     {
-        $oldStatus = $this->booking->booking_status;
-        $this->booking->update(['booking_status' => $value]);
-        $this->booking->refresh();
-
-        AuditLogger::log(
-            Auth::user(),
-            $this->booking,
-            'status_changed',
-            "Status changed to {$value}",
-            ['booking_status' => $oldStatus],
-            ['booking_status' => $value],
-        );
-
-        session()->flash('success', 'Status updated to ' . ucfirst(str_replace('_', ' ', $value)) . '.');
+        $types = ['adult' => 'Adult', 'gbe' => 'Youth', 'child' => 'Child', 'infant' => 'Infant'];
+        $pi = 0;
+        foreach (['adult', 'gbe', 'child', 'infant'] as $type) {
+            $count = (int)($this->{$type . 'Count'} ?? 0);
+            for ($i = 0; $i < $count; $i++) {
+                if ($pi === $index) return $types[$type] . ' x ' . ($i + 1);
+                $pi++;
+            }
+        }
+        return 'PNR ' . ($index + 1);
     }
 
-    public function addComment()
+    public function getActivityColorConfig(string $action, string $type = 'info'): array
     {
-        if (!$this->canComment()) {
+        // Full-row highlight for major lifecycle events
+        if (stripos($action, 'created a new booking') !== false || stripos($action, 'opened booking') !== false) {
+            return ['dot'=>'#0EA5E9','bg'=>'rgba(14,165,233,.10)','border'=>'#0EA5E9','label'=>'Created','full_row'=>true,'icon'=>'ph-sparkle'];
+        }
+        if (stripos($action, 'request issuance') !== false || stripos($action, 'issuance queue') !== false || stripos($action, 'moved to issuance') !== false) {
+            return ['dot'=>'#7C3AED','bg'=>'rgba(124,58,237,.12)','border'=>'#7C3AED','label'=>'Issuance','full_row'=>true,'icon'=>'ph-ticket'];
+        }
+        if (stripos($action, 'ticket in process') !== false || stripos($action, 'processing ticket') !== false) {
+            return ['dot'=>'#0369A1','bg'=>'rgba(3,105,161,.11)','border'=>'#0369A1','label'=>'Processing','full_row'=>true,'icon'=>'ph-airplane-takeoff'];
+        }
+        if (stripos($action, 'issued') !== false || stripos($action, 'ticket issued') !== false) {
+            return ['dot'=>'#047857','bg'=>'rgba(4,120,87,.11)','border'=>'#047857','label'=>'Issued','full_row'=>true,'icon'=>'ph-check-fat'];
+        }
+        if (stripos($action, 'request payment charge') !== false || stripos($action, 'payment charge') !== false) {
+            return ['dot'=>'#FF6B35','bg'=>'rgba(255,107,53,.11)','border'=>'#FF6B35','label'=>'Payment Req.','full_row'=>true,'icon'=>'ph-credit-card'];
+        }
+        if (stripos($action, 'payment approved') !== false || stripos($action, 'payment received') !== false) {
+            return ['dot'=>'#16A34A','bg'=>'rgba(22,163,74,.11)','border'=>'#16A34A','label'=>'Paid','full_row'=>true,'icon'=>'ph-check-circle'];
+        }
+        if (stripos($action, 'refund') !== false || stripos($action, 'refund queue') !== false) {
+            return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.10)','border'=>'#DC2626','label'=>'Refund','full_row'=>true,'icon'=>'ph-arrows-counter-clockwise'];
+        }
+        if (stripos($action, 'cancelled') !== false || stripos($action, 'cancel') !== false) {
+            return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.08)','border'=>'#DC2626','label'=>'Cancelled','full_row'=>true,'icon'=>'ph-x-circle'];
+        }
+        // Subtle highlights for field edits and notes
+        if (stripos($action, 'added a note') !== false || $type === 'note') {
+            return ['dot'=>'#64748B','bg'=>'rgba(100,116,139,.06)','border'=>'#94A3B8','label'=>'Note','full_row'=>false,'icon'=>'ph-note'];
+        }
+        if (stripos($action, 'approved') !== false || stripos($action, 'received') !== false || stripos($action, 'paid') !== false) {
+            return ['dot'=>'#16A34A','bg'=>'rgba(22,163,74,.06)','border'=>'#16A34A','label'=>'Payment','full_row'=>false,'icon'=>'ph-money'];
+        }
+        if (stripos($action, 'requested') !== false || stripos($action, 'charged') !== false) {
+            return ['dot'=>'#F59E0B','bg'=>'rgba(245,158,11,.06)','border'=>'#F59E0B','label'=>'Charge','full_row'=>false,'icon'=>'ph-lightning'];
+        }
+        if ($type === 'added' || stripos($action, 'created') !== false) {
+            return ['dot'=>'#0EA5E9','bg'=>'rgba(14,165,233,.05)','border'=>'#0EA5E9','label'=>'Added','full_row'=>false,'icon'=>'ph-plus-circle'];
+        }
+        if (stripos($action, 'ticket') !== false || stripos($action, 'document') !== false || stripos($action, 'voucher') !== false) {
+            return ['dot'=>'#7C3AED','bg'=>'rgba(124,58,237,.05)','border'=>'#7C3AED','label'=>'Docs','full_row'=>false,'icon'=>'ph-file-text'];
+        }
+        if (stripos($action, 'hotel') !== false || stripos($action, 'transfer') !== false) {
+            return ['dot'=>'#0891B2','bg'=>'rgba(8,145,178,.05)','border'=>'#0891B2','label'=>'Service','full_row'=>false,'icon'=>'ph-buildings'];
+        }
+        if ($type === 'update' || stripos($action, 'edited') !== false) {
+            return ['dot'=>'#94A3B8','bg'=>'rgba(148,163,184,.04)','border'=>'#CBD5E1','label'=>'Edit','full_row'=>false,'icon'=>'ph-pencil-simple'];
+        }
+        return ['dot'=>'#94A3B8','bg'=>'transparent','border'=>'rgba(148,163,184,.3)','label'=>'','full_row'=>false,'icon'=>'ph-circle'];
+    }
+
+    protected function buildActivityLog(Booking $booking): array
+    {
+        $entries = [];
+
+        $jsonLog = $booking->activity_log ?? [];
+        if (is_string($jsonLog)) $jsonLog = json_decode($jsonLog, true) ?? [];
+
+        foreach ($jsonLog as $eIdx => $e) {
+            $rawAction = $e['action'] ?? '';
+            $comment   = $e['comment'] ?? $e['detail'] ?? '';
+            $action = match ($rawAction) {
+                'created'          => 'created a new booking',
+                'comment_added'    => 'added a note',
+                'Note'             => 'added a note',
+                'updated'          => 'saved booking changes',
+                'payment_requested'=> 'Request Payment Charge',
+                'status_changed'   => match(true) {
+                    str_contains($comment, 'Issuance Queue')                                                       => 'Request Issuance',
+                    str_contains($comment, 'Ticket In Process') || str_contains($comment, 'Ticket in Process')     => 'Ticket In Process',
+                    str_contains($comment, 'Issued')                                                               => 'Ticket Issued',
+                    str_contains($comment, 'Refund')                                                               => 'Refund Requested',
+                    str_contains($comment, 'Cancelled')                                                            => 'Booking Cancelled',
+                    default                                                                                        => 'Status Changed',
+                },
+                default => $rawAction ? ucfirst(str_replace('_', ' ', $rawAction)) : '',
+            };
+            $type      = $e['type'] ?? 'info';
+            $agentName = $e['agent'] ?? 'System';
+
+            // Use the snapshotted avatar/initials stored at log time — never look up the current user record
+            $avatarUrl      = $e['avatar_url'] ?? null;
+            $avatarInitials = $e['avatar_initials'] ?? null;
+            if (!$avatarInitials) {
+                $avatarInitials = strtoupper(substr($agentName, 0, 1));
+                if (($sp = strpos($agentName, ' ')) !== false) $avatarInitials .= strtoupper(substr($agentName, $sp + 1, 1));
+            }
+
+            $entries[] = [
+                'agent'           => $agentName,
+                'avatar_url'      => $avatarUrl,
+                'avatar_initials' => $avatarInitials,
+                'action'          => $action,
+                'detail'          => $comment,
+                'reasons'         => $e['reasons'] ?? (isset($e['reason']) ? [['text'=>$e['reason'],'agent'=>null,'at'=>null]] : []),
+                'type'            => $type,
+                'json_index'      => $eIdx,
+                'ts_raw'          => $e['timestamp'] ?? '',
+                'timestamp'       => $e['timestamp'] ? \Carbon\Carbon::parse($e['timestamp'])->format('d M Y, H:i') : null,
+                'ts_sort'         => strtotime($e['timestamp'] ?? '0'),
+                'color'           => $this->getActivityColorConfig($action, $type),
+                'is_json'         => true,
+            ];
+        }
+
+        foreach ($booking->comments as $c) {
+            $rawAction = $c->action ?? 'note';
+            $cComment  = $c->comment ?? '';
+            $action    = match ($rawAction) {
+                'created'          => 'created a new booking',
+                'comment_added'    => 'added a note',
+                'note'             => 'added a note',
+                'Note'             => 'added a note',
+                'updated'          => 'saved booking changes',
+                'payment_requested'=> 'Request Payment Charge',
+                'status_changed'   => match(true) {
+                    str_contains($cComment, 'Issuance Queue')   => 'Request Issuance',
+                    str_contains($cComment, 'Ticket In Process') => 'Ticket In Process',
+                    str_contains($cComment, 'Issued')            => 'Ticket Issued',
+                    str_contains($cComment, 'Refund')            => 'Refund Requested',
+                    str_contains($cComment, 'Cancelled')         => 'Booking Cancelled',
+                    default                                      => 'Status Changed',
+                },
+                default => ucfirst(str_replace('_', ' ', $rawAction)),
+            };
+            $typeMap = ['created'=>'added','comment_added'=>'note','status_changed'=>'update','payment_requested'=>'update'];
+            $type    = $typeMap[$rawAction] ?? 'info';
+
+            // Use stored snapshot — never look up current user record for old log entries
+            $agentName      = $c->agent_name ?? ($c->user?->name ?? 'System');
+            $avatarUrl      = $c->avatar_url ?? null;
+            $avatarInitials = null;
+            if (!$avatarInitials) {
+                $avatarInitials = strtoupper(substr($agentName, 0, 1));
+                if (($sp = strpos($agentName, ' ')) !== false) $avatarInitials .= strtoupper(substr($agentName, $sp + 1, 1));
+            }
+
+            $entries[] = [
+                'agent'           => $agentName,
+                'avatar_url'      => $avatarUrl,
+                'avatar_initials' => $avatarInitials,
+                'action'          => $action,
+                'detail'          => $cComment,
+                'reason'          => null,
+                'type'            => $type,
+                'ts_raw'          => '',
+                'timestamp'       => $c->created_at?->format('d M Y, H:i'),
+                'ts_sort'         => $c->created_at?->timestamp ?? 0,
+                'color'           => $this->getActivityColorConfig($action, $type),
+                'is_json'         => false,
+            ];
+        }
+
+        usort($entries, fn($a, $b) => $a['ts_sort'] <=> $b['ts_sort']);
+        return $entries;
+    }
+
+    private function loadBookingData(): void
+    {
+        $b = $this->booking;
+
+        $this->lead_source = $b->lead_source ?? '';
+        $this->lead_nature = $b->lead_nature ?? '';
+        $this->is_returning_or_referral = $b->is_returning_or_referral ?? false;
+        $this->old_booking_reference = $b->old_booking_reference ?? '';
+        $this->last_payment_date = $b->last_payment_date ? $b->last_payment_date->format('Y-m-d') : '';
+        $this->last_issue_date = $b->last_issue_date ? $b->last_issue_date->format('Y-m-d') : '';
+        $this->referral_name = $b->referral_name ?? '';
+        $this->booking_type = $b->booking_type ?? '';
+
+        $this->booker_title = $b->booker_title;
+        $this->booker_first_name = $b->booker_first_name ?? '';
+        $this->booker_last_name = $b->booker_last_name ?? '';
+        $this->booker_mobile = $b->booker_mobile ?? '';
+        $this->booker_landline = $b->booker_landline ?? '';
+        $this->booker_email = $b->booker_email ?? '';
+        $this->booker_address = $b->booker_address ?? '';
+        $this->booker_postcode = $b->booker_postcode ?? '';
+        $this->booker_country = $b->booker_country ?? 'UK';
+
+        $this->passengers = [];
+        $this->adultCount = 0;
+        $this->gbeCount = 0;
+        $this->childCount = 0;
+        $this->infantCount = 0;
+        foreach ($b->passengers as $pax) {
+            $type = $pax->passenger_type ?? 'adult';
+            $this->{$type . 'Count'}++;
+            $this->passengers[] = [
+                'id' => $pax->id,
+                'type' => $type,
+                'title' => $pax->title ?? '',
+                'first_name' => $pax->first_name ?? '',
+                'last_name' => $pax->last_name ?? '',
+                'passport_number' => $pax->passport_number ?? '',
+                'passport_country_code' => $pax->passport_country_code ?? '',
+                'passport_issuing_country' => $pax->passport_issuing_country ?? '',
+                'national_id_number' => $pax->national_id_number ?? '',
+                'nationality' => $pax->nationality ?? '',
+                'date_of_birth' => $pax->date_of_birth ? $pax->date_of_birth->format('Y-m-d') : '',
+                'contact_number' => $pax->contact_number ?? '',
+                'cost_per_pax' => $pax->cost_per_pax ?? '',
+                'sold_per_pax' => $pax->sold_per_pax ?? '',
+                'frequent_flyer_number' => $pax->frequent_flyer_number ?? '',
+                'e_ticket_number' => $pax->e_ticket_number ?? '',
+                'ptc' => $pax->ptc ?? '',
+                'passenger_status_label' => $pax->passenger_status_label ?? '',
+            ];
+        }
+
+        if ($b->flightDetail) {
+            $fd = $b->flightDetail;
+            $this->flightSegments[] = [
+                'pnr' => $fd->pnr ?? '',
+                'locator' => $fd->locator ?? '',
+                'airline_locator' => $fd->airline_locator ?? '',
+                'type_issuer' => $fd->type_issuer ?? '',
+                'reservation_status' => $fd->reservation_status ?? '',
+                'flight_type' => $fd->flight_type ?? 'return',
+                'airline' => $fd->airline ?? '',
+                'vendor' => $fd->vendor ?? '',
+                'gds' => $fd->gds ?? '',
+                'cabin' => $fd->cabin ?? '',
+                'ticket_issue_limit' => $fd->ticket_issue_limit ? $fd->ticket_issue_limit->format('Y-m-d\TH:i') : '',
+                'cost' => $fd->cost ?? '',
+                'sold' => $fd->sold ?? '',
+                'passenger_costs' => $fd->passenger_costs ?? [],
+                'departure_airport' => $fd->departure_airport ?? '',
+                'arrival_airport' => $fd->arrival_airport ?? '',
+                'departure_date' => $fd->departure_date ? $fd->departure_date->format('Y-m-d') : '',
+                'return_date' => $fd->return_date ? $fd->return_date->format('Y-m-d') : '',
+            ];
+            $this->flight_folder_number = $fd->folder_number ?? '';
+            $this->flight_atol = $fd->atol;
+            $this->flight_safi = $fd->safi;
+            $this->flight_selling_price = $fd->selling_price ?? '';
+        } else {
+            $this->flightSegments = [[
+                'pnr' => '', 'locator' => '', 'airline_locator' => '', 'type_issuer' => '',
+                'reservation_status' => '', 'flight_type' => 'return', 'airline' => '', 'vendor' => '', 'gds' => '',
+                'cabin' => '', 'ticket_issue_limit' => '', 'cost' => '', 'sold' => '', 'passenger_costs' => [],
+                'departure_airport' => '',
+                'arrival_airport' => '', 'departure_date' => '', 'return_date' => '',
+            ]];
+        }
+
+        foreach ($b->flightCosts as $c) {
+            $this->flight_costs[$c->cost_type] = [
+                'cost' => (string)$c->cost,
+                'qty' => $c->quantity,
+                'sold' => (string)($c->sold_price ?? 0),
+            ];
+        }
+
+        $this->hotels = [];
+        foreach ($b->hotels as $hotel) {
+            $rooms = [];
+            foreach ($hotel->rooms as $room) {
+                $rooms[] = [
+                    'room_type' => $room->room_type ?? '',
+                    'occupants' => $room->occupants ?? 1,
+                    'meal_basis' => $room->meal_basis ?? 'room_only',
+                ];
+            }
+            $this->hotels[] = [
+                'hotel_id' => $hotel->id,
+                'hotel_name' => $hotel->hotel_name,
+                'city' => $hotel->city ?? '',
+                'status' => $hotel->booking_status,
+                'check_in' => $hotel->check_in?->format('Y-m-d') ?? '',
+                'check_out' => $hotel->check_out?->format('Y-m-d') ?? '',
+                'actual_cost' => $hotel->actual_cost ?? '',
+                'selling_price' => $hotel->selling_price ?? '',
+                'number_of_rooms' => count($rooms),
+                'rooms' => $rooms,
+            ];
+        }
+
+        // Visas
+        $this->visas = [];
+        foreach ($b->visas as $visa) {
+            $this->visas[] = [
+                'id'               => $visa->id,
+                'passenger_name'   => $visa->passenger_name ?? '',
+                'visa_type'        => $visa->visa_type ?? 'umrah',
+                'visa_reference'   => $visa->visa_reference ?? '',
+                'visa_number'      => $visa->visa_number ?? '',
+                'application_date' => $visa->application_date?->format('Y-m-d') ?? '',
+                'issue_date'       => $visa->issue_date?->format('Y-m-d') ?? '',
+                'expiry_date'      => $visa->expiry_date?->format('Y-m-d') ?? '',
+                'status'           => $visa->status ?? 'pending',
+                'actual_cost'      => (string) $visa->actual_cost,
+                'selling_price'    => (string) $visa->selling_price,
+                'notes'            => $visa->notes ?? '',
+            ];
+        }
+
+        // Excursion
+        $exc = $b->excursion_data ?? [];
+        $this->excursion_name         = $exc['name'] ?? '';
+        $this->excursion_destination  = $exc['destination'] ?? '';
+        $this->excursion_date         = $exc['date'] ?? '';
+        $this->excursion_supplier     = $exc['supplier'] ?? '';
+        $this->excursion_actual_cost  = isset($exc['actual_cost']) ? (string)$exc['actual_cost'] : '';
+        $this->excursion_selling_price= isset($exc['selling_price']) ? (string)$exc['selling_price'] : '';
+        $this->excursion_notes        = $exc['notes'] ?? '';
+        $this->excursion_status       = $exc['status'] ?? 'confirmed';
+        $this->showExcursion          = !empty($this->excursion_name) || ($this->excursion_actual_cost !== '' && $this->excursion_actual_cost > 0);
+
+        $this->transferPickups = [];
+        $this->transferDropoffs = [];
+        foreach ($b->transfers as $t) {
+            $entry = [
+                'id'            => $t->id,
+                'location'      => $t->location,
+                'date_time'     => $t->date_time?->format('Y-m-d H:i') ?? '',
+                'flight_number' => $t->flight_number ?? '',
+                'route'         => $t->route ?? '',
+                'vehicle_type'  => $t->vehicle_type ?? '',
+                'supplier'      => $t->supplier ?? '',
+                'actual_cost'   => $t->actual_cost !== null ? (string)$t->actual_cost : '',
+                'selling_price' => $t->selling_price !== null ? (string)$t->selling_price : '',
+                'status'        => $t->status ?? 'confirmed',
+                'notes'         => $t->notes ?? '',
+            ];
+            if ($t->type === 'pickup') $this->transferPickups[] = $entry;
+            else $this->transferDropoffs[] = $entry;
+        }
+
+        if ($b->payment) {
+            $this->booking_plan = $b->payment->booking_plan ?? '';
+            $this->payment_mode = $b->payment->payment_mode ?? '';
+            $this->payment_mode_2 = $b->payment->payment_mode_2 ?? '';
+            $this->amount_paid = $b->payment->amount_paid ?? '';
+            $this->due_date = $b->payment->due_date ? $b->payment->due_date->format('Y-m-d') : '';
+            $this->installment_period = $b->payment->installment_period ?? 'none';
+            $this->installment_first_amount = $b->payment->installment_first_amount ?? '';
+            $this->debit_card_change = $b->payment->debit_card_change ?? false;
+            $this->deposit_amount = $b->payment->deposit_amount ?? '';
+            $this->cc_charges = $b->payment->cc_charges ?? '';
+            $this->payment_method = $b->payment->payment_mode ?? '';
+        }
+
+        $jsonLog = $b->activity_log ?? [];
+        if (is_string($jsonLog)) $jsonLog = json_decode($jsonLog, true) ?? [];
+        $this->activity_log_entries = $jsonLog;
+    }
+
+    // ── Passenger type labels ──────────────────────────────────────────
+    public function passengerTypeLabel(string $type): string
+    {
+        return ['adult' => 'ADT', 'gbe' => 'GBE', 'child' => 'CNN', 'infant' => 'INF'][$type] ?? ucfirst($type);
+    }
+
+    public function passengerTypeFullName(string $type): string
+    {
+        return ['adult' => 'Adult', 'gbe' => 'Youth', 'child' => 'Child', 'infant' => 'Infant'][$type] ?? ucfirst($type);
+    }
+
+    public function getPassengerNumber(int $index, string $type): int
+    {
+        $count = 1;
+        for ($i = 0; $i < $index; $i++) {
+            if (($this->passengers[$i]['type'] ?? '') === $type) $count++;
+        }
+        return $count;
+    }
+
+    public function computePtc($dob, $passengerType): string
+    {
+        if ($passengerType === 'gbe') return 'GBE';
+        if (!$dob) return '';
+        $dobDate = \Carbon\Carbon::parse($dob);
+        $years = $dobDate->diffInYears(now());
+        return match (true) {
+            $years >= 16 => 'ADT',
+            $years >= 12 => 'GBE',
+            $years >= 2  => 'CNN',
+            default      => 'INF',
+        };
+    }
+
+    public function computeAgeInfo(string $dob): array
+    {
+        if (!$dob) return ['years' => 0, 'months' => 0, 'days' => 0, 'current_type' => 'infant', 'next_ptc' => null, 'next_ptc_date' => null];
+        $dobDate = \Carbon\Carbon::parse($dob);
+        $today = now();
+        $totalDays = $dobDate->diffInDays($today);
+        $years = (int)floor($totalDays / 365);
+        $remainingDays = $totalDays - ($years * 365);
+        $months = (int)floor($remainingDays / 30);
+        $days = round($remainingDays - ($months * 30));
+        $currentType = $years >= 16 ? 'adult' : ($years >= 12 ? 'youth' : ($years >= 2 ? 'child' : 'infant'));
+        $nextPtc = null;
+        $nextPtcDate = null;
+        if ($currentType === 'infant') { $nextPtc = 'Child (CNN)'; $nextPtcDate = $dobDate->copy()->addYears(2)->format('d M Y'); }
+        elseif ($currentType === 'child') { $nextPtc = 'Youth (GBE)'; $nextPtcDate = $dobDate->copy()->addYears(12)->format('d M Y'); }
+        elseif ($currentType === 'youth') { $nextPtc = 'Adult (ADT)'; $nextPtcDate = $dobDate->copy()->addYears(16)->format('d M Y'); }
+        return ['years' => $years, 'months' => $months, 'days' => $days, 'current_type' => $currentType, 'next_ptc' => $nextPtc, 'next_ptc_date' => $nextPtcDate];
+    }
+
+    public function getTotalPassengersProperty(): int { return count($this->passengers); }
+
+    public function getNonInfantPassengerCountProperty(): int
+    {
+        return count(array_filter($this->passengers, fn($p) => ($p['type'] ?? '') !== 'infant'));
+    }
+
+    // Flight pricing computed
+    public function getTotalFlightCostProperty(): float
+    {
+        $total = 0;
+        foreach ($this->flightSegments as $seg) {
+            foreach ($seg['passenger_costs'] ?? [] as $pc) {
+                $total += (float)($pc['cost'] ?? 0);
+            }
+        }
+        $taxableCount = $this->nonInfantPassengerCount;
+        if ($taxableCount > 0) {
+            $taxPerPerson = 0;
+            if ($this->flight_atol) $taxPerPerson += 2.50;
+            if ($this->flight_safi) $taxPerPerson += 2.50;
+            $total += ($taxPerPerson * $taxableCount);
+        }
+        return $total;
+    }
+
+    public function getTotalFlightSoldProperty(): float
+    {
+        $total = 0;
+        foreach ($this->flightSegments as $seg) {
+            foreach ($seg['passenger_costs'] ?? [] as $pc) {
+                $total += (float)($pc['sold'] ?? 0);
+            }
+        }
+        return $total;
+    }
+
+    public function getAtolTaxProperty(): float
+    {
+        if (!$this->flight_atol) return 0;
+        $tc = $this->nonInfantPassengerCount;
+        return $tc > 0 ? 2.50 * $tc : 0;
+    }
+
+    public function getSafiTaxProperty(): float
+    {
+        if (!$this->flight_safi) return 0;
+        $tc = $this->nonInfantPassengerCount;
+        return $tc > 0 ? 2.50 * $tc : 0;
+    }
+
+    public function getAtolSafiTaxProperty(): float { return $this->atolTax + $this->safiTax; }
+
+    public function getFlightMarginProperty(): float { return $this->totalFlightSold - $this->totalFlightCost; }
+
+    public function getTotalCostPriceProperty(): float
+    {
+        return $this->totalFlightCost
+            + $this->atolSafiTax
+            + collect($this->hotels)->sum(fn($h) => (float)($h['actual_cost'] ?? 0))
+            + collect($this->visas)->sum(fn($v) => (float)($v['actual_cost'] ?? 0))
+            + (float)($this->excursion_actual_cost ?: 0);
+    }
+
+    public function getTotalSoldPriceProperty(): float
+    {
+        return $this->totalFlightSold
+            + collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0))
+            + collect($this->visas)->sum(fn($v) => (float)($v['selling_price'] ?? 0))
+            + (float)($this->excursion_selling_price ?: 0);
+    }
+
+    public function getGrossMarginProperty(): float
+    {
+        return $this->totalSoldPrice - $this->totalCostPrice;
+    }
+
+    public function getTotalMarginProperty(): float
+    {
+        return $this->totalSoldPrice - $this->totalCostPrice - (float)($this->cc_charges ?: 0);
+    }
+
+    public function getHotelMarginProperty(): float
+    {
+        return collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0) - (float)($h['actual_cost'] ?? 0));
+    }
+
+    public function getAgentMonthlyNumberProperty(): int
+    {
+        $b = $this->booking;
+        return \App\Models\Booking::withTrashed()
+            ->where('user_id', $b->user_id)
+            ->whereYear('created_at', $b->created_at->year)
+            ->whereMonth('created_at', $b->created_at->month)
+            ->where('booking_number', '<=', $b->booking_number)
+            ->count();
+    }
+
+    public function getIsLockedProperty(): bool
+    {
+        return $this->booking->booking_status !== 'pending';
+    }
+
+    public function getCanEditProperty(): bool
+    {
+        return !$this->isLocked && Auth::user()->can('update', $this->booking);
+    }
+
+    public function getIsViewerOnlyProperty(): bool
+    {
+        return Auth::id() !== $this->booking->user_id;
+    }
+
+    private function abortIfViewer(): void
+    {
+        if ($this->isViewerOnly) {
+            abort(403, 'You do not have permission to modify this booking.');
+        }
+    }
+
+    public function getTotalPaidProperty(): float
+    {
+        return (float) $this->booking->paymentHistory()
+            ->where('status', 'approved')
+            ->sum('amount');
+    }
+
+    public function getRunningBalanceProperty(): float
+    {
+        return $this->totalSoldPrice - $this->totalPaid;
+    }
+
+    // ── Passenger management ───────────────────────────────────────────
+    public function updatedAdultCount() { $this->reconcilePassengers(); }
+    public function updatedGbeCount() { $this->reconcilePassengers(); }
+    public function updatedChildCount() { $this->reconcilePassengers(); }
+    public function updatedInfantCount() { $this->reconcilePassengers(); }
+
+    public function inc(string $type): void
+    {
+        $this->abortIfViewer();
+        $this->suppressLogging = true;
+        $prop = $type . 'Count';
+        $this->$prop = ($this->$prop ?? 0) + 1;
+        $this->reconcilePassengers();
+        $this->suppressLogging = false;
+        $typeLabel = ['adult'=>'Adult','gbe'=>'Youth','child'=>'Child','infant'=>'Infant'][$type] ?? $type;
+        $this->logActivity("Added Passenger", "{$typeLabel} — now {$this->$prop}", 'update');
+    }
+
+    public function dec(string $type): void
+    {
+        $this->abortIfViewer();
+        $this->suppressLogging = true;
+        $prop = $type . 'Count';
+        $persisted = count(array_filter($this->passengers, fn($p) => !empty($p['id']) && $p['type'] === $type));
+        $before = (int)$this->$prop;
+        $this->$prop = max($persisted, $before - 1);
+        $this->reconcilePassengers();
+        $this->suppressLogging = false;
+        if ($this->$prop < $before) {
+            $typeLabel = ['adult'=>'Adult','gbe'=>'Youth','child'=>'Child','infant'=>'Infant'][$type] ?? $type;
+            $this->logActivity("Removed Passenger", "{$typeLabel} — now {$this->$prop}", 'update');
+        }
+    }
+
+    public function reconcilePassengers(): void
+    {
+        $this->suppressLogging = true;
+        $persistedByType = [];
+        foreach ($this->passengers as $p) {
+            if (!empty($p['id'])) {
+                $t = $p['type'];
+                $persistedByType[$t] = ($persistedByType[$t] ?? 0) + 1;
+            }
+        }
+
+        $desired = [];
+        foreach (['adult' => 'adultCount', 'gbe' => 'gbeCount', 'child' => 'childCount', 'infant' => 'infantCount'] as $type => $prop) {
+            $count = max(0, (int)$this->$prop);
+            $min = $persistedByType[$type] ?? 0;
+            if ($count < $min) {
+                $count = $min;
+                $this->$prop = $count;
+            }
+            for ($i = 0; $i < $count; $i++) $desired[] = ['type' => $type];
+        }
+        $current = $this->passengers;
+        while (count($current) > count($desired)) array_pop($current);
+        $result = [];
+        foreach ($desired as $d) {
+            $found = false;
+            foreach ($current as $i => $c) {
+                if ($c !== null && $c['type'] === $d['type']) {
+                    $result[] = $c;
+                    $current[$i] = null;
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $result[] = [
+                    'id' => null, 'type' => $d['type'], 'title' => '', 'first_name' => '', 'last_name' => '',
+                    'passport_number' => '', 'passport_country_code' => '', 'passport_issuing_country' => '',
+                    'national_id_number' => '', 'nationality' => '', 'date_of_birth' => '',
+                    'contact_number' => '', 'cost_per_pax' => '', 'sold_per_pax' => '',
+                    'frequent_flyer_number' => '', 'e_ticket_number' => '',
+                    'ptc' => '', 'passenger_status_label' => '',
+                ];
+            }
+        }
+        $this->passengers = $result;
+        $this->suppressLogging = false;
+    }
+
+    public function updatedPassengers($value, $key): void
+    {
+        if (preg_match('/^passengers\.(\d+)\.date_of_birth$/', (string)$key, $m)) {
+            $this->validatePassengerDob((int)$m[1]);
+        }
+    }
+
+    public function validatePassengerDob(int $index): void
+    {
+        $p = $this->passengers[$index] ?? null;
+        if (!$p || empty($p['date_of_birth']) || empty($p['type'])) return;
+
+        $this->resetErrorBag("passengers.{$index}.date_of_birth");
+
+        try {
+            $dobDate = \Carbon\Carbon::parse($p['date_of_birth']);
+        } catch (\Exception $e) {
+            $this->addError("passengers.{$index}.date_of_birth", 'Invalid date format');
             return;
         }
 
+        if ($dobDate->gt(now())) {
+            $this->addError("passengers.{$index}.date_of_birth", 'Date of birth cannot be in the future');
+            return;
+        }
+
+        $years = $dobDate->diffInYears(now());
+        $type  = $p['type'];
+        $valid = match ($type) {
+            'adult'  => $years >= 16,
+            'gbe'    => $years >= 12 && $years < 16,
+            'child'  => $years >= 2  && $years < 12,
+            'infant' => $years < 2,
+            default  => true,
+        };
+        if (!$valid) {
+            $this->addError("passengers.{$index}.date_of_birth", match ($type) {
+                'adult'  => 'Adult must be 16+ years old',
+                'gbe'    => 'Youth must be 12-15 years old',
+                'child'  => 'Child must be 2-11 years old',
+                'infant' => 'Infant must be under 2 years old',
+                default  => 'Age does not match passenger type',
+            });
+        }
+    }
+
+    // ── Flight segments ────────────────────────────────────────────────
+    public function addFlightSegment(): void
+    {
+        $this->abortIfViewer();
+        $this->suppressLogging = true;
+        $this->flightSegments[] = [
+            'pnr' => '', 'locator' => '', 'airline_locator' => '', 'type_issuer' => '',
+            'reservation_status' => '', 'flight_type' => 'return', 'airline' => '', 'vendor' => '', 'gds' => '',
+            'cabin' => '', 'ticket_issue_limit' => '', 'cost' => '', 'sold' => '',
+            'departure_airport' => '',
+            'arrival_airport' => '', 'departure_date' => '', 'return_date' => '',
+        ];
+        $this->suppressLogging = false;
+        $this->logActivity('Added PNR segment', 'PNR #'.count($this->flightSegments).' added', 'update');
+    }
+
+    public function removeFlightSegment(int $index): void
+    {
+        $this->abortIfViewer();
+        if (count($this->flightSegments) > 1) {
+            $label = 'PNR #'.($index+1);
+            unset($this->flightSegments[$index]);
+            $this->flightSegments = array_values($this->flightSegments);
+            $this->logActivity('Removed PNR segment', $label.' removed', 'update');
+        }
+    }
+
+    // ── Hotels ─────────────────────────────────────────────────────────
+    public function addHotel(): void
+    {
+        $this->suppressLogging = true;
+        $this->hotels[] = [
+            'hotel_id' => null, 'hotel_name' => '', 'city' => '', 'status' => 'confirmed',
+            'check_in' => '', 'check_out' => '', 'actual_cost' => '', 'selling_price' => '',
+            'number_of_rooms' => 1,
+            'rooms' => [['room_type' => '', 'occupants' => 1, 'meal_basis' => 'room_only']],
+        ];
+        $this->suppressLogging = false;
+        $this->logActivity('Added Hotel', 'Hotel #'.count($this->hotels).' added', 'update');
+    }
+
+    public function removeHotel(int $index): void
+    {
+        $this->abortIfViewer();
+        if (count($this->hotels) > 0) {
+            $name = $this->hotels[$index]['hotel_name'] ?: 'Hotel #'.($index+1);
+            unset($this->hotels[$index]);
+            $this->hotels = array_values($this->hotels);
+            $this->logActivity('Removed Hotel', $name.' removed', 'update');
+        }
+    }
+
+    public function updatedHotels($value, $key): void
+    {
+        if (preg_match('/^hotels\.(\d+)\.number_of_rooms$/', $key, $m)) {
+            $idx = (int)$m[1];
+            $desired = max(1, (int) $value);
+            $this->hotels[$idx]['rooms'] = $this->hotels[$idx]['rooms'] ?? [];
+            while (count($this->hotels[$idx]['rooms']) > $desired) array_pop($this->hotels[$idx]['rooms']);
+            while (count($this->hotels[$idx]['rooms']) < $desired) {
+                $this->hotels[$idx]['rooms'][] = ['room_type' => '', 'occupants' => 1, 'meal_basis' => 'room_only'];
+            }
+        }
+    }
+
+    // ── Excursion ─────────────────────────────────────────────────────
+    public function addExcursion(): void
+    {
+        $this->showExcursion = true;
+        if (empty($this->excursion_status)) $this->excursion_status = 'confirmed';
+        $this->logActivity('Added Excursion section', '', 'update');
+    }
+
+    // ── Visas ──────────────────────────────────────────────────────────
+    public function addVisa(): void
+    {
+        $this->suppressLogging = true;
+        $this->visas[] = [
+            'id'               => null,
+            'passenger_name'   => '',
+            'visa_type'        => 'tourist',
+            'visa_reference'   => '',
+            'visa_number'      => '',
+            'application_date' => '',
+            'issue_date'       => '',
+            'expiry_date'      => '',
+            'status'           => 'pending',
+            'actual_cost'      => '',
+            'selling_price'    => '',
+            'notes'            => '',
+        ];
+        $this->suppressLogging = false;
+        $this->logActivity('Added Visa', 'Visa #'.count($this->visas).' added', 'update');
+    }
+
+    public function removeVisa(int $index): void
+    {
+        $label = $this->visas[$index]['passenger_name'] ?: 'Visa #'.($index+1);
+        if (isset($this->visas[$index]['id']) && $this->visas[$index]['id']) {
+            \App\Models\BookingVisa::find($this->visas[$index]['id'])?->delete();
+        }
+        unset($this->visas[$index]);
+        $this->visas = array_values($this->visas);
+        $this->logActivity('Removed Visa', $label.' removed', 'update');
+    }
+
+    // ── Transfers ──────────────────────────────────────────────────────
+    public function addPickup(): void
+    {
+        $this->suppressLogging = true;
+        $this->transferPickups[] = ['id'=>null,'location'=>'','date_time'=>'','flight_number'=>'','route'=>'','vehicle_type'=>'','supplier'=>'','actual_cost'=>'','selling_price'=>'','status'=>'confirmed','notes'=>''];
+        $this->suppressLogging = false;
+        $this->logActivity('Added Transfer Pickup', 'Pickup #'.count($this->transferPickups).' added', 'update');
+    }
+
+    public function removePickup(int $index): void
+    {
+        $loc = $this->transferPickups[$index]['location'] ?: 'Pickup #'.($index+1);
+        unset($this->transferPickups[$index]);
+        $this->transferPickups = array_values($this->transferPickups);
+        $this->logActivity('Removed Transfer Pickup', $loc.' removed', 'update');
+    }
+
+    public function addDropoff(): void
+    {
+        $this->suppressLogging = true;
+        $this->transferDropoffs[] = ['id'=>null,'location'=>'','date_time'=>'','flight_number'=>'','route'=>'','vehicle_type'=>'','supplier'=>'','actual_cost'=>'','selling_price'=>'','status'=>'confirmed','notes'=>''];
+        $this->suppressLogging = false;
+        $this->logActivity('Added Transfer Dropoff', 'Dropoff #'.count($this->transferDropoffs).' added', 'update');
+    }
+
+    public function removeDropoff(int $index): void
+    {
+        $loc = $this->transferDropoffs[$index]['location'] ?: 'Dropoff #'.($index+1);
+        unset($this->transferDropoffs[$index]);
+        $this->transferDropoffs = array_values($this->transferDropoffs);
+        $this->logActivity('Removed Transfer Dropoff', $loc.' removed', 'update');
+    }
+
+    // ── Payment method / instalments ───────────────────────────────────
+    public function updatedSelectedPaymentMethod(): void
+    {
+        $this->abortIfViewer();
+        $this->payment_instalments = [[
+            'amount' => '',
+            'date' => '',
+            'editing' => true,
+        ]];
+    }
+
+    public function addPaymentInstalment(): void
+    {
+        $this->payment_instalments[] = [
+            'amount' => '',
+            'date' => '',
+            'editing' => true,
+        ];
+    }
+
+    public function removePaymentInstalment(): void
+    {
+        if (count($this->payment_instalments) > 1) {
+            array_pop($this->payment_instalments);
+        }
+    }
+
+    public function toggleEditInstalment(int $index): void
+    {
+        if (isset($this->payment_instalments[$index])) {
+            $this->payment_instalments[$index]['editing'] = !$this->payment_instalments[$index]['editing'];
+        }
+    }
+
+    // ── Payment management ─────────────────────────────────────────────
+    public function sendToAccounts(int $historyId): void
+    {
+        $ph = BookingPaymentHistory::findOrFail($historyId);
+        if ($ph->booking_id !== $this->booking->id) return;
+        $ph->update(['status' => 'sent_to_accounts']);
+        AuditLogger::log(Auth::user(), $this->booking, 'payment_sent', "Payment {$historyId} sent to accounts for approval");
+        session()->flash('success', 'Payment sent to accounts for approval.');
+        $this->refreshBooking();
+    }
+
+    private function refreshBooking(): void
+    {
+        $this->booking->refresh();
+        $this->booking->load([
+            'passengers', 'payment', 'paymentHistory', 'documents',
+            'flightDetail', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
+            'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
+        ]);
+        $this->activityLog = $this->buildActivityLog($this->booking);
+    }
+
+    // ── Documents ──────────────────────────────────────────────────────
+    public function addDocument(): void { $this->abortIfViewer(); $this->newDocuments[] = null; $this->newDocumentTypes[] = ''; }
+    public function removeDocument(int $i): void { $this->abortIfViewer(); unset($this->newDocuments[$i]); unset($this->newDocumentTypes[$i]); $this->newDocuments = array_values($this->newDocuments); $this->newDocumentTypes = array_values($this->newDocumentTypes); }
+
+    // ── Activity log helpers ───────────────────────────────────────────
+    protected array $fieldSnapshot = [];
+    protected bool $suppressLogging = false;
+
+    private function logActivity(string $action, string $detail = '', string $type = 'info', bool $bypassViewerCheck = false): void
+    {
+        if (!$bypassViewerCheck) {
+            $this->abortIfViewer();
+        }
+
+        $user   = Auth::user();
+        $agent  = $user->name ?? 'System';
+        $userId = Auth::id();
+        $ts     = now();
+
+        $ini = strtoupper(substr($agent, 0, 1));
+        if (($sp = strpos($agent, ' ')) !== false) $ini .= strtoupper(substr($agent, $sp + 1, 1));
+        $avatarUrl = $user?->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null;
+
+        $this->activity_log_entries[] = [
+            'agent'           => $agent,
+            'avatar_url'      => $avatarUrl,
+            'avatar_initials' => $ini,
+            'user_id'         => $userId,
+            'timestamp'       => $ts->toDateTimeString(),
+            'action'          => $action,
+            'detail'          => $detail,
+            'type'            => $type,
+        ];
+
+        // Persist immediately — every logged action is durable, not just after Save
+        $this->booking->update(['activity_log' => array_values($this->activity_log_entries)]);
+
+        $jsonIndex = count($this->activity_log_entries) - 1;
+
+        $this->activityLog[] = [
+            'agent'           => $agent,
+            'avatar_url'      => $avatarUrl,
+            'avatar_initials' => $ini,
+            'action'          => $action,
+            'detail'          => $detail,
+            'type'            => $type,
+            'timestamp'       => $ts->format('d M Y, H:i'),
+            'ts_sort'         => $ts->timestamp,
+            'color'           => $this->getActivityColorConfig($action, $type),
+            'json_index'      => $jsonIndex,
+            'is_json'         => true,
+            'reasons'         => [],
+        ];
+    }
+
+    // ── Field-level change tracking ────────────────────────────────────
+    public function updating($property, $value): void
+    {
+        if ($this->suppressLogging) return;
+        if ($this->getFieldLabel($property) !== null) {
+            $this->fieldSnapshot[$property] = data_get($this, $property);
+        }
+    }
+
+    public function updated($property, $value): void
+    {
+        if ($this->suppressLogging) return;
+        $label = $this->getFieldLabel($property);
+        if ($label === null) return;
+
+        $old = $this->fieldSnapshot[$property] ?? null;
+        if ((string)$old === (string)$value) return;
+
+        $detail = ($old !== null && $old !== '')
+            ? "«{$old}» → «{$value}»"
+            : "set to «{$value}»";
+
+        $this->logActivity("Edited: {$label}", $detail, 'update');
+    }
+
+    private function getFieldLabel(string $property): ?string
+    {
+        $simple = [
+            'booker_first_name'      => 'Caller First Name',
+            'booker_last_name'       => 'Caller Last Name',
+            'booker_email'           => 'Caller Email',
+            'booker_mobile'          => 'Caller Mobile',
+            'booker_landline'        => 'Caller Landline',
+            'booker_address'         => 'Caller Address',
+            'booker_postcode'        => 'Caller Postcode',
+            'booker_title'           => 'Caller Title',
+            'booker_whatsapp'        => 'Caller WhatsApp',
+            'booking_type'           => 'Booking Type',
+            'lead_source'            => 'Lead Source',
+            'lead_nature'            => 'Lead Nature',
+            'notes'                  => 'Notes',
+            'excursion_name'         => 'Excursion Name',
+            'excursion_destination'  => 'Excursion Destination',
+            'excursion_supplier'     => 'Excursion Supplier',
+            'excursion_actual_cost'  => 'Excursion Cost',
+            'excursion_selling_price'=> 'Excursion Selling Price',
+            'excursion_status'       => 'Excursion Status',
+            'excursion_date'         => 'Excursion Date',
+            'flight_atol'            => 'ATOL',
+            'flight_safi'            => 'SAFI',
+        ];
+        if (isset($simple[$property])) return $simple[$property];
+
+        // Passengers: passengers.N.field
+        $paxFields = ['first_name','last_name','date_of_birth','passport_number','nationality','e_ticket_number','title','contact_number'];
+        if (preg_match('/^passengers\.(\d+)\.('.implode('|',$paxFields).')$/', $property, $m)) {
+            return 'Passenger #'.($m[1]+1).' '.ucwords(str_replace('_',' ',$m[2]));
+        }
+
+        // Flight segments: flightSegments.N.field
+        $segFields = ['locator','airline_locator','airline','departure_airport','arrival_airport','departure_date','return_date','cabin','vendor','gds','pnr','reservation_status','ticket_issue_limit','flight_type'];
+        if (preg_match('/^flightSegments\.(\d+)\.('.implode('|',$segFields).')$/', $property, $m)) {
+            return 'PNR #'.($m[1]+1).' '.ucwords(str_replace('_',' ',$m[2]));
+        }
+
+        // Passenger costs
+        if (preg_match('/^flightSegments\.(\d+)\.passenger_costs\.(\d+)\.(cost|sold)$/', $property, $m)) {
+            return 'PNR #'.($m[1]+1).' Pax #'.($m[2]+1).' '.ucfirst($m[3]);
+        }
+
+        // Hotels: hotels.N.field
+        $hotelFields = ['hotel_name','city','status','check_in','check_out','actual_cost','selling_price'];
+        if (preg_match('/^hotels\.(\d+)\.('.implode('|',$hotelFields).')$/', $property, $m)) {
+            return 'Hotel #'.($m[1]+1).' '.ucwords(str_replace('_',' ',$m[2]));
+        }
+
+        // Hotel rooms: hotels.N.rooms.M.field
+        $roomFields = ['room_type','occupants','meal_basis'];
+        if (preg_match('/^hotels\.(\d+)\.rooms\.(\d+)\.('.implode('|',$roomFields).')$/', $property, $m)) {
+            return 'Hotel #'.($m[1]+1).' Room #'.($m[2]+1).' '.ucwords(str_replace('_',' ',$m[3]));
+        }
+
+        // Visas: visas.N.field
+        $visaFields = ['passenger_name','visa_type','status','actual_cost','selling_price','visa_reference','visa_number','application_date','expiry_date','notes'];
+        if (preg_match('/^visas\.(\d+)\.('.implode('|',$visaFields).')$/', $property, $m)) {
+            return 'Visa #'.($m[1]+1).' '.ucwords(str_replace('_',' ',$m[2]));
+        }
+
+        // Transfer pickups/dropoffs
+        $txFields = ['location','flight_number','route','vehicle_type','supplier','actual_cost','selling_price','status'];
+        if (preg_match('/^transferPickups\.(\d+)\.('.implode('|',$txFields).')$/', $property, $m)) {
+            return 'Pickup #'.($m[1]+1).' '.ucwords(str_replace('_',' ',$m[2]));
+        }
+        if (preg_match('/^transferDropoffs\.(\d+)\.('.implode('|',$txFields).')$/', $property, $m)) {
+            return 'Dropoff #'.($m[1]+1).' '.ucwords(str_replace('_',' ',$m[2]));
+        }
+
+        return null;
+    }
+
+    public function addActivityEntry(): void
+    {
+        if (empty(trim($this->mandatory_comment))) return;
+        $this->logActivity('Note', $this->mandatory_comment, 'note');
+        $this->mandatory_comment = '';
+    }
+
+    // ── Status change ──────────────────────────────────────────────────
+    public function updatedBookingStatus($value)
+    {
+        if ($this->isLocked) return;
+        $this->abortIfViewer();
+        $oldStatus = $this->booking->booking_status;
+        $this->booking->update(['booking_status' => $value]);
+        $this->booking->refresh();
+        $label = \App\Models\Booking::STATUS_LABELS[$value] ?? ucfirst(str_replace('_', ' ', $value));
+        AuditLogger::log(Auth::user(), $this->booking, 'status_changed', "Status changed to {$label}", ['booking_status' => $oldStatus], ['booking_status' => $value]);
+        $this->logActivity("Status → {$label}", '', 'update');
+    }
+
+    public function cancelPnr(): void
+    {
+        $this->abortIfViewer();
+        if (!in_array(Auth::user()->role, ['admin', 'manager', 'operations'])) return;
+
+        // Mark all flight segments as Cancelled
+        $segments = $this->flightSegments;
+        foreach ($segments as $i => $seg) {
+            $segments[$i]['reservation_status'] = 'Cancelled';
+        }
+        $this->flightSegments = $segments;
+
+        // Persist via flight detail update
+        if ($this->booking->flightDetail) {
+            $this->booking->flightDetail->update(['segments' => array_values($segments)]);
+        }
+
+        AuditLogger::log(Auth::user(), $this->booking, 'pnr_cancelled', 'All PNR segments marked as Cancelled');
+        $this->logActivity('Cancel PNR', 'All flight segments marked Cancelled', 'update');
+        session()->flash('success', 'PNR segments cancelled.');
+    }
+
+    public function requestIssuance(): void
+    {
+        $this->abortIfViewer();
+        $oldStatus = $this->booking->booking_status;
+        $this->booking->update(['booking_status' => 'issuance_queue', 'issuance_requested_at' => now()]);
+        $this->booking->refresh();
+        $this->bookingStatus = 'issuance_queue';
+        AuditLogger::log(Auth::user(), $this->booking, 'status_changed', 'Moved to Issuance Queue', ['booking_status' => $oldStatus], ['booking_status' => 'issuance_queue']);
+        $this->logActivity('Request Issuance', 'Booking sent to Issuance Queue', 'update');
+    }
+
+    public function markTicketInProcess(): void
+    {
+        $this->abortIfViewer();
+        $this->booking->update(['booking_status' => 'ticket_in_process']);
+        $this->booking->refresh();
+        $this->bookingStatus = 'ticket_in_process';
+        $this->logActivity('Ticket In Process', 'Ticket is now being processed', 'update');
+    }
+
+    public function markIssued(string $paymentType = 'issued'): void
+    {
+        $this->abortIfViewer();
+        $allowed = ['issued', 'issued_payment_awaiting', 'issued_payment_plan'];
+        if (!in_array($paymentType, $allowed)) $paymentType = 'issued';
+        $this->booking->update(['booking_status' => $paymentType]);
+        $this->booking->refresh();
+        $this->bookingStatus = $paymentType;
+        $label = \App\Models\Booking::STATUS_LABELS[$paymentType] ?? 'Issued';
+        $this->logActivity('Ticket Issued', "Status set to: {$label}", 'update');
+    }
+
+    // ── Charge Popup ─────────────────────────────────────────────────
+    public function openChargeModal(): void
+    {
+        $this->chargeAmount = '';
+        $this->chargeMethod = '';
+        $this->chargeReceipt = '';
+        $this->card_number = '';
+        $this->card_expiry = '';
+        $this->card_cvv = '';
+        $this->card_holder_name = '';
+        $this->showChargeModal = true;
+    }
+
+    public function closeChargeModal(): void
+    {
+        $this->showChargeModal = false;
+    }
+
+    public function requestPaymentCharge(): void
+    {
         $this->validate([
-            'newComment' => 'required|string|max:2000',
+            'chargeAmount' => 'required|numeric|min:1',
+            'chargeMethod' => 'required|string',
         ]);
 
-        BookingComment::create([
+        BookingPaymentHistory::create([
             'booking_id' => $this->booking->id,
             'user_id' => Auth::id(),
-            'comment' => $this->newComment,
+            'amount' => $this->chargeAmount,
+            'payment_method' => $this->chargeMethod,
+            'receipt_number' => $this->chargeReceipt ?: null,
+            'payment_date' => now(),
+            'status' => 'pending',
+            'payment_details' => in_array($this->chargeMethod, ['debit_card','credit_card','amex']) ? json_encode([
+                'card_number' => $this->card_number,
+                'card_expiry' => $this->card_expiry,
+                'card_cvv' => $this->card_cvv,
+                'card_holder_name' => $this->card_holder_name,
+            ]) : null,
         ]);
 
-        AuditLogger::log(
-            Auth::user(),
-            $this->booking,
-            'comment_added',
-            'Comment added',
-            null,
-            ['comment' => $this->newComment],
-        );
+        // Lock the form until accounts approves
+        $this->booking->update(['booking_status' => 'payment_charge_request']);
+        $this->booking->refresh();
+        $this->bookingStatus = 'payment_charge_request';
 
+        AuditLogger::log(Auth::user(), $this->booking, 'payment_requested', 'Payment charge of £' . number_format((float)$this->chargeAmount, 2) . ' requested via ' . $this->chargeMethod);
+        $this->logActivity('Request Payment Charge', '£' . number_format((float)$this->chargeAmount, 2) . ' via ' . ucwords(str_replace('_', ' ', $this->chargeMethod)), 'update', bypassViewerCheck: true);
+
+        $this->showChargeModal = false;
+        $this->chargeAmount = '';
+        $this->chargeMethod = '';
+        $this->chargeReceipt = '';
+        $this->booking->load('paymentHistory');
+        $this->activityLog = $this->buildActivityLog($this->booking);
+        session()->flash('success', 'Payment charge requested successfully.');
+    }
+
+    // ── Comments ───────────────────────────────────────────────────────
+    public function addComment()
+    {
+        if (!$this->canComment()) return;
+        $this->validate(['newComment' => 'required|string|max:2000']);
+        $user = Auth::user();
+        BookingComment::create([
+            'booking_id' => $this->booking->id,
+            'user_id'    => $user->id,
+            'agent_name' => $user->name,
+            'avatar_url' => $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null,
+            'action'     => 'comment_added',
+            'comment'    => $this->newComment,
+        ]);
+        AuditLogger::log(Auth::user(), $this->booking, 'comment_added', 'Comment added', null, ['comment' => $this->newComment]);
         $this->newComment = '';
-        $this->booking->load([
-            'comments' => function ($query) {
-                $query->with('user')->orderBy('created_at');
-            }
-        ]);
+        $this->booking->load(['comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
+        $this->activityLog = $this->buildActivityLog($this->booking);
+    }
+
+    public function saveLogEntryComment(int $jsonIndex, string $comment): void
+    {
+        $comment = trim($comment);
+        if (!$comment) return;
+
+        $logs = $this->activity_log_entries;
+        if (!isset($logs[$jsonIndex])) return;
+
+        $user    = Auth::user();
+        $reasons = $logs[$jsonIndex]['reasons'] ?? (isset($logs[$jsonIndex]['reason'])
+            ? [['text' => $logs[$jsonIndex]['reason'], 'agent' => null, 'at' => null]]
+            : []);
+
+        $avatarUrl      = $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null;
+        $avatarInitials = strtoupper(substr($user->name, 0, 1));
+        if (($sp = strpos($user->name, ' ')) !== false) $avatarInitials .= strtoupper(substr($user->name, $sp + 1, 1));
+
+        $reasons[] = [
+            'text'            => $comment,
+            'agent'           => $user->name,
+            'avatar_url'      => $avatarUrl,
+            'avatar_initials' => $avatarInitials,
+            'at'              => now()->format('d M Y, H:i'),
+        ];
+
+        $logs[$jsonIndex]['reasons'] = $reasons;
+        unset($logs[$jsonIndex]['reason']); // migrate old single-reason field
+
+        $this->activity_log_entries = $logs;
+        $this->booking->update(['activity_log' => array_values($logs)]);
+
+        // Also create a new timeline entry so the comment is visible in the log
+        $parentAction = $logs[$jsonIndex]['action'] ?? 'entry';
+        $this->logActivity('added a comment', "On: {$parentAction} — {$comment}", 'note');
+
+        $this->activityLog = $this->buildActivityLog($this->booking->fresh());
     }
 
     public function canComment(): bool
@@ -89,8 +1382,10 @@ class BookingShow extends Component
         return $user->id === $this->booking->user_id || $user->role === 'admin';
     }
 
+    // ── Refunds ────────────────────────────────────────────────────────
     public function requestRefund(): void
     {
+        $this->abortIfViewer();
         $this->refundAmount = $this->booking->total_sale_price ?? '';
         $this->refundReason = '';
         $this->refundMethod = 'bank_transfer';
@@ -104,9 +1399,7 @@ class BookingShow extends Component
             'refundReason' => 'required|string|max:1000',
             'refundMethod' => 'required|in:cash,bank_transfer,stripe,klarna',
         ]);
-
         $oldStatus = $this->booking->booking_status;
-
         Refund::create([
             'booking_id' => $this->booking->id,
             'requested_by' => Auth::id(),
@@ -116,26 +1409,409 @@ class BookingShow extends Component
             'requested_at' => now(),
             'status' => 'requested',
         ]);
-
         $this->booking->update(['booking_status' => 'refund_queue']);
         $this->bookingStatus = 'refund_queue';
         $this->booking->refresh();
-
-        AuditLogger::log(
-            Auth::user(),
-            $this->booking,
-            'status_changed',
-            "Refund requested — status changed from {$oldStatus} to refund_queue",
-            ['booking_status' => $oldStatus],
-            ['booking_status' => 'refund_queue', 'refund_amount' => $this->refundAmount, 'refund_method' => $this->refundMethod],
-        );
-
+        AuditLogger::log(Auth::user(), $this->booking, 'status_changed', "Refund requested", ['booking_status' => $oldStatus], ['booking_status' => 'refund_queue']);
         $this->showRefundModal = false;
-        session()->flash('success', 'Refund request submitted successfully.');
+        session()->flash('success', 'Refund request submitted.');
+    }
+
+    // ── Country list ───────────────────────────────────────────────────
+    public function countries(): array
+    {
+        return ['AF' => 'Afghanistan', 'AL' => 'Albania', 'DZ' => 'Algeria', 'AO' => 'Angola', 'AR' => 'Argentina', 'AM' => 'Armenia', 'AU' => 'Australia', 'AT' => 'Austria', 'AZ' => 'Azerbaijan', 'BS' => 'Bahamas', 'BH' => 'Bahrain', 'BD' => 'Bangladesh', 'BE' => 'Belgium', 'BJ' => 'Benin', 'BT' => 'Bhutan', 'BA' => 'Bosnia', 'BR' => 'Brazil', 'BN' => 'Brunei', 'BG' => 'Bulgaria', 'BF' => 'Burkina Faso', 'BI' => 'Burundi', 'KH' => 'Cambodia', 'CM' => 'Cameroon', 'CA' => 'Canada', 'CL' => 'Chile', 'CN' => 'China', 'CO' => 'Colombia', 'CR' => 'Costa Rica', 'HR' => 'Croatia', 'CY' => 'Cyprus', 'CZ' => 'Czech Republic', 'DK' => 'Denmark', 'DJ' => 'Djibouti', 'DM' => 'Dominica', 'DO' => 'Dominican Republic', 'EC' => 'Ecuador', 'EG' => 'Egypt', 'SV' => 'El Salvador', 'EE' => 'Estonia', 'ET' => 'Ethiopia', 'FI' => 'Finland', 'FR' => 'France', 'GA' => 'Gabon', 'GM' => 'Gambia', 'GE' => 'Georgia', 'DE' => 'Germany', 'GH' => 'Ghana', 'GR' => 'Greece', 'GT' => 'Guatemala', 'GN' => 'Guinea', 'GY' => 'Guyana', 'HT' => 'Haiti', 'HN' => 'Honduras', 'HU' => 'Hungary', 'IS' => 'Iceland', 'IN' => 'India', 'ID' => 'Indonesia', 'IR' => 'Iran', 'IQ' => 'Iraq', 'IE' => 'Ireland', 'IL' => 'Israel', 'IT' => 'Italy', 'JM' => 'Jamaica', 'JP' => 'Japan', 'JO' => 'Jordan', 'KZ' => 'Kazakhstan', 'KE' => 'Kenya', 'KW' => 'Kuwait', 'LV' => 'Latvia', 'LB' => 'Lebanon', 'LS' => 'Lesotho', 'LY' => 'Libya', 'LT' => 'Lithuania', 'LU' => 'Luxembourg', 'MG' => 'Madagascar', 'MW' => 'Malawi', 'MY' => 'Malaysia', 'MV' => 'Maldives', 'ML' => 'Mali', 'MT' => 'Malta', 'MX' => 'Mexico', 'MD' => 'Moldova', 'MC' => 'Monaco', 'MN' => 'Mongolia', 'MA' => 'Morocco', 'MZ' => 'Mozambique', 'NA' => 'Namibia', 'NP' => 'Nepal', 'NL' => 'Netherlands', 'NZ' => 'New Zealand', 'NI' => 'Nicaragua', 'NE' => 'Niger', 'NG' => 'Nigeria', 'NO' => 'Norway', 'OM' => 'Oman', 'PK' => 'Pakistan', 'PA' => 'Panama', 'PG' => 'Papua New Guinea', 'PY' => 'Paraguay', 'PE' => 'Peru', 'PH' => 'Philippines', 'PL' => 'Poland', 'PT' => 'Portugal', 'QA' => 'Qatar', 'RO' => 'Romania', 'RU' => 'Russia', 'RW' => 'Rwanda', 'SA' => 'Saudi Arabia', 'SN' => 'Senegal', 'RS' => 'Serbia', 'SL' => 'Sierra Leone', 'SG' => 'Singapore', 'SK' => 'Slovakia', 'SI' => 'Slovenia', 'SO' => 'Somalia', 'ZA' => 'South Africa', 'ES' => 'Spain', 'LK' => 'Sri Lanka', 'SD' => 'Sudan', 'SE' => 'Sweden', 'CH' => 'Switzerland', 'SY' => 'Syria', 'TZ' => 'Tanzania', 'TH' => 'Thailand', 'TG' => 'Togo', 'TT' => 'Trinidad', 'TN' => 'Tunisia', 'TR' => 'Turkey', 'UG' => 'Uganda', 'UA' => 'Ukraine', 'AE' => 'UAE', 'GB' => 'United Kingdom', 'US' => 'United States', 'UY' => 'Uruguay', 'UZ' => 'Uzbekistan', 'VE' => 'Venezuela', 'VN' => 'Vietnam', 'YE' => 'Yemen', 'ZM' => 'Zambia', 'ZW' => 'Zimbabwe'];
+    }
+
+    public function paymentMethodOptions(): array
+    {
+        return [
+            'epay_debit' => 'Epay Debit', 'epay_credit' => 'Epay Credit', 'amex' => 'AMEX',
+            'klarna' => 'Klarna', 'superpay' => 'SuperPay', 'clearpay' => 'ClearPay',
+            'stripe' => 'Stripe', 'refund' => 'Refund', 'previous_booking' => 'Previous Booking',
+            'dnpl' => 'DNPL', 'cash' => 'Bank Transfer', 'debit_card' => 'Debit Card', 'credit_card' => 'Credit Card',
+        ];
+    }
+
+    // ── SAVE ───────────────────────────────────────────────────────────
+    public function save()
+    {
+        if ($this->isViewerOnly) {
+            session()->flash('error', 'You do not have permission to modify this booking.');
+            return;
+        }
+
+        if (empty($this->passengers)) {
+            session()->flash('error', 'Add at least one passenger.');
+            return;
+        }
+
+        if (empty(trim($this->mandatory_comment))) {
+            $this->addError('mandatory_comment', 'A reason/comment is required before saving.');
+            return;
+        }
+
+        $this->validate([
+            'booking_type'             => 'required',
+            'passengers'               => 'required|array|min:1',
+            'passengers.*.title'       => 'required',
+            'passengers.*.first_name'  => 'required|string|max:255',
+            'passengers.*.last_name'   => 'required|string|max:255',
+            'passengers.*.date_of_birth' => 'required|date',
+            'passengers.*.passport_number' => 'required|string|max:255',
+            'passengers.*.contact_number' => 'required|string|max:255|regex:/^[0-9]+$/',
+            'booking_plan'              => 'required',
+            'booking_status'            => 'required|in:pending,payment_charge_request,issuance_queue,ticket_in_process,invoiced,confirmed,cancelled,refund_queue,issued,issued_payment_awaiting,issued_payment_plan',
+            'mandatory_comment'         => 'required|string|min:3',
+        ]);
+
+        DB::transaction(function () {
+            $b = $this->booking;
+
+            if (!$this->isLocked) {
+
+            // Activity JSON — build on in-memory entries (already includes all field-edit entries flushed live)
+            $saveUser = Auth::user();
+            $saveIni  = strtoupper(substr($saveUser->name, 0, 1));
+            if (($sp = strpos($saveUser->name, ' ')) !== false) $saveIni .= strtoupper(substr($saveUser->name, $sp + 1, 1));
+            $activityLog   = $this->activity_log_entries;
+            $activityLog[] = [
+                'agent'           => $saveUser->name,
+                'avatar_url'      => $saveUser->profile_photo_path ? asset('storage/' . $saveUser->profile_photo_path) : null,
+                'avatar_initials' => $saveIni,
+                'timestamp'       => now()->toDateTimeString(),
+                'action'          => 'updated',
+                'comment'         => $this->mandatory_comment ?: '',
+                'type'            => 'update',
+            ];
+
+            $b->update([
+                'booking_type' => $this->booking_type,
+                'passenger_count' => count($this->passengers),
+                'booking_status' => $this->bookingStatus,
+                'activity_log' => $activityLog,
+            ]);
+
+            // Activity log record
+            BookingActivityLog::create([
+                'booking_id' => $b->id, 'user_id' => Auth::id(), 'action' => 'updated',
+                'comment' => $this->mandatory_comment ?: '',
+            ]);
+
+            if ($this->mandatory_comment) {
+                $authUser = Auth::user();
+                BookingComment::create([
+                    'booking_id' => $b->id,
+                    'user_id'    => $authUser->id,
+                    'agent_name' => $authUser->name,
+                    'avatar_url' => $authUser->profile_photo_path ? asset('storage/' . $authUser->profile_photo_path) : null,
+                    'comment'    => $this->mandatory_comment,
+                    'action'     => 'updated',
+                    'is_mandatory' => true,
+                ]);
+            }
+
+            // Passengers
+            $updatedIds = [];
+            foreach ($this->passengers as $p) {
+                $ptc = $this->computePtc($p['date_of_birth'] ?? null, $p['type']);
+                $data = [
+                    'passenger_type' => $p['type'], 'title' => $p['title'] ?: null,
+                    'first_name' => $p['first_name'], 'last_name' => $p['last_name'],
+                    'full_name' => trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')),
+                    'passport_number' => $p['passport_number'] ?: null,
+                    'passport_country_code' => $p['passport_country_code'] ?: null,
+                    'passport_issuing_country' => $p['passport_issuing_country'] ?: null,
+                    'national_id_number' => $p['national_id_number'] ?: null,
+                    'nationality' => $p['nationality'] ?: null,
+                    'date_of_birth' => $p['date_of_birth'] ?: null,
+                    'contact_number' => $p['contact_number'] ?: null,
+                    'cost_per_pax' => is_numeric($p['cost_per_pax'] ?? '') ? (float)$p['cost_per_pax'] : null,
+                    'sold_per_pax' => is_numeric($p['sold_per_pax'] ?? '') ? (float)$p['sold_per_pax'] : null,
+                    'frequent_flyer_number' => $p['frequent_flyer_number'] ?: null,
+                    'e_ticket_number' => $p['e_ticket_number'] ?: null,
+                    'ptc' => $ptc,
+                    'passenger_status_label' => $p['passenger_status_label'] ?: null,
+                ];
+                if (!empty($p['id'])) {
+                    BookingPassenger::where('id', $p['id'])->update($data);
+                    $updatedIds[] = $p['id'];
+                } else {
+                    $data['booking_id'] = $b->id;
+                    $np = BookingPassenger::create($data);
+                    $updatedIds[] = $np->id;
+                }
+            }
+            BookingPassenger::where('booking_id', $b->id)->whereNotIn('id', $updatedIds)->delete();
+
+            // Flight
+            $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']);
+            if ($canEditFlightHotel) {
+                $hasFlightData = collect($this->flightSegments)->contains(fn($s) => $s['airline'] || $s['pnr'] || $s['departure_airport']);
+                if ($hasFlightData) {
+                    BookingFlightDetail::where('booking_id', $b->id)->delete();
+                    foreach ($this->flightSegments as $seg) {
+                        BookingFlightDetail::create([
+                            'booking_id' => $b->id,
+                            'pnr' => $seg['pnr'] ?: null,
+                            'folder_number' => $this->flight_folder_number ?: null,
+                            'locator' => $seg['locator'] ?: null,
+                            'airline_locator' => $seg['airline_locator'] ?: null,
+                            'type_issuer' => $seg['type_issuer'] ?: null,
+                            'reservation_status' => $seg['reservation_status'] ?: null,
+                            'flight_type' => $seg['flight_type'] ?? 'return',
+                            'airline' => $seg['airline'] ? strtoupper($seg['airline']) : null,
+                            'vendor' => $seg['vendor'] ?: null,
+                            'gds' => $seg['gds'] ?: null,
+                            'cabin' => $seg['cabin'] ?: null,
+                            'ticket_issue_limit' => $seg['ticket_issue_limit'] ?: null,
+                            'atol' => $this->flight_atol,
+                            'safi' => $this->flight_safi,
+                            'departure_airport' => $seg['departure_airport'] ?: null,
+                            'arrival_airport' => $seg['arrival_airport'] ?: null,
+                            'departure_date' => $seg['departure_date'] ?: null,
+                            'return_date' => $seg['return_date'] ?: null,
+                            'selling_price' => $this->flight_selling_price ?: 0,
+                            'cost' => is_numeric($seg['cost'] ?? '') ? (float)$seg['cost'] : null,
+                            'sold' => is_numeric($seg['sold'] ?? '') ? (float)$seg['sold'] : null,
+                            'passenger_costs' => !empty($seg['passenger_costs']) ? $seg['passenger_costs'] : null,
+                        ]);
+                    }
+                    BookingFlightCost::where('booking_id', $b->id)->delete();
+                    foreach (['adult', 'child', 'gbe', 'infant'] as $type) {
+                        $qty = (int)($this->flight_costs[$type]['qty'] ?? 0);
+                        if ($qty > 0) {
+                            BookingFlightCost::create([
+                                'booking_id' => $b->id, 'cost_type' => $type,
+                                'cost' => $this->flight_costs[$type]['cost'] ?: 0,
+                                'quantity' => $qty,
+                                'sold_price' => $this->flight_costs[$type]['sold'] ?: 0,
+                            ]);
+                        }
+                    }
+                }
+
+                // Hotels
+                $keptHotelIds = [];
+                foreach ($this->hotels as $hotel) {
+                    $hotelData = [
+                        'hotel_name' => $hotel['hotel_name'] ?: 'Hotel',
+                        'city' => $hotel['city'] ?: null,
+                        'booking_status' => $hotel['status'] ?? 'confirmed',
+                        'check_in' => $hotel['check_in'] ?: null,
+                        'check_out' => $hotel['check_out'] ?: null,
+                        'actual_cost' => $hotel['actual_cost'] ?: 0,
+                        'selling_price' => $hotel['selling_price'] ?: 0,
+                    ];
+                    if (!empty($hotel['hotel_id'])) {
+                        BookingHotel::where('id', $hotel['hotel_id'])->update($hotelData);
+                        $bookingHotel = BookingHotel::find($hotel['hotel_id']);
+                        $keptHotelIds[] = $bookingHotel->id;
+                    } else {
+                        $hotelData['booking_id'] = $b->id;
+                        $bookingHotel = BookingHotel::create($hotelData);
+                        $keptHotelIds[] = $bookingHotel->id;
+                    }
+                    $bookingHotel->rooms()->delete();
+                    foreach ($hotel['rooms'] ?? [] as $ri => $room) {
+                        BookingHotelRoom::create([
+                            'booking_hotel_id' => $bookingHotel->id,
+                            'room_number' => $ri + 1,
+                            'room_type' => $room['room_type'] ?: null,
+                            'occupants' => $room['occupants'] ?? 1,
+                            'meal_basis' => $room['meal_basis'] ?? 'room_only',
+                        ]);
+                    }
+                }
+                BookingHotel::where('booking_id', $b->id)->whereNotIn('id', $keptHotelIds)->delete();
+
+                // Visas — sync: upsert existing, delete removed
+                $keptVisaIds = [];
+                foreach ($this->visas as $visa) {
+                    $data = [
+                        'booking_id'       => $b->id,
+                        'passenger_name'   => $visa['passenger_name'] ?: null,
+                        'visa_type'        => $visa['visa_type'] ?? 'tourist',
+                        'visa_reference'   => $visa['visa_reference'] ?: null,
+                        'visa_number'      => $visa['visa_number'] ?: null,
+                        'application_date' => $visa['application_date'] ?: null,
+                        'issue_date'       => $visa['issue_date'] ?: null,
+                        'expiry_date'      => $visa['expiry_date'] ?: null,
+                        'status'           => $visa['status'] ?? 'pending',
+                        'actual_cost'      => is_numeric($visa['actual_cost'] ?? '') ? (float)$visa['actual_cost'] : 0,
+                        'selling_price'    => is_numeric($visa['selling_price'] ?? '') ? (float)$visa['selling_price'] : 0,
+                        'notes'            => $visa['notes'] ?: null,
+                    ];
+                    if (!empty($visa['id'])) {
+                        \App\Models\BookingVisa::where('id', $visa['id'])->update($data);
+                        $keptVisaIds[] = $visa['id'];
+                    } else {
+                        $newVisa = \App\Models\BookingVisa::create($data);
+                        $keptVisaIds[] = $newVisa->id;
+                    }
+                }
+                \App\Models\BookingVisa::where('booking_id', $b->id)->whereNotIn('id', $keptVisaIds)->delete();
+
+                // Excursion data
+                if ($this->booking_type === 'excursion' || !empty($this->excursion_name)) {
+                    $b->update(['excursion_data' => [
+                        'name'          => $this->excursion_name ?: null,
+                        'destination'   => $this->excursion_destination ?: null,
+                        'date'          => $this->excursion_date ?: null,
+                        'supplier'      => $this->excursion_supplier ?: null,
+                        'actual_cost'   => is_numeric($this->excursion_actual_cost) ? (float)$this->excursion_actual_cost : 0,
+                        'selling_price' => is_numeric($this->excursion_selling_price) ? (float)$this->excursion_selling_price : 0,
+                        'notes'         => $this->excursion_notes ?: null,
+                        'status'        => $this->excursion_status ?: 'confirmed',
+                    ]]);
+                }
+
+                // Transfers — delete then recreate to handle removals cleanly
+                $b->transfers()->delete();
+                foreach ($this->transferPickups as $pickup) {
+                    if (!empty($pickup['location'])) {
+                        BookingTransfer::create([
+                            'booking_id'    => $b->id,
+                            'type'          => 'pickup',
+                            'location'      => $pickup['location'],
+                            'date_time'     => $pickup['date_time'] ?: null,
+                            'flight_number' => $pickup['flight_number'] ?: null,
+                            'route'         => $pickup['route'] ?: null,
+                            'vehicle_type'  => $pickup['vehicle_type'] ?: null,
+                            'supplier'      => $pickup['supplier'] ?: null,
+                            'actual_cost'   => $pickup['actual_cost'] !== '' ? $pickup['actual_cost'] : null,
+                            'selling_price' => $pickup['selling_price'] !== '' ? $pickup['selling_price'] : null,
+                            'status'        => $pickup['status'] ?: 'confirmed',
+                            'notes'         => $pickup['notes'] ?: null,
+                        ]);
+                    }
+                }
+                foreach ($this->transferDropoffs as $dropoff) {
+                    if (!empty($dropoff['location'])) {
+                        BookingTransfer::create([
+                            'booking_id'    => $b->id,
+                            'type'          => 'dropoff',
+                            'location'      => $dropoff['location'],
+                            'date_time'     => $dropoff['date_time'] ?: null,
+                            'flight_number' => $dropoff['flight_number'] ?: null,
+                            'route'         => $dropoff['route'] ?: null,
+                            'vehicle_type'  => $dropoff['vehicle_type'] ?: null,
+                            'supplier'      => $dropoff['supplier'] ?: null,
+                            'actual_cost'   => $dropoff['actual_cost'] !== '' ? $dropoff['actual_cost'] : null,
+                            'selling_price' => $dropoff['selling_price'] !== '' ? $dropoff['selling_price'] : null,
+                            'status'        => $dropoff['status'] ?: 'confirmed',
+                            'notes'         => $dropoff['notes'] ?: null,
+                        ]);
+                    }
+                }
+            }
+
+            } // end !isLocked guard
+
+            // Payment
+            $hotelTotalSold = collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0));
+            $total = $this->totalFlightSold + $hotelTotalSold;
+            $a = 0; $b_balance = 0; $d = 0;
+            if ($this->booking_plan === 'full') { $a = $total; }
+            elseif ($this->booking_plan === 'awaiting') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
+            elseif ($this->booking_plan === 'payment_plan') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
+            elseif ($this->booking_plan === 'dnpl') { $d = (float)($this->deposit_amount ?: 0); $b_balance = $total; }
+
+            $primaryMethod = $this->payment_method ?: $this->payment_mode;
+            if ($b->payment) {
+                $b->payment->update([
+                    'booking_plan' => $this->booking_plan,
+                    'amount_paid' => $a,
+                    'total_amount' => $total,
+                    'balance_remaining' => $b_balance,
+                    'due_date' => $this->due_date ?: null,
+                    'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_count . '_instalments') : 'none',
+                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
+                    'debit_card_change' => $this->debit_card_change,
+                    'deposit_amount' => $d,
+                    'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
+                    'payment_mode' => $primaryMethod ?: 'none',
+                    'payment_mode_2' => $this->payment_mode_2 ?: null,
+                    'cc_charges' => $this->cc_charges ?: 0,
+                ]);
+            } elseif ($primaryMethod) {
+                BookingPayment::create([
+                    'booking_id' => $b->id, 'booking_plan' => $this->booking_plan,
+                    'amount_paid' => $a, 'total_amount' => $total,
+                    'balance_remaining' => $b_balance, 'due_date' => $this->due_date ?: null,
+                    'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_count . '_instalments') : 'none',
+                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
+                    'debit_card_change' => false, 'deposit_amount' => $d,
+                    'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
+                    'payment_mode' => $primaryMethod, 'payment_mode_2' => null,
+                    'cc_charges' => $this->cc_charges ?: 0, 'invoice_generated' => false,
+                ]);
+            }
+
+            // Payment history
+            $historyEntries = $this->booking_plan === 'payment_plan'
+                ? $this->instalments
+                : [[
+                    'date' => $this->payment_date ?: now()->toDateString(),
+                    'method' => $this->payment_method,
+                    'amount' => $this->booking_plan === 'dnpl' ? $this->deposit_amount : $this->amount_paid,
+                    'receipt' => $this->receipt_number,
+                ]];
+            foreach ($historyEntries as $ph) {
+                $amt = (float)($ph['amount'] ?? 0);
+                if ($amt > 0) {
+                    BookingPaymentHistory::create([
+                        'booking_id' => $b->id, 'user_id' => Auth::id(),
+                        'payment_date' => !empty($ph['date']) ? \Carbon\Carbon::parse($ph['date'])->toDateString() : now()->toDateString(),
+                        'payment_method' => $ph['method'] ?: null,
+                        'amount' => $amt,
+                        'receipt_number' => $ph['receipt'] ?: null,
+                    ]);
+                }
+            }
+
+            // Save payment instalments from view page (new payment method section)
+            foreach ($this->payment_instalments as $inst) {
+                $amt = (float)($inst['amount'] ?? 0);
+                if ($amt > 0 && $this->selected_payment_method) {
+                    BookingPaymentHistory::create([
+                        'booking_id' => $b->id,
+                        'user_id' => Auth::id(),
+                        'payment_date' => !empty($inst['date']) ? \Carbon\Carbon::parse($inst['date'])->toDateString() : now()->toDateString(),
+                        'payment_method' => $this->selected_payment_method,
+                        'amount' => $amt,
+                        'receipt_number' => null,
+                    ]);
+                }
+            }
+
+            // Documents
+            if (!empty($this->newDocuments)) {
+                foreach ($this->newDocuments as $i => $f) {
+                    if ($f) {
+                        $path = $f->store('booking-documents', 'public');
+                        BookingDocument::create(['booking_id' => $b->id, 'uploaded_by' => Auth::id(), 'file_name' => $f->getClientOriginalName(), 'file_path' => $path, 'file_type' => $f->getClientMimeType(), 'document_type' => $this->newDocumentTypes[$i] ?? 'other']);
+                    }
+                }
+            }
+        });
+
+        $this->newDocuments = [];
+        $this->newDocumentTypes = [];
+        $this->mandatory_comment = '';
+        $this->booking->refresh();
+        $this->booking->load(['passengers', 'payment', 'paymentHistory', 'documents', 'flightDetail', 'flightCosts', 'hotels.rooms', 'transfers', 'visas', 'comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
+        $this->loadBookingData();
+        $this->activityLog = $this->buildActivityLog($this->booking);
+        session()->flash('success', "Booking #{$this->booking->booking_number} updated.");
     }
 
     public function render()
     {
-        return view('livewire.booking-show');
+        return view('livewire.booking-show', [
+            'countries' => $this->countries(),
+            'paymentMethods' => $this->paymentMethodOptions(),
+            'vendorOptions' => \App\Models\Setting::getValue('vendor_options', []),
+        ]);
     }
 }

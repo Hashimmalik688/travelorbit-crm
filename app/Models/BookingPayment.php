@@ -11,7 +11,7 @@ class BookingPayment extends Model
 
     protected $fillable = [
         'booking_id',
-        'payment_type',
+        'booking_plan',
         'amount_paid',
         'total_amount',
         'balance_remaining',

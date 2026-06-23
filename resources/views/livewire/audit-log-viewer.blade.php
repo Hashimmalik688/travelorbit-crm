@@ -1,9 +1,9 @@
 <div>
     <div class="to-page-header">
         <div class="to-page-header-left">
-            <h1>Audit Log</h1>
+            <h1>Activity Log</h1>
             <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="#">Settings</a> &rsaquo; Audit Log
+                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="{{ route('settings') }}">Settings</a> &rsaquo; Activity Log
             </div>
         </div>
     </div>
@@ -21,8 +21,29 @@
                 </thead>
                 <tbody>
                     @forelse ($logs ?? [] as $log)
-                        <tr>
-                            <td>{{ $log->created_at?->format('d M Y H:i') ?? '—' }}</td>
+                        @php
+                          $action = $log->action ?? '';
+                          $desc = $log->description ?? '';
+                          $border = '#94A3B8';
+                          $bg = 'transparent';
+                          if (stripos($action, 'cancelled') !== false || stripos($action, 'refund') !== false || stripos($action, 'cancel') !== false) {
+                              $border = '#DC2626'; $bg = 'rgba(220,38,38,.05)';
+                          } elseif (stripos($action, 'approved') !== false || stripos($action, 'received') !== false || stripos($action, 'paid') !== false) {
+                              $border = '#16A34A'; $bg = 'rgba(22,163,74,.05)';
+                          } elseif (stripos($action, 'requested') !== false || stripos($action, 'charged') !== false || stripos($action, 'raised') !== false) {
+                              $border = '#F59E0B'; $bg = 'rgba(245,158,11,.05)';
+                          } elseif (stripos($action, 'created') !== false || stripos($action, 'opened') !== false) {
+                              $border = '#0EA5E9'; $bg = 'rgba(14,165,233,.05)';
+                          } elseif (stripos($action, 'ticket') !== false || stripos($action, 'issued') !== false || stripos($action, 'document') !== false || stripos($action, 'voucher') !== false) {
+                              $border = '#7C3AED'; $bg = 'rgba(124,58,237,.05)';
+                          } elseif (stripos($action, 'hotel') !== false || stripos($action, 'transfer') !== false) {
+                              $border = '#0891B2'; $bg = 'rgba(8,145,178,.05)';
+                          }
+                          $badgeColor = $border;
+                          $badgeBg = $bg === 'transparent' ? 'rgba(148,163,184,.08)' : $bg;
+                        @endphp
+                        <tr style="border-left:3px solid {{ $border }};">
+                            <td>{{ $log->created_at?->format('d M Y H:i') ?? '-' }}</td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="avatar avatar-sm">
@@ -31,8 +52,8 @@
                                     <span>{{ $log->user?->name ?? 'System' }}</span>
                                 </div>
                             </td>
-                            <td><span class="badge bg-label-primary">{{ $log->action ?? '—' }}</span></td>
-                            <td class="text-muted small">{{ $log->description ?? '—' }}</td>
+                            <td><span class="badge" style="color:{{ $badgeColor }};background:{{ $badgeBg }};">{{ $log->action ?? '-' }}</span></td>
+                            <td class="text-muted small">{{ $log->description ?? '-' }}</td>
                         </tr>
                     @empty
                         <tr>

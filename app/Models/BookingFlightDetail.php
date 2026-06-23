@@ -18,18 +18,21 @@ class BookingFlightDetail extends Model
         'airline_locator',
         'type_issuer',
         'reservation_status',
+        'flight_type',
         'airline',
         'vendor',
         'gds',
         'ticket_issue_limit',
         'atol',
         'safi',
-        'city_code',
         'departure_airport',
         'arrival_airport',
         'departure_date',
         'return_date',
         'selling_price',
+        'cost',
+        'sold',
+        'passenger_costs',
     ];
 
     protected function casts(): array
@@ -41,6 +44,9 @@ class BookingFlightDetail extends Model
             'atol' => 'boolean',
             'safi' => 'boolean',
             'selling_price' => 'decimal:2',
+            'cost' => 'decimal:2',
+            'sold' => 'decimal:2',
+            'passenger_costs' => 'array',
         ];
     }
 

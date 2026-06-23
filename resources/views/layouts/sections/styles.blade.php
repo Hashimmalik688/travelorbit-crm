@@ -2,7 +2,7 @@
 <!-- Fonts -->
 <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700|plus-jakarta-sans:600,700,800&display=swap" rel="stylesheet">
 
-<!-- Phosphor Icons (primary) — beautiful, consistent, free -->
+<!-- Phosphor Icons (primary) - beautiful, consistent, free -->
 <script type="module" src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js"></script>
 
 <!-- Boxicons (fallback) -->
@@ -21,3 +21,6 @@
 <!-- app CSS -->
 @vite(['resources/css/app.css'])
 <!-- END: app CSS-->
+
+<!-- Livewire Styles -->
+@livewireStyles

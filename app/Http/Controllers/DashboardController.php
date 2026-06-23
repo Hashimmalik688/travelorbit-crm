@@ -9,23 +9,53 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    public function agentDashboardPage()
+    {
+        return $this->agentDashboard();
+    }
+
+    public function accountsDashboardPage()  { return $this->accountsDashboard(); }
+    public function issuanceDashboardPage()  { return $this->issuanceDashboard(); }
+
     public function index()
     {
         $user = Auth::user();
 
-        if ($user && $user->role === 'agent') {
-            return $this->agentDashboard();
-        }
+        return match ($user?->role) {
+            'agent', 'operations' => $this->agentDashboard(),
+            'accounts'            => $this->accountsDashboard(),
+            'issuance'            => $this->issuanceDashboard(),
+            default               => $this->adminDashboard(),
+        };
+    }
 
+    protected function adminDashboard()
+    {
         $startOfMonth = now()->startOfMonth();
         $endOfMonth = now()->endOfMonth();
 
         $totalBookings = Booking::whereBetween('created_at', [$startOfMonth, $endOfMonth])->count();
 
-        $totalRevenue = DB::table('booking_flight_details')
+        $totalSale = (float) DB::table('booking_flight_details')
             ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
             ->whereBetween('bookings.created_at', [$startOfMonth, $endOfMonth])
+            ->whereNull('bookings.deleted_at')
             ->sum('booking_flight_details.selling_price');
+
+        $totalSale += (float) DB::table('booking_hotels')
+            ->join('bookings', 'bookings.id', '=', 'booking_hotels.booking_id')
+            ->whereBetween('bookings.created_at', [$startOfMonth, $endOfMonth])
+            ->whereNull('bookings.deleted_at')
+            ->sum('booking_hotels.selling_price');
+
+        $totalCost = (float) DB::table('booking_flight_costs')
+            ->join('bookings', 'bookings.id', '=', 'booking_flight_costs.booking_id')
+            ->whereBetween('bookings.created_at', [$startOfMonth, $endOfMonth])
+            ->whereNull('bookings.deleted_at')
+            ->selectRaw('SUM(cost * quantity) as total')
+            ->value('total');
+
+        $totalRevenue = $totalSale - $totalCost;
 
         $outstandingPayments = BookingPayment::where('balance_remaining', '>', 0)->sum('balance_remaining');
 
@@ -39,94 +69,159 @@ class DashboardController extends Controller
             ->pluck('total', 'booking_status')
             ->toArray();
 
-        $pendingCount = $bookingsByStatus['pending'] ?? 0;
-        $confirmedCount = $bookingsByStatus['confirmed'] ?? 0;
-        $issuedCount = $bookingsByStatus['issued'] ?? 0;
+        $pendingCount    = $bookingsByStatus['pending']   ?? 0;
+        $confirmedCount  = $bookingsByStatus['confirmed'] ?? 0;
+        $issuedCount     = $bookingsByStatus['issued']    ?? 0;
+        $issuanceQueue   = $bookingsByStatus['issuance_queue'] ?? 0;
+        $ticketInProcess = $bookingsByStatus['ticket_in_process'] ?? 0;
+        $invoicedCount   = $bookingsByStatus['invoiced'] ?? 0;
 
-        $topAgent = Booking::select('user_id', DB::raw('count(*) as total'))
+        $topAgents = Booking::select('user_id', DB::raw('count(*) as total'))
             ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->groupBy('user_id')
             ->orderByDesc('total')
             ->with('user')
-            ->first();
+            ->take(5)
+            ->get();
 
         $last7DaysBookings = [];
-        $last7DaysRevenue  = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->toDateString();
             $last7DaysBookings[] = Booking::whereDate('created_at', $date)->count();
-            $last7DaysRevenue[]  = (int) DB::table('booking_flight_details')
-                ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
-                ->whereDate('bookings.created_at', $date)
-                ->sum('booking_flight_details.selling_price');
         }
+
+        $cancelledCount = $bookingsByStatus['cancelled'] ?? 0;
+
+        $allAgents = \App\Models\User::whereIn('role', ['agent', 'operations', 'manager', 'admin'])->withCount([
+            'bookings as month_bookings' => fn($q) => $q->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+        ])->get();
 
         return view('content.dashboard.dashboard', compact(
             'totalBookings', 'totalRevenue', 'outstandingPayments',
             'overduePaymentsCount', 'pendingCount', 'confirmedCount',
-            'issuedCount', 'topAgent', 'last7DaysBookings', 'last7DaysRevenue'
+            'issuedCount', 'issuanceQueue', 'ticketInProcess', 'invoicedCount',
+            'cancelledCount', 'topAgents', 'last7DaysBookings', 'allAgents'
         ));
     }
 
-    private function agentDashboard()
+    protected function accountsDashboard()
+    {
+        $now = now();
+        $som = $now->copy()->startOfMonth();
+        $eom = $now->copy()->endOfMonth();
+
+        $readyToInvoice  = Booking::where('booking_status', 'ticket_in_process')->count();
+        $invoicedToday   = Booking::where('booking_status', 'invoiced')->whereDate('invoiced_at', today())->count();
+        $invoicedMonth   = Booking::where('booking_status', 'invoiced')->whereBetween('invoiced_at', [$som, $eom])->count();
+        $outstandingTotal = BookingPayment::where('balance_remaining', '>', 0)->sum('balance_remaining');
+
+        $recentBookings = Booking::whereIn('booking_status', ['ticket_in_process','invoiced','pending','confirmed'])
+            ->orderByDesc('updated_at')->take(15)->with(['user','payment'])->get();
+
+        return view('content.dashboard.accounts-dashboard', compact(
+            'readyToInvoice', 'invoicedToday', 'invoicedMonth',
+            'outstandingTotal', 'recentBookings'
+        ));
+    }
+
+    protected function issuanceDashboard()
+    {
+        $inQueue    = Booking::where('booking_status', 'issuance_queue')->count();
+        $inProcess  = Booking::where('booking_status', 'ticket_in_process')->count();
+        $doneToday  = Booking::where('booking_status', 'ticket_in_process')->whereDate('ticket_processed_at', today())->count();
+
+        $queueBookings = Booking::whereIn('booking_status', ['issuance_queue','ticket_in_process'])
+            ->orderBy('issuance_queued_at')->take(20)->with(['user','flightDetail','passengers'])->get();
+
+        return view('content.dashboard.issuance-dashboard', compact(
+            'inQueue', 'inProcess', 'doneToday', 'queueBookings'
+        ));
+    }
+
+    protected function agentDashboard()
     {
         $userId = Auth::id();
-        $startOfMonth = now()->startOfMonth();
-        $endOfMonth = now()->endOfMonth();
+        $now    = now();
+        $som    = $now->copy()->startOfMonth();
+        $eom    = $now->copy()->endOfMonth();
 
-        $myTotalBookings = Booking::where('user_id', $userId)
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-            ->count();
+        // ── This month counts ──
+        $myTotalBookings = Booking::where('user_id', $userId)->whereBetween('created_at', [$som, $eom])->count();
+        $myTodayBookings = Booking::where('user_id', $userId)->whereDate('created_at', today())->count();
 
-        $myRevenue = DB::table('booking_flight_details')
-            ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
+        // ── FRESH: total revenue (sold) from all bookings ever ──
+        $myFresh = (float) DB::table('booking_passengers')
+            ->join('bookings', 'bookings.id', '=', 'booking_passengers.booking_id')
             ->where('bookings.user_id', $userId)
-            ->whereBetween('bookings.created_at', [$startOfMonth, $endOfMonth])
-            ->sum('booking_flight_details.selling_price');
+            ->whereNull('bookings.deleted_at')
+            ->sum('booking_passengers.sold_per_pax');
 
-        $myOutstanding = BookingPayment::whereHas('booking', fn ($q) => $q->where('user_id', $userId))
+        // ── ISSUED: total amount actually received (payment history) ──
+        $myIssued = (float) DB::table('booking_payment_history')
+            ->join('bookings', 'bookings.id', '=', 'booking_payment_history.booking_id')
+            ->where('bookings.user_id', $userId)
+            ->whereNull('bookings.deleted_at')
+            ->sum('booking_payment_history.amount');
+
+        // ── PENDING: total outstanding balance ──
+        $myPending = (float) \App\Models\BookingPayment::whereHas('booking', fn ($q) => $q->where('user_id', $userId))
             ->where('balance_remaining', '>', 0)
             ->sum('balance_remaining');
 
-        $myPendingIssuance = Booking::where('user_id', $userId)
-            ->whereNull('issuance_requested_at')
-            ->where('booking_status', 'confirmed')
-            ->count();
-
-        $myStatusCounts = Booking::where('user_id', $userId)
-            ->select('booking_status', DB::raw('count(*) as total'))
-            ->groupBy('booking_status')
-            ->pluck('total', 'booking_status')
+        // ── Current month calendar ──
+        $calendarDays = Booking::where('user_id', $userId)
+            ->whereBetween('created_at', [$som, $eom])
+            ->selectRaw('DATE(created_at) as day, count(*) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day')
             ->toArray();
 
-        $myPendingCount = $myStatusCounts['pending'] ?? 0;
-        $myConfirmedCount = $myStatusCounts['confirmed'] ?? 0;
-        $myCancelledCount = $myStatusCounts['cancelled'] ?? 0;
+        // ── Last 12 months booking days - for the navigable calendar ──
+        $allMonthData = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $m    = $now->copy()->subMonths($i);
+            $mSom = $m->copy()->startOfMonth();
+            $mEom = $m->copy()->endOfMonth();
+            $days = Booking::where('user_id', $userId)
+                ->whereBetween('created_at', [$mSom, $mEom])
+                ->selectRaw('DATE(created_at) as day, count(*) as total')
+                ->groupBy('day')
+                ->pluck('total', 'day')
+                ->toArray();
+            $startDow = (int) $mSom->dayOfWeek;
+            $startDow = $startDow === 0 ? 6 : $startDow - 1;
+            $key = $m->format('Y-m');
+            $allMonthData[$key] = [
+                'label'       => $m->format('F Y'),
+                'shortLabel'  => $m->format('M Y'),
+                'daysInMonth' => $m->daysInMonth,
+                'startDow'    => $startDow,
+                'days'        => $days,
+                'total'       => array_sum($days),
+                'year'        => $m->year,
+                'month'       => $m->month,
+                'key'         => $key,
+                'isCurrent'   => $m->isSameMonth($now),
+            ];
+        }
 
-        $myTotalRevenue = DB::table('booking_flight_details')
-            ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
-            ->where('bookings.user_id', $userId)
-            ->sum('booking_flight_details.selling_price');
-
-        $myAvgRevenue = $myTotalBookings > 0 ? round($myTotalRevenue / $myTotalBookings) : 0;
-
+        // ── Recent bookings ──
         $myRecentBookings = Booking::where('user_id', $userId)
-            ->orderByDesc('created_at')
-            ->take(8)
-            ->with('flightDetail')
+            ->orderByDesc('created_at')->take(10)
+            ->with(['flightDetail', 'payment'])
             ->get();
 
-        $myRecentCount = Booking::where('user_id', $userId)
-            ->where('created_at', '>=', now()->subDays(7))
-            ->count();
-
-        $monthlyTarget = 20;
+        // ── All agents with today's booking count ──
+        $allAgents = \App\Models\User::where('role', 'agent')
+            ->withCount(['bookings' => fn ($q) => $q->whereDate('created_at', today())])
+            ->orderBy('name')
+            ->get();
 
         return view('content.dashboard.agent-dashboard', compact(
-            'myTotalBookings', 'myRevenue', 'myOutstanding', 'myPendingIssuance',
-            'myPendingCount', 'myConfirmedCount', 'myCancelledCount',
-            'myAvgRevenue', 'myRecentBookings', 'myRecentCount',
-            'monthlyTarget'
+            'myTotalBookings', 'myTodayBookings',
+            'myFresh', 'myIssued', 'myPending',
+            'calendarDays', 'allMonthData',
+            'myRecentBookings', 'allAgents'
         ));
     }
 }

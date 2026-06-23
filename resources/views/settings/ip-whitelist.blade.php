@@ -1,7 +1,5 @@
 @extends('layouts/contentNavbarLayout')
-
-@section('title', 'Profile')
-
+@section('title', 'IP Whitelist')
 @section('content')
-    @livewire('user-profile')
+    @livewire('ip-whitelist-manager')
 @endsection

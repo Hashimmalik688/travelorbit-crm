@@ -27,7 +27,7 @@
                             <td><a href="#" class="fw-semibold">#{{ $refund->booking->booking_number ?? 'N/A' }}</a></td>
                             <td>{{ $refund->booking->booker_name ?? 'N/A' }}</td>
                             <td>£{{ number_format($refund->amount, 2) }}</td>
-                            <td>{{ $refund->created_at?->format('d M Y') ?? '—' }}</td>
+                            <td>{{ $refund->created_at?->format('d M Y') ?? '-' }}</td>
                             <td><span class="badge bg-label-warning">{{ ucfirst($refund->status ?? 'pending') }}</span></td>
                             <td>
                                 <button class="btn btn-sm btn-icon btn-outline-primary"><i class="ph ph-eye"></i></button>

@@ -8,7 +8,7 @@ $containerNav = $containerNav ?? 'container-xxl';
 $isNavbar = $isNavbar ?? true;
 $isMenu = $isMenu ?? true;
 $isFlex = $isFlex ?? false;
-$isFooter = $isFooter ?? true;
+$isFooter = $isFooter ?? false;
 $customizerHidden = $customizerHidden ?? '';
 
 /* HTML Classes */

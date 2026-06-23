@@ -70,6 +70,12 @@ class PaymentIndex extends Component
         $schedule = PaymentSchedule::find($scheduleId);
         if ($schedule) {
             $schedule->update(['status' => 'overdue']);
+            AuditLogger::log(
+                Auth::user(),
+                $schedule->booking,
+                'payment_marked_overdue',
+                "Installment #{$schedule->installment_number} ({$schedule->amount}) marked as overdue",
+            );
         }
     }
 

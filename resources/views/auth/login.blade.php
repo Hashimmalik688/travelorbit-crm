@@ -9,6 +9,8 @@
 html, body { height: 100%; }
 
 body {
+  zoom: 1 !important;
+  min-height: 100vh !important;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -22,7 +24,7 @@ body {
 }
 
 /* ─────────────────────────────
-   Left — photo panel
+   Left - photo panel
 ───────────────────────────── */
 .auth-photo {
   flex: 1;
@@ -32,10 +34,9 @@ body {
   flex-direction: column;
   padding: 44px 52px;
 
-  /* High-quality Unsplash travel photo */
-  background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1400&q=85&auto=format&fit=crop');
+  background-image: url('https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?w=1400&q=85&auto=format&fit=crop');
   background-size: cover;
-  background-position: center 40%;
+  background-position: center 55%;
 }
 
 /* Dark overlay for readability */
@@ -111,7 +112,7 @@ body {
 }
 
 /* ─────────────────────────────
-   Right — form panel
+   Right - form panel
 ───────────────────────────── */
 .auth-form-wrap {
   width: 460px;
@@ -178,7 +179,7 @@ body {
 .field-ctrl::placeholder { color: #D1D5DB; }
 .field-ctrl.is-invalid   { border-color: #EF4444; }
 
-/* Ripple button — uiverse.io inspired */
+/* Ripple button - uiverse.io inspired */
 .ripple {
   position: relative;
   overflow: hidden;
@@ -323,7 +324,7 @@ body {
       </h1>
       <p class="auth-desc">
         Manage bookings, track payments, monitor agent performance
-        and report on your business — all in one place.
+        and report on your business - all in one place.
       </p>
     </div>
 

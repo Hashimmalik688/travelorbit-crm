@@ -1,6 +1,6 @@
 @extends('layouts/contentNavbarLayout')
 
-@section('title', 'Audit Log')
+@section('title', 'Activity Log')
 
 @section('content')
     @livewire('audit-log-viewer')
