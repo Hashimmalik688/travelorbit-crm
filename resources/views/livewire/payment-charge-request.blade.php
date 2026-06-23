@@ -103,11 +103,11 @@
                                 </td>
                                 <td style="vertical-align:middle;">
                                     <div class="d-flex gap-1">
-                                        <button type="button" wire:click="approvePayment({{ $cr->id }})" wire:confirm="Approve this payment charge?"
+                                        <button type="button" wire:click="confirmApprove({{ $cr->id }})"
                                             style="font-size:.6rem;font-weight:700;padding:4px 10px;border-radius:8px;background:#16A34A;color:#fff;border:none;cursor:pointer;white-space:nowrap;">
                                             <i class="ph ph-check me-1"></i> Approve
                                         </button>
-                                        <button type="button" wire:click="rejectPayment({{ $cr->id }})" wire:confirm="Reject this payment charge?"
+                                        <button type="button" wire:click="confirmReject({{ $cr->id }})"
                                             style="font-size:.6rem;font-weight:700;padding:4px 10px;border-radius:8px;background:#F59E0B;color:#fff;border:none;cursor:pointer;white-space:nowrap;">
                                             <i class="ph ph-x me-1"></i> Reject
                                         </button>
@@ -130,4 +130,51 @@
             </div>
         @endif
     </div>
+
+    {{-- Approve / Reject Modal --}}
+    @if($showModal)
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:28px 32px 24px;">
+            {{-- Icon --}}
+            <div style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;
+                        {{ $modalAction === 'approve' ? 'background:rgba(22,163,74,.12);' : 'background:rgba(245,158,11,.12);' }}">
+                <i class="ph {{ $modalAction === 'approve' ? 'ph-check-circle' : 'ph-x-circle' }}" 
+                   style="font-size:1.5rem;{{ $modalAction === 'approve' ? 'color:#16A34A;' : 'color:#F59E0B;' }}"></i>
+            </div>
+
+            {{-- Title --}}
+            <h5 style="font-weight:800;font-size:1rem;color:#1E293B;text-align:center;margin-bottom:4px;">
+                {{ $modalAction === 'approve' ? 'Approve Payment Charge' : 'Reject Payment Charge' }}
+            </h5>
+            <p style="font-size:.72rem;color:#94A3B8;text-align:center;margin-bottom:20px;">
+                {{ $modalAction === 'approve' ? 'Enter customer name or any details for this approval.' : 'Enter the reason for rejecting this payment charge.' }}
+            </p>
+
+            {{-- Note box --}}
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:.68rem;font-weight:700;color:#475569;margin-bottom:6px;">
+                    {{ $modalAction === 'approve' ? 'Customer / Approval Details' : 'Decline Reason *' }}
+                </label>
+                <textarea wire:model="modalNote" rows="3" 
+                    placeholder="{{ $modalAction === 'approve' ? 'e.g. Customer confirmed via phone, payment authorised...' : 'e.g. Insufficient funds, card declined...' }}"
+                    class="form-control" style="font-size:.8rem;resize:vertical;border-radius:10px;border:1.5px solid rgba(51,46,158,.15);padding:10px 14px;width:100%;"></textarea>
+                @error('modalNote') <span style="font-size:.65rem;color:#DC2626;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+            </div>
+
+            {{-- Buttons --}}
+            <div class="d-flex gap-2">
+                <button type="button" wire:click="closeModal"
+                    style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(51,46,158,.15);background:#fff;font-size:.76rem;font-weight:700;color:#64748B;cursor:pointer;">
+                    Cancel
+                </button>
+                <button type="button" wire:click="{{ $modalAction === 'approve' ? 'executeApprove' : 'executeReject' }}"
+                    style="flex:1;padding:10px;border-radius:10px;border:none;font-size:.76rem;font-weight:700;color:#fff;cursor:pointer;
+                           {{ $modalAction === 'approve' ? 'background:#16A34A;' : 'background:#F59E0B;' }}">
+                    <i class="ph {{ $modalAction === 'approve' ? 'ph-check' : 'ph-x' }} me-1"></i>
+                    {{ $modalAction === 'approve' ? 'Approve' : 'Reject' }}
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>

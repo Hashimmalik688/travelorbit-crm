@@ -613,6 +613,12 @@ class BookingEdit extends Component
             }
             BookingPassenger::where('booking_id', $this->booking->id)->whereNotIn('id', $updatedIds)->delete();
 
+            // Snapshot pricing before save for audit logging
+            $oldFlightCosts = $this->booking->flightCosts()->get()->toArray();
+            $oldFlightSellingPrice = $this->booking->flightDetail?->selling_price;
+            $oldHotels = $this->booking->hotels()->get()->toArray();
+            $oldTransfers = $this->booking->transfers()->get()->toArray();
+
             // Flight detail - only Manager/Admin can save flight changes
             $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']);
             if ($canEditFlightHotel && ($this->flight_airline || $this->flight_pnr || $this->flight_selling_price)) {
@@ -722,6 +728,30 @@ class BookingEdit extends Component
                             'route' => $dropoff['route'] ?: null,
                         ]);
                     }
+                }
+            }
+
+            // Log pricing changes
+            if ($canEditFlightHotel) {
+                $newFlightCosts = $this->booking->flightCosts()->get()->toArray();
+                $newFlightSellingPrice = $this->booking->flightDetail?->selling_price;
+                $newHotels = $this->booking->hotels()->get()->toArray();
+                $newTransfers = $this->booking->transfers()->get()->toArray();
+
+                $priceChanges = [];
+                if ($oldFlightCosts != $newFlightCosts) $priceChanges[] = 'flight costs';
+                if ((float)($oldFlightSellingPrice ?? 0) != (float)($newFlightSellingPrice ?? 0)) {
+                    $priceChanges[] = 'flight selling price (' . number_format((float)$newFlightSellingPrice, 2) . ')';
+                }
+                if ($oldHotels != $newHotels) $priceChanges[] = 'hotel costs';
+                if ($oldTransfers != $newTransfers) $priceChanges[] = 'transfer costs';
+
+                if (!empty($priceChanges)) {
+                    AuditLogger::log(Auth::user(), $this->booking, 'pricing_updated',
+                        'Pricing changed: ' . implode(', ', $priceChanges),
+                        ['flight_costs' => $oldFlightCosts, 'flight_selling_price' => $oldFlightSellingPrice, 'hotels' => $oldHotels, 'transfers' => $oldTransfers],
+                        ['flight_costs' => $newFlightCosts, 'flight_selling_price' => $newFlightSellingPrice, 'hotels' => $newHotels, 'transfers' => $newTransfers]
+                    );
                 }
             }
 

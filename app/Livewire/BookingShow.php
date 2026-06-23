@@ -690,7 +690,7 @@ class BookingShow extends Component
 
     private function abortIfViewer(): void
     {
-        if ($this->isViewerOnly) {
+        if ($this->isViewerOnly && !in_array(Auth::user()->role, ['admin', 'manager'])) {
             abort(403, 'You do not have permission to modify this booking.');
         }
     }
@@ -1468,6 +1468,14 @@ class BookingShow extends Component
         DB::transaction(function () {
             $b = $this->booking;
 
+            // Snapshot pricing before save for audit logging
+            $oldFlightCosts = $b->flightCosts()->get()->toArray();
+            $oldFlightSellingPrice = $b->flightDetail?->selling_price;
+            $oldHotels = $b->hotels()->get()->toArray();
+            $oldVisas = $b->visas()->get()->toArray();
+            $oldExcursion = $b->excursion_data;
+            $oldTransfers = $b->transfers()->get()->toArray();
+
             if (!$this->isLocked) {
 
             // Activity JSON — build on in-memory entries (already includes all field-edit entries flushed live)
@@ -1707,6 +1715,61 @@ class BookingShow extends Component
             }
 
             } // end !isLocked guard
+
+            // Log pricing changes
+            $user = Auth::user();
+            if (in_array($user->role, ['admin', 'manager', 'operations', 'issuance'])) {
+                $newFlightCosts = $b->flightCosts()->get()->toArray();
+                $newFlightSellingPrice = $b->flightDetail?->selling_price;
+                $newHotels = $b->hotels()->get()->toArray();
+                $newVisas = $b->visas()->get()->toArray();
+                $newExcursion = $b->excursion_data;
+                $newTransfers = $b->transfers()->get()->toArray();
+
+                $priceChanges = [];
+
+                if ($oldFlightCosts != $newFlightCosts) {
+                    $priceChanges[] = 'flight costs';
+                }
+                if ((float)($oldFlightSellingPrice ?? 0) != (float)($newFlightSellingPrice ?? 0)) {
+                    $priceChanges[] = 'flight selling price (' . number_format((float)$newFlightSellingPrice, 2) . ')';
+                }
+                if ($oldHotels != $newHotels) {
+                    $priceChanges[] = 'hotel costs';
+                }
+                if ($oldVisas != $newVisas) {
+                    $priceChanges[] = 'visa costs';
+                }
+                if (($oldExcursion ?? []) != ($newExcursion ?? [])) {
+                    $priceChanges[] = 'excursion pricing';
+                }
+                if ($oldTransfers != $newTransfers) {
+                    $priceChanges[] = 'transfer costs';
+                }
+
+                if (!empty($priceChanges)) {
+                    AuditLogger::log(
+                        $user, $b, 'pricing_updated',
+                        'Pricing changed: ' . implode(', ', $priceChanges),
+                        [
+                            'flight_costs' => $oldFlightCosts,
+                            'flight_selling_price' => $oldFlightSellingPrice,
+                            'hotels' => $oldHotels,
+                            'visas' => $oldVisas,
+                            'excursion' => $oldExcursion,
+                            'transfers' => $oldTransfers,
+                        ],
+                        [
+                            'flight_costs' => $newFlightCosts,
+                            'flight_selling_price' => $newFlightSellingPrice,
+                            'hotels' => $newHotels,
+                            'visas' => $newVisas,
+                            'excursion' => $newExcursion,
+                            'transfers' => $newTransfers,
+                        ]
+                    );
+                }
+            }
 
             // Payment
             $hotelTotalSold = collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0));

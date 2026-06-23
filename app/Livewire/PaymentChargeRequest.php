@@ -17,6 +17,11 @@ class PaymentChargeRequest extends Component
     public $dateFrom = '';
     public $dateTo = '';
 
+    public $showModal = false;
+    public $modalAction = '';       // 'approve' or 'reject'
+    public $modalPaymentId = null;
+    public $modalNote = '';
+
     protected $queryString = ['search', 'dateFrom', 'dateTo'];
 
     public function updatingSearch(): void
@@ -34,33 +39,75 @@ class PaymentChargeRequest extends Component
         $this->resetPage();
     }
 
-    public function approvePayment(int $historyId): void
+    public function confirmApprove(int $historyId): void
     {
-        $ph = BookingPaymentHistory::findOrFail($historyId);
+        $this->modalPaymentId = $historyId;
+        $this->modalAction = 'approve';
+        $this->modalNote = '';
+        $this->showModal = true;
+    }
+
+    public function confirmReject(int $historyId): void
+    {
+        $this->modalPaymentId = $historyId;
+        $this->modalAction = 'reject';
+        $this->modalNote = '';
+        $this->showModal = true;
+    }
+
+    public function closeModal(): void
+    {
+        $this->reset('showModal', 'modalAction', 'modalPaymentId', 'modalNote');
+    }
+
+    public function executeApprove(): void
+    {
+        $this->validate(['modalNote' => 'nullable|string|max:500']);
+
+        $ph = BookingPaymentHistory::findOrFail($this->modalPaymentId);
         $ph->update(['status' => 'approved', 'approved_by' => Auth::id()]);
 
         $booking = Booking::find($ph->booking_id);
-        AuditLogger::log(Auth::user(), $booking, 'payment_approved', "Payment charge {$historyId} approved");
+
+        $details = $ph->payment_details ?? [];
+        $details['approval_note'] = $this->modalNote;
+        $ph->update(['payment_details' => $details]);
+
+        $logMsg = "Payment charge {$ph->id} approved";
+        if ($this->modalNote) {
+            $logMsg .= " — {$this->modalNote}";
+        }
+        AuditLogger::log(Auth::user(), $booking, 'payment_approved', $logMsg);
 
         if ($booking && $booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
             $booking->update(['booking_status' => Booking::STATUS_PENDING]);
         }
 
+        $this->closeModal();
         session()->flash('success', 'Payment charge approved.');
     }
 
-    public function rejectPayment(int $historyId): void
+    public function executeReject(): void
     {
-        $ph = BookingPaymentHistory::findOrFail($historyId);
+        $this->validate(['modalNote' => 'required|string|max:500']);
+
+        $ph = BookingPaymentHistory::findOrFail($this->modalPaymentId);
         $booking = Booking::find($ph->booking_id);
 
         $ph->update(['status' => 'rejected']);
-        AuditLogger::log(Auth::user(), $booking, 'payment_rejected', "Payment charge {$historyId} rejected");
+
+        $details = $ph->payment_details ?? [];
+        $details['rejection_reason'] = $this->modalNote;
+        $ph->update(['payment_details' => $details]);
+
+        $logMsg = "Payment charge {$ph->id} rejected — {$this->modalNote}";
+        AuditLogger::log(Auth::user(), $booking, 'payment_rejected', $logMsg);
 
         if ($booking && $booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
             $booking->update(['booking_status' => Booking::STATUS_PENDING]);
         }
 
+        $this->closeModal();
         session()->flash('success', 'Payment charge rejected.');
     }
 

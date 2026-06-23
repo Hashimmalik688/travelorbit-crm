@@ -32,6 +32,7 @@ See [design/taste.md](design/taste.md)
 
 # Role-Based Access
 - Only admin has access to user management; regular users, agents, and other roles have no profile page, settings view, or self-service account modification (password, avatar, etc.). Admin manages all user passwords and profile images centrally. Confidence: 0.85
+- Admin has universal edit access — every field should be editable for any user and any booking, regardless of status or state restrictions applied to other roles. Confidence: 0.70
 
 # User Management
 - Display the stored plain text password as a visible column in the user management table (index/list view), not only in the edit modal. Confidence: 0.65
