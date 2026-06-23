@@ -1571,7 +1571,7 @@ class CreateBooking extends Component
                 'total_amount'   => $total,
                 'balance_remaining' => $b,
                 'due_date'       => $this->due_date ?: null,
-                'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_count . '_instalments') : 'none',
+                'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
                 'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
                 'debit_card_change' => false,
                 'deposit_amount' => $d,

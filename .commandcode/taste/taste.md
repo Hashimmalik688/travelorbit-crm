@@ -25,14 +25,14 @@ See [design/taste.md](design/taste.md)
 - After building features, run php artisan migrate followed by php artisan optimize:clear. Confidence: 0.65
 
 # Activity Logging
-- Every action in the CRM must be logged in the activity log — including payment charge request approvals, view actions, and any action regardless of who performs it. Nothing is exempt from logging. Confidence: 0.85
+- Every action in the CRM must be logged in the activity log — including payment charge request approvals, view actions, and any action regardless of who performs it. Nothing is exempt from logging; logging applies to every account and every action, including view/access events. Confidence: 0.92
 
 # Communication
 - Keep responses brief and action-focused; avoid extra explanation, verbose descriptions, or commentary unless explicitly requested. Confidence: 0.75
 
 # Role-Based Access
 - Only admin has access to user management; regular users, agents, and other roles have no profile page, settings view, or self-service account modification (password, avatar, etc.). Admin manages all user passwords and profile images centrally. Confidence: 0.85
-- Admin has universal edit access — every field should be editable for any user and any booking, regardless of status or state restrictions applied to other roles. Confidence: 0.70
+- Admin has universal edit access — every field should be editable for any user and any booking, regardless of status or state restrictions applied to other roles. This includes bypassing "View-Only Access" UI banners and restrictions at both the PHP logic layer and the Blade template layer. Confidence: 0.85
 
 # User Management
 - Display the stored plain text password as a visible column in the user management table (index/list view), not only in the edit modal. Confidence: 0.65

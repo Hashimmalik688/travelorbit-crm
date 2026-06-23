@@ -1,5 +1,7 @@
-<div>
+<div x-data="{ saveTimer: null, saving: false, saved: false, triggerAutoSave() { if(this.saveTimer) clearTimeout(this.saveTimer); this.saveTimer = setTimeout(() => { this.saving = true; this.saved = false; $wire.autoSave().then(() => { this.saving = false; this.saved = true; setTimeout(() => this.saved = false, 2500); }).catch(() => { this.saving = false; }); }, 1800); }, init() { this.$el.addEventListener('input', (e) => { if(e.target.type==='file') return; this.triggerAutoSave(); }); this.$el.addEventListener('change', (e) => { if(e.target.type==='file') return; this.triggerAutoSave(); }); } }">
 <style>
+@keyframes as-spin { to { transform:rotate(360deg); } }
+.spinning { animation:as-spin .8s linear infinite; }
 .bv-section { background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);margin-bottom:16px;overflow:visible; }
 .bv-section-hdr { padding:14px 20px;border-bottom:1px solid rgba(51,46,158,.06);display:flex;align-items:center;gap:8px; }
 .bv-section-hdr .bv-icon { width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
@@ -95,7 +97,7 @@
   $canApprovePayments     = in_array($role, ['admin', 'manager', 'accounts']);
 
   // ── Viewer-only override: locks everything except Request Payment Charge ──
-  $viewerOnly = Auth::id() !== $booking->user_id;
+  $viewerOnly = Auth::id() !== $booking->user_id && !in_array($role, ['admin', 'manager']);
   if ($viewerOnly) {
       $canEditCore         = false;
       $isLocked            = true;
@@ -206,7 +208,10 @@
 
     <a href="{{ route('bookings.index') }}" class="bv-action" style="background:transparent;border-color:rgba(51,46,158,.2);color:#374151;"><i class="ph ph-arrow-left"></i> Back</a>
     @if($canEditBooking || ($isLocked && in_array(Auth::user()->role, ['admin','manager','accounts'])))
-      <button type="button" wire:click="save" class="bv-action" style="background:linear-gradient(135deg,#332E9E,#4A45B5);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(51,46,158,.2);"><i class="ph ph-floppy-disk"></i> Save</button>
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:9px;font-size:.68rem;font-weight:600;">
+        <span x-show="saving" style="display:inline-flex;align-items:center;gap:4px;color:#64748B;"><i class="ph ph-circle-notch spinning"></i> Saving...</span>
+        <span x-show="saved && !saving" style="display:inline-flex;align-items:center;gap:4px;color:#16A34A;"><i class="ph ph-check-circle"></i> Saved</span>
+      </div>
     @endif
   </div>
 </div>
@@ -248,17 +253,17 @@
       <div class="bv-section-hdr"><div class="bv-icon" style="background:rgba(51,46,158,.08);"><i class="ph ph-user-circle" style="color:#332E9E;font-size:.9rem;"></i></div><h2>Lead &amp; Caller</h2></div>
       <div class="bv-section-body">
         <div class="row g-2">
-          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Source','model'=>'lead_source','val'=>$leadLabels[$booking->lead_source ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_source ?? '')),'type'=>'select','options'=>[['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google']],'locked'=>true])</div>
-          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Nature','model'=>'lead_nature','val'=>$natureLabels[$booking->lead_nature ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_nature ?? '')),'type'=>'select','options'=>[['value'=>'new_booking','label'=>'New Booking'],['value'=>'date_change','label'=>'Date Change'],['value'=>'refund_booking','label'=>'Refund Booking'],['value'=>'previous_booking','label'=>'Previous Booking']],'locked'=>true])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Source','model'=>'lead_source','val'=>$leadLabels[$booking->lead_source ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_source ?? '')),'type'=>'select','options'=>[['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google']],'locked'=>!$isPrivileged])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Nature','model'=>'lead_nature','val'=>$natureLabels[$booking->lead_nature ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_nature ?? '')),'type'=>'select','options'=>[['value'=>'new_booking','label'=>'New Booking'],['value'=>'date_change','label'=>'Date Change'],['value'=>'refund_booking','label'=>'Refund Booking'],['value'=>'previous_booking','label'=>'Previous Booking']],'locked'=>!$isPrivileged])</div>
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Booking Type','model'=>'booking_type','val'=>ucfirst($booking->booking_type ?? ''),'type'=>'select','options'=>[['value'=>'flight','label'=>'Flight'],['value'=>'hotel','label'=>'Hotel'],['value'=>'holiday','label'=>'Holidays'],['value'=>'umrah','label'=>'Umrah'],['value'=>'visa','label'=>'Visa'],['value'=>'transfers','label'=>'Transfers'],['value'=>'excursion','label'=>'Excursion']],'locked'=>!$canEditBookingType])</div>
-          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Title','model'=>'booker_title','val'=>\App\Models\Booking::TITLES[$booking->booker_title] ?? $booking->booker_title ?? '','type'=>'select','options'=>[['value'=>'1','label'=>'Mr.'],['value'=>'2','label'=>'Ms.'],['value'=>'3','label'=>'Mrs.'],['value'=>'4','label'=>'Mstr'],['value'=>'5','label'=>'Miss'],['value'=>'6','label'=>'Dr.']],'locked'=>true])</div>
-          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'First Name','model'=>'booker_first_name','val'=>$booking->booker_first_name ?? '','locked'=>true])</div>
-          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'Last Name','model'=>'booker_last_name','val'=>$booking->booker_last_name ?? '','locked'=>true])</div>
-          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Mobile','model'=>'booker_mobile','val'=>$booking->booker_mobile ?? '','locked'=>true])</div>
-          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Landline','model'=>'booker_landline','val'=>$booking->booker_landline ?? '','locked'=>true])</div>
-          <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Email','model'=>'booker_email','val'=>$booking->booker_email ?? '','type'=>'email','locked'=>true])</div>
-          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Address','model'=>'booker_address','val'=>$booking->booker_address ?? '','type'=>'textarea','locked'=>true])</div>
-          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>true])</div>
+          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Title','model'=>'booker_title','val'=>\App\Models\Booking::TITLES[$booking->booker_title] ?? $booking->booker_title ?? '','type'=>'select','options'=>[['value'=>'1','label'=>'Mr.'],['value'=>'2','label'=>'Ms.'],['value'=>'3','label'=>'Mrs.'],['value'=>'4','label'=>'Mstr'],['value'=>'5','label'=>'Miss'],['value'=>'6','label'=>'Dr.']],'locked'=>!$isPrivileged])</div>
+          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'First Name','model'=>'booker_first_name','val'=>$booking->booker_first_name ?? '','locked'=>!$isPrivileged])</div>
+          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'Last Name','model'=>'booker_last_name','val'=>$booking->booker_last_name ?? '','locked'=>!$isPrivileged])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Mobile','model'=>'booker_mobile','val'=>$booking->booker_mobile ?? '','locked'=>!$isPrivileged])</div>
+          <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Landline','model'=>'booker_landline','val'=>$booking->booker_landline ?? '','locked'=>!$isPrivileged])</div>
+          <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Email','model'=>'booker_email','val'=>$booking->booker_email ?? '','type'=>'email','locked'=>!$isPrivileged])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Address','model'=>'booker_address','val'=>$booking->booker_address ?? '','type'=>'textarea','locked'=>!$isPrivileged])</div>
+          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>!$isPrivileged])</div>
         </div>
       </div>
     </div>

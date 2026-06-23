@@ -79,8 +79,12 @@ class PaymentChargeRequest extends Component
         }
         AuditLogger::log(Auth::user(), $booking, 'payment_approved', $logMsg);
 
-        if ($booking && $booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
-            $booking->update(['booking_status' => Booking::STATUS_PENDING]);
+        // Log to booking activity feed
+        if ($booking) {
+            $this->appendBookingActivity($booking, 'payment_approved', 'Payment Approved', $this->modalNote ?: '');
+            if ($booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
+                $booking->update(['booking_status' => Booking::STATUS_PENDING]);
+            }
         }
 
         $this->closeModal();
@@ -103,8 +107,12 @@ class PaymentChargeRequest extends Component
         $logMsg = "Payment charge {$ph->id} rejected — {$this->modalNote}";
         AuditLogger::log(Auth::user(), $booking, 'payment_rejected', $logMsg);
 
-        if ($booking && $booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
-            $booking->update(['booking_status' => Booking::STATUS_PENDING]);
+        // Log to booking activity feed
+        if ($booking) {
+            $this->appendBookingActivity($booking, 'payment_rejected', 'Payment Declined', $this->modalNote);
+            if ($booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
+                $booking->update(['booking_status' => Booking::STATUS_PENDING]);
+            }
         }
 
         $this->closeModal();
@@ -125,6 +133,35 @@ class PaymentChargeRequest extends Component
         $ph->delete();
 
         session()->flash('success', 'Payment charge deleted.');
+    }
+
+    private function appendBookingActivity(Booking $booking, string $action, string $label, string $detail): void
+    {
+        $user = Auth::user();
+        $agent = $user->name ?? 'System';
+        $ini = strtoupper(substr($agent, 0, 1));
+        if (($sp = strpos($agent, ' ')) !== false) {
+            $ini .= strtoupper(substr($agent, $sp + 1, 1));
+        }
+        $avatarUrl = $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null;
+
+        $log = $booking->activity_log ?? [];
+        if (is_string($log)) {
+            $log = json_decode($log, true) ?? [];
+        }
+
+        $log[] = [
+            'agent'           => $agent,
+            'avatar_url'      => $avatarUrl,
+            'avatar_initials' => $ini,
+            'user_id'         => $user->id,
+            'timestamp'       => now()->toDateTimeString(),
+            'action'          => $action,
+            'detail'          => $detail,
+            'type'            => 'update',
+        ];
+
+        $booking->update(['activity_log' => $log]);
     }
 
     public function render()

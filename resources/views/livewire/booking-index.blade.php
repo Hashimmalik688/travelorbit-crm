@@ -111,10 +111,10 @@
                                 @endif
                             </td>
                             <td>{{ $booking->flightDetail?->departure_date ? \Carbon\Carbon::parse($booking->flightDetail->departure_date)->format('d M Y') : '-' }}</td>
-                            <td class="text-end fw-semibold">£{{ number_format($booking->total_sale_price, 0) }}</td>
+                            <td class="text-end fw-semibold">£{{ number_format($booking->total_sale_price, 2) }}</td>
                             <td class="text-end">
                                 <span class="fw-semibold {{ $booking->total_margin >= 0 ? 'text-success' : 'text-danger' }}">
-                                    £{{ number_format($booking->total_margin, 0) }}
+                                    £{{ number_format($booking->total_margin, 2) }}
                                 </span>
                             </td>
                             <td>

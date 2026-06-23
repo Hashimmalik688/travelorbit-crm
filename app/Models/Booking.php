@@ -298,10 +298,32 @@ class Booking extends Model
     {
         return Attribute::make(
             get: function () {
-                if ($this->flightCosts()->exists()) {
-                    return $this->flightCosts()->get()->sum(fn ($c) => $c->cost * $c->quantity);
+                $total = 0;
+
+                // Flight: per-passenger costs from passenger_costs JSON (matches booking show)
+                if ($this->flightDetail && $this->flightDetail->passenger_costs) {
+                    $total += collect($this->flightDetail->passenger_costs)->sum(fn ($pc) => (float) ($pc['cost'] ?? 0));
                 }
-                return 0;
+
+                // ATOL/SAFI: £2.50 per non-infant passenger (matches booking show)
+                if ($this->flightDetail) {
+                    $nonInfant = $this->passengers->filter(fn ($p) => $p->passenger_type !== 'infant')->count();
+                    if ($this->flightDetail->atol) $total += 2.50 * $nonInfant;
+                    if ($this->flightDetail->safi) $total += 2.50 * $nonInfant;
+                }
+
+                // Hotels
+                $total += $this->hotels()->sum('actual_cost');
+
+                // Visas
+                $total += $this->visas()->sum('actual_cost');
+
+                // Excursion
+                if ($this->excursion_data && $cost = ($this->excursion_data['actual_cost'] ?? null)) {
+                    $total += (float) $cost;
+                }
+
+                return $total;
             },
         );
     }
@@ -311,10 +333,23 @@ class Booking extends Model
         return Attribute::make(
             get: function () {
                 $total = 0;
-                if ($this->flightDetail) {
-                    $total += $this->flightDetail->selling_price;
+
+                // Flight: per-passenger sold from passenger_costs JSON (matches booking show)
+                if ($this->flightDetail && $this->flightDetail->passenger_costs) {
+                    $total += collect($this->flightDetail->passenger_costs)->sum(fn ($pc) => (float) ($pc['sold'] ?? 0));
                 }
+
+                // Hotels
                 $total += $this->hotels()->sum('selling_price');
+
+                // Visas
+                $total += $this->visas()->sum('selling_price');
+
+                // Excursion
+                if ($this->excursion_data && $sp = ($this->excursion_data['selling_price'] ?? null)) {
+                    $total += (float) $sp;
+                }
+
                 return $total;
             },
         );
