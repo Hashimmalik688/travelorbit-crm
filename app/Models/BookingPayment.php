@@ -28,6 +28,7 @@ class BookingPayment extends Model
         'total_margin_amount',
         'invoice_generated',
         'invoice_generated_at',
+        'payment_instalments',
     ];
 
     protected function casts(): array
@@ -46,6 +47,7 @@ class BookingPayment extends Model
             'cc_charges' => 'decimal:2',
             'margin_without_cc' => 'decimal:2',
             'total_margin_amount' => 'decimal:2',
+            'payment_instalments' => 'array',
         ];
     }
 

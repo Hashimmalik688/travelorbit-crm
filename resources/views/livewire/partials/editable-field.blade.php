@@ -1,4 +1,4 @@
-{{-- Editable inline field with pencil toggle --}}
+{{-- Editable inline field — editing controlled by parent section's Alpine state --}}
 @php
   $locked = $locked ?? false;
   $type = $type ?? 'text';
@@ -8,24 +8,25 @@
   $placeholder = $placeholder ?? '';
   $options = $options ?? [];
   $rawModel = $rawModel ?? $model;
+  $editingVar = $editingVar ?? null;
+  $editingExp = $editingVar ? '$parent.' . $editingVar : 'false';
   $fieldId = str_replace(['.','[',']'], ['-','',''], $model);
 @endphp
 
 <div class="bv-field-row">
   <div style="flex:1;min-width:0;">
     @if($label)<div class="bv-label">{{ $label }}</div>@endif
-    <div x-data="{ editing: false }" style="position:relative;{{ $locked ? 'opacity:.45;' : '' }}">
+    <div style="position:relative;{{ $locked ? 'opacity:.45;' : '' }}">
       {{-- Read-only display --}}
-      <div x-show="!editing" style="min-height:28px;display:flex;align-items:center;gap:6px;{{ $locked ? 'pointer-events:none;' : '' }}">
+      <div x-show="!{{ $editingExp }}" style="min-height:28px;display:flex;align-items:center;gap:6px;{{ $locked ? 'pointer-events:none;' : '' }}">
         <span class="bv-value" style="word-break:break-word;{{ empty($val) ? 'color:#C4C9D4;' : '' }}">{{ $val ?: ($placeholder ?: '-') }}</span>
-        @if(!$locked)
-          <button type="button" @click="editing = true" class="bv-edit-pencil" title="Edit"><i class="ph ph-pencil-simple"></i></button>
-        @else
+        @if($locked)
           <span class="bv-edit-pencil locked" title="Read only"><i class="ph ph-lock-simple"></i></span>
         @endif
       </div>
-      {{-- Inline edit --}}
-      <div x-show="editing" x-cloak style="display:flex;align-items:flex-start;gap:4px;">
+      {{-- Inline edit (only when editingVar is set and not locked) --}}
+      @if($editingVar && !$locked)
+      <div x-show="{{ $editingExp }}" x-cloak style="display:flex;align-items:flex-start;gap:4px;">
         @if($type === 'select')
           <div style="flex:1;min-width:0;">
             <x-styled-select-sm :modelName="$model" :options="$options" :placeholder="$placeholder ?: ''" :live="true" />
@@ -45,8 +46,8 @@
         @else
           <input type="text" wire:model="{{ $model }}" class="bv-input-inline bv-input-sm" placeholder="{{ $placeholder }}" style="font-size:.72rem;">
         @endif
-        <button type="button" @click="editing = false" style="border:none;background:rgba(51,46,158,.08);color:#332E9E;border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:.75rem;"><i class="ph ph-check"></i></button>
       </div>
+      @endif
     </div>
   </div>
 </div>

@@ -106,7 +106,6 @@ class BookingShow extends Component
     public $amount_paid = '';
     public $due_date = '';
     public $installment_count = 2;
-    public $instalments = [];
     public $payment_history = [];
     public $payment_date = '';
     public $receipt_number = '';
@@ -182,8 +181,11 @@ class BookingShow extends Component
     public function getActivityColorConfig(string $action, string $type = 'info'): array
     {
         // Full-row highlight for major lifecycle events
-        if (stripos($action, 'created a new booking') !== false || stripos($action, 'opened booking') !== false) {
+        if (stripos($action, 'created a new booking') !== false) {
             return ['dot'=>'#0EA5E9','bg'=>'rgba(14,165,233,.10)','border'=>'#0EA5E9','label'=>'Created','full_row'=>true,'icon'=>'ph-sparkle'];
+        }
+        if (stripos($action, 'opened booking') !== false) {
+            return ['dot'=>'#64748B','bg'=>'rgba(100,116,139,.06)','border'=>'#94A3B8','label'=>'View','full_row'=>false,'icon'=>'ph-eye'];
         }
         if (stripos($action, 'request issuance') !== false || stripos($action, 'issuance queue') !== false || stripos($action, 'moved to issuance') !== false) {
             return ['dot'=>'#7C3AED','bg'=>'rgba(124,58,237,.12)','border'=>'#7C3AED','label'=>'Issuance','full_row'=>true,'icon'=>'ph-ticket'];
@@ -516,6 +518,7 @@ class BookingShow extends Component
 
         if ($b->payment) {
             $this->booking_plan = $b->payment->booking_plan ?? '';
+            $this->selected_payment_method = $b->payment->booking_plan ?? '';
             $this->payment_mode = $b->payment->payment_mode ?? '';
             $this->payment_mode_2 = $b->payment->payment_mode_2 ?? '';
             $this->amount_paid = $b->payment->amount_paid ?? '';
@@ -526,6 +529,13 @@ class BookingShow extends Component
             $this->deposit_amount = $b->payment->deposit_amount ?? '';
             $this->cc_charges = $b->payment->cc_charges ?? '';
             $this->payment_method = $b->payment->payment_mode ?? '';
+
+            $saved = $b->payment->payment_instalments;
+            if ($saved && is_array($saved)) {
+                $instData = isset($saved['instalments']) ? $saved['instalments'] : $saved;
+                $this->payment_instalments = array_map(fn($inst) => array_merge(['amount' => '', 'date' => '', 'editing' => false], (array) $inst), $instData);
+                $this->instalment_paid = $saved['paid'] ?? [];
+            }
         }
 
         $jsonLog = $b->activity_log ?? [];
@@ -601,13 +611,6 @@ class BookingShow extends Component
             foreach ($seg['passenger_costs'] ?? [] as $pc) {
                 $total += (float)($pc['cost'] ?? 0);
             }
-        }
-        $taxableCount = $this->nonInfantPassengerCount;
-        if ($taxableCount > 0) {
-            $taxPerPerson = 0;
-            if ($this->flight_atol) $taxPerPerson += 2.50;
-            if ($this->flight_safi) $taxPerPerson += 2.50;
-            $total += ($taxPerPerson * $taxableCount);
         }
         return $total;
     }
@@ -993,8 +996,9 @@ class BookingShow extends Component
         $this->payment_instalments = [[
             'amount' => '',
             'date' => '',
-            'editing' => true,
+            'editing' => false,
         ]];
+        $this->instalment_paid = [];
     }
 
     public function addPaymentInstalment(): void
@@ -1003,7 +1007,7 @@ class BookingShow extends Component
         $this->payment_instalments[] = [
             'amount' => '',
             'date' => '',
-            'editing' => true,
+            'editing' => false,
         ];
         $this->logActivity('Added Payment Instalment', '', 'update', bypassViewerCheck: true);
     }
@@ -1013,6 +1017,7 @@ class BookingShow extends Component
         $this->abortIfViewer();
         if (count($this->payment_instalments) > 1) {
             array_pop($this->payment_instalments);
+            array_pop($this->instalment_paid);
         }
         $this->logActivity('Removed Payment Instalment', '', 'update', bypassViewerCheck: true);
     }
@@ -1800,6 +1805,9 @@ class BookingShow extends Component
             }
 
             // Payment
+            if (!empty($this->selected_payment_method)) {
+                $this->booking_plan = $this->selected_payment_method;
+            }
             $hotelTotalSold = collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0));
             $total = $this->totalFlightSold + $hotelTotalSold;
             $a = 0; $b_balance = 0; $d = 0;
@@ -1817,13 +1825,14 @@ class BookingShow extends Component
                     'balance_remaining' => $b_balance,
                     'due_date' => $this->due_date ?: null,
                     'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
-                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
                     'debit_card_change' => $this->debit_card_change,
                     'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
                     'payment_mode' => $primaryMethod ?: 'none',
                     'payment_mode_2' => $this->payment_mode_2 ?: null,
                     'cc_charges' => $this->cc_charges ?: 0,
+                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
                 ]);
             } elseif ($primaryMethod) {
                 BookingPayment::create([
@@ -1831,17 +1840,18 @@ class BookingShow extends Component
                     'amount_paid' => $a, 'total_amount' => $total,
                     'balance_remaining' => $b_balance, 'due_date' => $this->due_date ?: null,
                     'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
-                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
                     'debit_card_change' => false, 'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
                     'payment_mode' => $primaryMethod, 'payment_mode_2' => null,
                     'cc_charges' => $this->cc_charges ?: 0, 'invoice_generated' => false,
+                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
                 ]);
             }
 
-            // Payment history
+            // Payment history (single entry for non-payment_plan bookings only)
             $historyEntries = $this->booking_plan === 'payment_plan'
-                ? $this->instalments
+                ? []
                 : [[
                     'date' => $this->payment_date ?: now()->toDateString(),
                     'method' => $this->payment_method,
@@ -1857,21 +1867,6 @@ class BookingShow extends Component
                         'payment_method' => $ph['method'] ?: null,
                         'amount' => $amt,
                         'receipt_number' => $ph['receipt'] ?: null,
-                    ]);
-                }
-            }
-
-            // Save payment instalments from view page (new payment method section)
-            foreach ($this->payment_instalments as $inst) {
-                $amt = (float)($inst['amount'] ?? 0);
-                if ($amt > 0 && $this->selected_payment_method) {
-                    BookingPaymentHistory::create([
-                        'booking_id' => $b->id,
-                        'user_id' => Auth::id(),
-                        'payment_date' => !empty($inst['date']) ? \Carbon\Carbon::parse($inst['date'])->toDateString() : now()->toDateString(),
-                        'payment_method' => $this->selected_payment_method,
-                        'amount' => $amt,
-                        'receipt_number' => null,
                     ]);
                 }
             }
@@ -2180,11 +2175,12 @@ class BookingShow extends Component
                     'total_amount' => $total, 'balance_remaining' => $b_balance,
                     'due_date' => $this->due_date ?: null,
                     'installment_period' => $instPeriod,
-                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
                     'debit_card_change' => $this->debit_card_change, 'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
                     'payment_mode' => $primaryMethod ?: 'none', 'payment_mode_2' => $this->payment_mode_2 ?: null,
                     'cc_charges' => $this->cc_charges ?: 0,
+                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
                 ]);
             } elseif ($primaryMethod) {
                 BookingPayment::create([
@@ -2192,16 +2188,17 @@ class BookingShow extends Component
                     'amount_paid' => $a, 'total_amount' => $total,
                     'balance_remaining' => $b_balance, 'due_date' => $this->due_date ?: null,
                     'installment_period' => $instPeriod,
-                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
                     'debit_card_change' => false, 'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
                     'payment_mode' => $primaryMethod, 'payment_mode_2' => null,
                     'cc_charges' => $this->cc_charges ?: 0, 'invoice_generated' => false,
+                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
                 ]);
             }
 
             $historyEntries = $this->booking_plan === 'payment_plan'
-                ? $this->instalments
+                ? []
                 : [['date' => $this->payment_date ?: now()->toDateString(), 'method' => $this->payment_method, 'amount' => $this->booking_plan === 'dnpl' ? $this->deposit_amount : $this->amount_paid, 'receipt' => $this->receipt_number]];
             foreach ($historyEntries as $ph) {
                 $amt = (float)($ph['amount'] ?? 0);
@@ -2210,17 +2207,6 @@ class BookingShow extends Component
                         'booking_id' => $b->id, 'user_id' => Auth::id(),
                         'payment_date' => !empty($ph['date']) ? \Carbon\Carbon::parse($ph['date'])->toDateString() : now()->toDateString(),
                         'payment_method' => $ph['method'] ?: null, 'amount' => $amt, 'receipt_number' => $ph['receipt'] ?: null,
-                    ]);
-                }
-            }
-
-            foreach ($this->payment_instalments as $inst) {
-                $amt = (float)($inst['amount'] ?? 0);
-                if ($amt > 0 && $this->selected_payment_method) {
-                    BookingPaymentHistory::create([
-                        'booking_id' => $b->id, 'user_id' => Auth::id(),
-                        'payment_date' => !empty($inst['date']) ? \Carbon\Carbon::parse($inst['date'])->toDateString() : now()->toDateString(),
-                        'payment_method' => $this->selected_payment_method, 'amount' => $amt, 'receipt_number' => null,
                     ]);
                 }
             }
