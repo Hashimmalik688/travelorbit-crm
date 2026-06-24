@@ -844,7 +844,7 @@
     </div>
 
     {{-- COST & MARGINS --}}
-    <div class="bv-section" style="position:sticky;top:20px;">
+    <div class="bv-section">
       <div style="border-radius:16px 16px 0 0;background:#fff;border:1px solid rgba(51,46,158,.08);">
         <div class="bv-section-hdr"><div class="bv-icon" style="background:rgba(255,107,53,.08);"><i class="ph ph-currency-circle-dollar" style="color:#FF6B35;font-size:.85rem;"></i></div><h2>Cost &amp; Margins</h2></div>
         @php
@@ -1112,7 +1112,10 @@
             @foreach($booking->documents as $doc)
               <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:6px;font-size:.66rem;">
                 <span><i class="ph ph-file me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }}</span>
-                <a href="{{ Storage::url($doc->file_path) }}" target="_blank" style="color:#7C3AED;font-size:.9rem;"><i class="ph ph-download-simple"></i></a>
+                <div class="d-flex gap-1">
+                  <button type="button" wire:click="previewDocument({{ $doc->id }})" style="color:#332E9E;font-size:.9rem;background:none;border:none;cursor:pointer;padding:2px;" title="Preview"><i class="ph ph-eye"></i></button>
+                  <a href="{{ Storage::url($doc->file_path) }}" target="_blank" style="color:#7C3AED;font-size:.9rem;" title="Download"><i class="ph ph-download-simple"></i></a>
+                </div>
               </div>
             @endforeach
           @else
@@ -1265,6 +1268,48 @@
           <button type="button" wire:click="$set('showRefundModal',false)" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#64748B;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:600;cursor:pointer;">Cancel</button>
           <button type="button" wire:click="submitRefund" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Submit Refund Request</button>
         </div>
+      </div>
+    </div>
+  </div>
+@endif
+
+{{-- DOCUMENT PREVIEW MODAL --}}
+@if($previewDoc)
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:32px;" wire:click="closePreview">
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 96px rgba(0,0,0,.4);overflow:hidden;" wire:click.stop="">
+      {{-- Header --}}
+      <div style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(51,46,158,.08);flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="ph ph-file-text" style="font-size:1.1rem;color:#332E9E;"></i>
+          <div>
+            <div style="font-size:.8rem;font-weight:700;color:#0F172A;">{{ $previewDoc->file_name }}</div>
+            <div style="font-size:.64rem;color:#94A3B8;">{{ $previewDoc->document_type ? ucfirst($previewDoc->document_type) : 'Document' }}</div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ Storage::url($previewDoc->file_path) }}" target="_blank" style="background:rgba(51,46,158,.08);color:#332E9E;border:none;border-radius:8px;padding:6px 14px;font-size:.68rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download</a>
+          <button type="button" wire:click="closePreview" style="background:rgba(0,0,0,.06);color:#64748B;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;">✕</button>
+        </div>
+      </div>
+      {{-- Content --}}
+      <div style="overflow-y:auto;flex:1;background:#F1F5F9;display:flex;align-items:center;justify-content:center;padding:24px;min-height:300px;">
+        @php
+          $ext = strtolower(pathinfo($previewDoc->file_name, PATHINFO_EXTENSION));
+          $isImage = in_array($ext, ['jpg','jpeg','png','gif','webp','svg','bmp']);
+          $isPdf = $ext === 'pdf';
+        @endphp
+        @if($isImage)
+          <img src="{{ Storage::url($previewDoc->file_path) }}" alt="{{ $previewDoc->file_name }}" style="max-width:100%;max-height:70vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);">
+        @elseif($isPdf)
+          <iframe src="{{ Storage::url($previewDoc->file_path) }}" style="width:100%;height:70vh;border:none;border-radius:12px;"></iframe>
+        @else
+          <div style="text-align:center;padding:40px;color:#64748B;">
+            <i class="ph ph-file-x" style="font-size:3rem;color:#CBD5E1;display:block;margin-bottom:12px;"></i>
+            <div style="font-size:.9rem;font-weight:600;color:#1E293B;margin-bottom:4px;">Preview not available</div>
+            <div style="font-size:.72rem;margin-bottom:16px;">This file type cannot be previewed inline.</div>
+            <a href="{{ Storage::url($previewDoc->file_path) }}" target="_blank" style="background:#332E9E;color:#fff;border:none;border-radius:10px;padding:8px 20px;font-size:.73rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download to View</a>
+          </div>
+        @endif
       </div>
     </div>
   </div>

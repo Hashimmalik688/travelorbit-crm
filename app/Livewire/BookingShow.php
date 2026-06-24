@@ -141,6 +141,9 @@ class BookingShow extends Component
     public $newDocuments = [];
     public $newDocumentTypes = [];
 
+    // Document preview
+    public $previewDoc = null;
+
     // Activity
     public $mandatory_comment = '';
     public array $activity_log_entries = [];
@@ -523,15 +526,6 @@ class BookingShow extends Component
             $this->deposit_amount = $b->payment->deposit_amount ?? '';
             $this->cc_charges = $b->payment->cc_charges ?? '';
             $this->payment_method = $b->payment->payment_mode ?? '';
-            // Populate payment_instalments from existing payment history
-            $history = $b->paymentHistory()->orderBy('payment_date')->get();
-            if ($history->isNotEmpty()) {
-                $this->payment_instalments = $history->map(fn($h) => [
-                    'amount' => (string)($h->amount ?? ''),
-                    'date' => $h->payment_date?->format('Y-m-d') ?? '',
-                    'editing' => false,
-                ])->toArray();
-            }
         }
 
         $jsonLog = $b->activity_log ?? [];
@@ -1054,8 +1048,17 @@ class BookingShow extends Component
     }
 
     // ── Documents ──────────────────────────────────────────────────────
-    public function addDocument(): void { $this->abortIfViewer(); $this->newDocuments[] = null; $this->newDocumentTypes[] = ''; }
-    public function removeDocument(int $i): void { $this->abortIfViewer(); unset($this->newDocuments[$i]); unset($this->newDocumentTypes[$i]); $this->newDocuments = array_values($this->newDocuments); $this->newDocumentTypes = array_values($this->newDocumentTypes); }
+    public function addDocument(): void { $this->abortIfViewer(); $this->newDocuments[] = null; $this->newDocumentTypes[] = ''; $this->logActivity('Added Document Upload', '', 'update'); }
+    public function removeDocument(int $i): void { $this->abortIfViewer(); unset($this->newDocuments[$i]); unset($this->newDocumentTypes[$i]); $this->newDocuments = array_values($this->newDocuments); $this->newDocumentTypes = array_values($this->newDocumentTypes); $this->logActivity('Removed Document Upload', '', 'update'); }
+
+    public function previewDocument(int $docId): void
+    {
+        $doc = \App\Models\BookingDocument::where('booking_id', $this->booking->id)->find($docId);
+        if (!$doc) return;
+        $this->previewDoc = $doc;
+    }
+
+    public function closePreview(): void { $this->previewDoc = null; }
 
     // ── Activity log helpers ───────────────────────────────────────────
     protected array $fieldSnapshot = [];
@@ -1792,6 +1795,7 @@ class BookingShow extends Component
                             'transfers' => $newTransfers,
                         ]
                     );
+                    $this->logActivity('Pricing Updated', implode('; ', $priceChanges), 'update', bypassViewerCheck: true);
                 }
             }
 
@@ -1799,13 +1803,10 @@ class BookingShow extends Component
             $hotelTotalSold = collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0));
             $total = $this->totalFlightSold + $hotelTotalSold;
             $a = 0; $b_balance = 0; $d = 0;
-            // Derive amount_paid / deposit_amount from payment_instalments when user is using the payment structure UI
-            $instTotal = collect($this->payment_instalments)->sum(fn($i) => (float)($i['amount'] ?? 0));
-            $firstInst = (float)($this->payment_instalments[0]['amount'] ?? 0);
             if ($this->booking_plan === 'full') { $a = $total; }
-            elseif ($this->booking_plan === 'awaiting') { $a = $instTotal ?: (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'payment_plan') { $a = $instTotal ?: (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'dnpl') { $d = $firstInst ?: (float)($this->deposit_amount ?: 0); $b_balance = $total; }
+            elseif ($this->booking_plan === 'awaiting') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
+            elseif ($this->booking_plan === 'payment_plan') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
+            elseif ($this->booking_plan === 'dnpl') { $d = (float)($this->deposit_amount ?: 0); $b_balance = $total; }
 
             $primaryMethod = $this->payment_method ?: $this->payment_mode;
             if ($b->payment) {
@@ -1816,7 +1817,7 @@ class BookingShow extends Component
                     'balance_remaining' => $b_balance,
                     'due_date' => $this->due_date ?: null,
                     'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
                     'debit_card_change' => $this->debit_card_change,
                     'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
@@ -1830,7 +1831,7 @@ class BookingShow extends Component
                     'amount_paid' => $a, 'total_amount' => $total,
                     'balance_remaining' => $b_balance, 'due_date' => $this->due_date ?: null,
                     'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
                     'debit_card_change' => false, 'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
                     'payment_mode' => $primaryMethod, 'payment_mode_2' => null,
@@ -1881,6 +1882,7 @@ class BookingShow extends Component
                     if ($f) {
                         $path = $f->store('booking-documents', 'public');
                         BookingDocument::create(['booking_id' => $b->id, 'uploaded_by' => Auth::id(), 'file_name' => $f->getClientOriginalName(), 'file_path' => $path, 'file_type' => $f->getClientMimeType(), 'document_type' => $this->newDocumentTypes[$i] ?? 'other']);
+                        $this->logActivity('Document Uploaded', $f->getClientOriginalName() . ' (' . ($this->newDocumentTypes[$i] ?? 'other') . ')', 'update', bypassViewerCheck: true);
                     }
                 }
             }
@@ -2153,6 +2155,7 @@ class BookingShow extends Component
                         ['flight_costs' => $oldFlightCosts, 'flight_selling_price' => $oldFlightSellingPrice, 'hotels' => $oldHotels, 'visas' => $oldVisas, 'excursion' => $oldExcursion, 'transfers' => $oldTransfers],
                         ['flight_costs' => $newFlightCosts, 'flight_selling_price' => $newFlightSellingPrice, 'hotels' => $newHotels, 'visas' => $newVisas, 'excursion' => $newExcursion, 'transfers' => $newTransfers]
                     );
+                    $this->logActivity('Pricing Updated', implode('; ', $priceChanges), 'update', bypassViewerCheck: true);
                 }
             }
 
@@ -2160,13 +2163,10 @@ class BookingShow extends Component
             $hotelTotalSold = collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0));
             $total = $this->totalFlightSold + $hotelTotalSold;
             $a = 0; $b_balance = 0; $d = 0;
-            // Derive amount_paid / deposit_amount from payment_instalments when user is using the payment structure UI
-            $instTotal = collect($this->payment_instalments)->sum(fn($i) => (float)($i['amount'] ?? 0));
-            $firstInst = (float)($this->payment_instalments[0]['amount'] ?? 0);
             if ($this->booking_plan === 'full') { $a = $total; }
-            elseif ($this->booking_plan === 'awaiting') { $a = $instTotal ?: (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'payment_plan') { $a = $instTotal ?: (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'dnpl') { $d = $firstInst ?: (float)($this->deposit_amount ?: 0); $b_balance = $total; }
+            elseif ($this->booking_plan === 'awaiting') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
+            elseif ($this->booking_plan === 'payment_plan') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
+            elseif ($this->booking_plan === 'dnpl') { $d = (float)($this->deposit_amount ?: 0); $b_balance = $total; }
 
             // Map installment period to valid DB enum: 'none', '30_days', '2_months'
             $instPeriod = $this->booking_plan === 'payment_plan'
@@ -2180,7 +2180,7 @@ class BookingShow extends Component
                     'total_amount' => $total, 'balance_remaining' => $b_balance,
                     'due_date' => $this->due_date ?: null,
                     'installment_period' => $instPeriod,
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
                     'debit_card_change' => $this->debit_card_change, 'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
                     'payment_mode' => $primaryMethod ?: 'none', 'payment_mode_2' => $this->payment_mode_2 ?: null,
@@ -2192,7 +2192,7 @@ class BookingShow extends Component
                     'amount_paid' => $a, 'total_amount' => $total,
                     'balance_remaining' => $b_balance, 'due_date' => $this->due_date ?: null,
                     'installment_period' => $instPeriod,
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
+                    'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
                     'debit_card_change' => false, 'deposit_amount' => $d,
                     'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
                     'payment_mode' => $primaryMethod, 'payment_mode_2' => null,
@@ -2230,6 +2230,7 @@ class BookingShow extends Component
                     if ($f) {
                         $path = $f->store('booking-documents', 'public');
                         BookingDocument::create(['booking_id' => $b->id, 'uploaded_by' => Auth::id(), 'file_name' => $f->getClientOriginalName(), 'file_path' => $path, 'file_type' => $f->getClientMimeType(), 'document_type' => $this->newDocumentTypes[$i] ?? 'other']);
+                        $this->logActivity('Document Uploaded', $f->getClientOriginalName() . ' (' . ($this->newDocumentTypes[$i] ?? 'other') . ')', 'update', bypassViewerCheck: true);
                     }
                 }
             }
