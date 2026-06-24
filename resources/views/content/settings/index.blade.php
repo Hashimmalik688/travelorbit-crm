@@ -46,6 +46,15 @@
         'url'   => route('settings.vendors'),
         'meta'  => 'Booking',
       ],
+      [
+        'title' => 'GDS Options',
+        'desc'  => 'Add, remove or edit GDS options (Amadeus, Sabre, etc.) shown in the booking flight form.',
+        'icon'  => 'ph ph-globe',
+        'color' => '#7C3AED',
+        'bg'    => 'rgba(124,58,237,.08)',
+        'url'   => route('settings.gds'),
+        'meta'  => 'Booking',
+      ],
     ];
   @endphp
   @foreach($cards as $c)

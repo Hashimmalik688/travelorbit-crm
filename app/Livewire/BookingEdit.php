@@ -620,7 +620,7 @@ class BookingEdit extends Component
             $oldTransfers = $this->booking->transfers()->get()->toArray();
 
             // Flight detail - only Manager/Admin can save flight changes
-            $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']);
+            $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']) || (Auth::user()->role === 'agent' && $this->booking->booking_status === 'pending');
             if ($canEditFlightHotel && ($this->flight_airline || $this->flight_pnr || $this->flight_selling_price)) {
                 $fdData = [
                     'pnr' => $this->flight_pnr ?: null,
@@ -817,6 +817,14 @@ class BookingEdit extends Component
                 ['value' => 'Hays Travel',   'label' => 'Hays Travel'],
                 ['value' => 'Trailfinders',  'label' => 'Trailfinders'],
                 ['value' => 'Other',         'label' => 'Other'],
+            ]),
+            'gdsOptions' => \App\Models\Setting::getValue('gds_options', [
+                ['value' => 'AMADEUS',    'label' => 'Amadeus'],
+                ['value' => 'GALILEO',    'label' => 'Galileo'],
+                ['value' => 'SABRE',      'label' => 'Sabre'],
+                ['value' => 'WORLDSPAN',  'label' => 'Worldspan'],
+                ['value' => 'APOLLO',     'label' => 'Apollo'],
+                ['value' => 'TRAVELPORT', 'label' => 'Travelport'],
             ]),
         ]);
     }

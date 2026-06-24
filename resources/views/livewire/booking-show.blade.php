@@ -1,4 +1,4 @@
-<div x-data="{ saveTimer: null, saving: false, saved: false, triggerAutoSave() { if(this.saving) return; if(this.saveTimer) clearTimeout(this.saveTimer); this.saveTimer = setTimeout(() => { this.saving = true; this.saved = false; $wire.autoSave().then(() => { this.saving = false; this.saved = true; setTimeout(() => this.saved = false, 2500); }).catch(() => { this.saving = false; }); }, 1800); }, init() { this.$el.addEventListener('input', (e) => { if(e.target.type==='file') return; this.triggerAutoSave(); }); this.$el.addEventListener('change', (e) => { if(e.target.type==='file') return; this.triggerAutoSave(); }); } }">
+<div x-data="{ saveTimer: null, saving: false, saved: false, triggerAutoSave() { if(this.saving) return; if(this.saveTimer) clearTimeout(this.saveTimer); this.saveTimer = setTimeout(() => { this.saving = true; this.saved = false; $wire.autoSave().then(() => { this.saving = false; this.saved = true; setTimeout(() => this.saved = false, 2500); }).catch(() => { this.saving = false; }); }, 1800); }, init() { this.$el.addEventListener('input', (e) => { if(e.target.type==='file' || e.target.tagName==='TEXTAREA') return; this.triggerAutoSave(); }); this.$el.addEventListener('change', (e) => { if(e.target.type==='file' || e.target.tagName==='TEXTAREA') return; this.triggerAutoSave(); }); } }">
 <style>
 @keyframes as-spin { to { transform:rotate(360deg); } }
 .spinning { animation:as-spin .8s linear infinite; }
@@ -48,6 +48,7 @@
 .bv-pay-btn { font-size:.62rem;font-weight:600;padding:3px 10px;border-radius:7px;border:none;cursor:pointer;white-space:nowrap; }
 .bv-pay-btn.send { background:#F59E0B;color:#fff; }
 .bv-pay-btn.approve { background:#16A34A;color:#fff; }
+[x-cloak] { display:none !important; }
 .bv-activity-row { display:flex;gap:8px;padding:4px 0;font-size:.7rem;border-bottom:1px solid rgba(51,46,158,.03); }
 .bv-activity-dot { width:6px;height:6px;border-radius:50%;margin-top:6px;flex-shrink:0; }
 [x-cloak] { display: none !important; }
@@ -84,7 +85,7 @@
   ]);
 
   // ── Flight/hotel section fields (needs operations/issuance role + core unlock) ──
-  $canEditFlightHotel = $canEditCore && in_array($role, ['admin', 'manager', 'operations', 'issuance']);
+  $canEditFlightHotel = $canEditCore && (in_array($role, ['admin', 'manager', 'operations', 'issuance']) || ($role === 'agent' && $status === 'pending'));
 
   // ── Add buttons visibility: depends on booking type AND lock ──
   $canAddPNR      = $canEditFlightHotel && in_array($btype, ['flight', 'holiday', 'umrah']);
@@ -221,7 +222,7 @@
 @endif
 
 <div class="row g-3">
-  <div class="col-lg-8">
+  <div class="col-lg-8" style="position:relative;z-index:2;">
 
     {{-- LOCKED NOTICE --}}
     @if($isLocked && !$isPrivileged && !$viewerOnly)
@@ -269,7 +270,10 @@
           <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Landline','model'=>'booker_landline','val'=>$booking->booker_landline ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Email','model'=>'booker_email','val'=>$booking->booker_email ?? '','type'=>'email','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Address','model'=>'booker_address','val'=>$booking->booker_address ?? '','type'=>'textarea','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
-          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])
+          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
+        </div>
+      </div>
+    </div>
 
     {{-- PASSENGERS --}}
     <div class="bv-section">
@@ -359,13 +363,13 @@
     </div>
 
     {{-- FLIGHT / PNR --}}
-    <div class="bv-section" x-data="{ sectionEditing: false }">
+    <div class="bv-section">
       <div class="bv-section-hdr">
         <div class="bv-icon" style="background:rgba(14,165,233,.08);"><i class="ph ph-airplane" style="color:#0EA5E9;font-size:.9rem;"></i></div>
         <h2>Flight &amp; PNR</h2>
         @if($fd)<span class="bv-pill ms-auto" style="background:rgba(14,165,233,.08);color:#0369A1;font-size:.64rem;">{{ strtoupper($fd->departure_airport ?? '-') }} - {{ strtoupper($fd->arrival_airport ?? '-') }}</span>@endif
         @if($canEditFlightHotel)
-          <button type="button" @click="sectionEditing = !sectionEditing" class="bv-edit-pencil" style="width:auto;padding:4px 10px;border-radius:6px;gap:4px;" x-text="sectionEditing ? 'Done' : 'Edit'"></button>
+          <button type="button" wire:click="toggleFlightSectionEditing" class="bv-edit-pencil" style="width:auto;padding:4px 10px;border-radius:6px;gap:4px;">{{ $flightSectionEditing ? 'Done' : 'Edit' }}</button>
         @endif
       </div>
       <div class="bv-section-body">
@@ -377,24 +381,24 @@
             </div>
             <div class="bv-seg-body">
               <div class="row g-2 mb-2">
-                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Locator','model'=>"flightSegments.{$si}.locator",'val'=>$seg['locator'] ?? '','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Airline Locator','model'=>"flightSegments.{$si}.airline_locator",'val'=>$seg['airline_locator'] ?? '','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Vendor','model'=>"flightSegments.{$si}.vendor",'val'=>$seg['vendor'] ?? '','type'=>'select','options'=>$vendorOptions,'locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Locator','model'=>"flightSegments.{$si}.locator",'val'=>$seg['locator'] ?? '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Airline Locator','model'=>"flightSegments.{$si}.airline_locator",'val'=>$seg['airline_locator'] ?? '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Vendor','model'=>"flightSegments.{$si}.vendor",'val'=>$seg['vendor'] ?? '','type'=>'select','options'=>$vendorOptions,'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
               </div>
               <div class="row g-2 mb-2">
-                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Airline','model'=>"flightSegments.{$si}.airline",'val'=>$seg['airline'] ? strtoupper($seg['airline']) : '','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'GDS','model'=>"flightSegments.{$si}.gds",'val'=>$seg['gds'] ?? '','type'=>'select','options'=>[['value'=>'AMADEUS','label'=>'Amadeus'],['value'=>'GALILEO','label'=>'Galileo'],['value'=>'SABRE','label'=>'Sabre'],['value'=>'WORLDSPAN','label'=>'Worldspan'],['value'=>'APOLLO','label'=>'Apollo'],['value'=>'TRAVELPORT','label'=>'Travelport']],'locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Cabin','model'=>"flightSegments.{$si}.cabin",'val'=>$seg['cabin'] ?? '','type'=>'select','options'=>[['value'=>'Economy','label'=>'Economy'],['value'=>'Premium Economy','label'=>'Premium Economy'],['value'=>'Business','label'=>'Business'],['value'=>'First Class','label'=>'First Class']],'locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Reservation','model'=>"flightSegments.{$si}.reservation_status",'val'=>$seg['reservation_status'] ?? '','type'=>'select','options'=>[['value'=>'Confirmed','label'=>'Confirmed'],['value'=>'Ticketed','label'=>'Ticketed'],['value'=>'Pending','label'=>'Pending'],['value'=>'On Hold','label'=>'On Hold'],['value'=>'Cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Ticket Limit','model'=>"flightSegments.{$si}.ticket_issue_limit",'val'=>$seg['ticket_issue_limit'] ? \Carbon\Carbon::parse($seg['ticket_issue_limit'])->format('d M Y, H:i') : '','type'=>'datetime-local','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Airline','model'=>"flightSegments.{$si}.airline",'val'=>$seg['airline'] ? strtoupper($seg['airline']) : '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'GDS','model'=>"flightSegments.{$si}.gds",'val'=>$seg['gds'] ?? '','type'=>'select','options'=>$gdsOptions,'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Cabin','model'=>"flightSegments.{$si}.cabin",'val'=>$seg['cabin'] ?? '','type'=>'select','options'=>[['value'=>'Economy','label'=>'Economy'],['value'=>'Premium Economy','label'=>'Premium Economy'],['value'=>'Business','label'=>'Business'],['value'=>'First Class','label'=>'First Class']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Reservation','model'=>"flightSegments.{$si}.reservation_status",'val'=>$seg['reservation_status'] ?? '','type'=>'select','options'=>[['value'=>'Confirmed','label'=>'Confirmed'],['value'=>'Ticketed','label'=>'Ticketed'],['value'=>'Pending','label'=>'Pending'],['value'=>'On Hold','label'=>'On Hold'],['value'=>'Cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Ticket Limit','model'=>"flightSegments.{$si}.ticket_issue_limit",'val'=>$seg['ticket_issue_limit'] ? \Carbon\Carbon::parse($seg['ticket_issue_limit'])->format('d M Y, H:i') : '','type'=>'datetime-local','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
               </div>
               <div class="row g-2 mb-2">
-                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Dep. Airport','model'=>"flightSegments.{$si}.departure_airport",'val'=>$seg['departure_airport'] ? strtoupper($seg['departure_airport']) : '','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Arr. Airport','model'=>"flightSegments.{$si}.arrival_airport",'val'=>$seg['arrival_airport'] ? strtoupper($seg['arrival_airport']) : '','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Flight Type','model'=>"flightSegments.{$si}.flight_type",'val'=>($seg['flight_type'] ?? 'return') === 'one_way' ? 'One Way' : 'Return','type'=>'select','options'=>[['value'=>'return','label'=>'Return'],['value'=>'one_way','label'=>'One Way']],'locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
-                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Dep. Date','model'=>"flightSegments.{$si}.departure_date",'val'=>$seg['departure_date'] ? \Carbon\Carbon::parse($seg['departure_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Dep. Airport','model'=>"flightSegments.{$si}.departure_airport",'val'=>$seg['departure_airport'] ? strtoupper($seg['departure_airport']) : '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Arr. Airport','model'=>"flightSegments.{$si}.arrival_airport",'val'=>$seg['arrival_airport'] ? strtoupper($seg['arrival_airport']) : '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Flight Type','model'=>"flightSegments.{$si}.flight_type",'val'=>($seg['flight_type'] ?? 'return') === 'one_way' ? 'One Way' : 'Return','type'=>'select','options'=>[['value'=>'return','label'=>'Return'],['value'=>'one_way','label'=>'One Way']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Dep. Date','model'=>"flightSegments.{$si}.departure_date",'val'=>$seg['departure_date'] ? \Carbon\Carbon::parse($seg['departure_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 @if (($seg['flight_type'] ?? 'return') !== 'one_way')
-                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Return Date','model'=>"flightSegments.{$si}.return_date",'val'=>$seg['return_date'] ? \Carbon\Carbon::parse($seg['return_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'editingVar'=>'sectionEditing'])</div>
+                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Return Date','model'=>"flightSegments.{$si}.return_date",'val'=>$seg['return_date'] ? \Carbon\Carbon::parse($seg['return_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 @endif
               </div>
               {{-- Passenger Pricing (above PNR details, aggregated by type) --}}
@@ -421,8 +425,8 @@
                       <div>
                         <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Cost</div>
                         @if($canEditFlightHotel)
-                          <div x-show="!$parent.sectionEditing"><span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span></div>
-                          <div x-show="$parent.sectionEditing" x-cloak><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.cost" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>
+                          @if(!$flightSectionEditing)<div><span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span></div>
+                          @else<div><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.cost" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>@endif
                         @else
                           <span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span>
                         @endif
@@ -430,8 +434,8 @@
                       <div>
                         <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Sold</div>
                         @if($canEditFlightHotel)
-                          <div x-show="!$parent.sectionEditing"><span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span></div>
-                          <div x-show="$parent.sectionEditing" x-cloak><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.sold" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>
+                          @if(!$flightSectionEditing)<div><span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span></div>
+                          @else<div><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.sold" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>@endif
                         @else
                           <span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span>
                         @endif
@@ -441,9 +445,8 @@
                 </div>
               @endif
               <label class="bv-label">PNR Details</label>
-              @if($canEditFlightHotel)
-                <div x-show="!$parent.sectionEditing" style="font-family:monospace;font-size:.74rem;color:#1E293B;background:#F8FAFF;border-radius:10px;padding:10px;min-height:100px;white-space:pre-wrap;border:1px solid rgba(51,46,158,.06);">{{ $seg['pnr'] ?? 'No PNR recorded' }}</div>
-                <div x-show="$parent.sectionEditing" x-cloak class="d-flex gap-2 align-items-start"><textarea wire:model="flightSegments.{{ $si }}.pnr" rows="12" class="form-control form-control-sm flex-grow-1" style="border-radius:10px;font-family:monospace;font-size:.72rem;resize:vertical;min-height:180px;" placeholder="Paste PNR here - RP/LONBA1234..."></textarea><button type="button" class="btn btn-sm fw-semibold flex-shrink-0" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:9px;font-size:.7rem;white-space:nowrap;padding:5px 10px;">Fetch PNR</button></div>
+              @if($canEditFlightHotel && $flightSectionEditing)
+                <div class="d-flex gap-2 align-items-start"><textarea wire:model.lazy="flightSegments.{{ $si }}.pnr" rows="12" class="form-control form-control-sm flex-grow-1" style="border-radius:10px;font-family:monospace;font-size:.72rem;resize:vertical;min-height:180px;" placeholder="Paste PNR here - RP/LONBA1234..."></textarea><button type="button" class="btn btn-sm fw-semibold flex-shrink-0" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:9px;font-size:.7rem;white-space:nowrap;padding:5px 10px;">Fetch PNR</button></div>
               @else
                 <div style="font-family:monospace;font-size:.74rem;color:#1E293B;background:#F8FAFF;border-radius:10px;padding:10px;min-height:100px;white-space:pre-wrap;border:1px solid rgba(51,46,158,.06);">{{ $seg['pnr'] ?? 'No PNR recorded' }}</div>
               @endif
@@ -463,14 +466,17 @@
         @endif
         @if($canEditFlightHotel)
           <div class="d-flex align-items-center gap-3 mt-2 pt-2" style="border-top:1px solid rgba(51,46,158,.06);">
-            <div x-show="$parent.sectionEditing" x-cloak>
+            @if($flightSectionEditing)
+            <div>
               <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;"><div class="form-check form-switch mb-0 ps-0"><input type="checkbox" wire:model.live="flight_atol" role="switch" class="form-check-input ms-0" style="width:28px;height:15px;cursor:pointer;"></div><span style="font-size:.7rem;font-weight:700;color:{{ $flight_atol ? '#FF6B35' : '#374151' }};">ATOL</span></label>
               <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;"><div class="form-check form-switch mb-0 ps-0"><input type="checkbox" wire:model.live="flight_safi" role="switch" class="form-check-input ms-0" style="width:28px;height:15px;cursor:pointer;"></div><span style="font-size:.7rem;font-weight:700;color:{{ $flight_safi ? '#332E9E' : '#374151' }};">SAFI</span></label>
             </div>
-            <div x-show="!$parent.sectionEditing">
+            @else
+            <div>
               <span style="font-size:.7rem;font-weight:700;color:{{ $flight_atol ? '#FF6B35' : '#94A3B8' }};">{{ $flight_atol ? 'ATOL' : '— ATOL' }}</span>
               <span style="font-size:.7rem;font-weight:700;color:{{ $flight_safi ? '#332E9E' : '#94A3B8' }};margin-left:12px;">{{ $flight_safi ? 'SAFI' : '— SAFI' }}</span>
             </div>
+            @endif
           </div>
         @endif
       </div>
@@ -822,51 +828,74 @@
     @endif
 
     {{-- PAYMENT STRUCTURE --}}
+    @php
+      $planLabel = ['full'=>'Full Payment','awaiting'=>'Payment Awaiting','payment_plan'=>'Payment Plan','dnpl'=>'DNPL'][$selected_payment_method ?? ''] ?? '';
+    @endphp
     <div class="bv-section mb-3" style="{{ !$canEditPayment ? 'opacity:.5;pointer-events:none;' : '' }}">
       <div class="bv-section-hdr">
         <div class="bv-icon" style="background:rgba(14,165,233,.08);"><i class="ph ph-credit-card" style="color:#0EA5E9;font-size:.9rem;"></i></div>
         <h2>Payment Structure</h2>
-        @if($selected_payment_method)
-          @php $planLabel = ['full'=>'Full Payment','awaiting'=>'Payment Awaiting','payment_plan'=>'Payment Plan','dnpl'=>'DNPL'][$selected_payment_method] ?? ''; @endphp
-          <span style="font-size:.64rem;font-weight:700;color:#fff;background:{{ $planLabel ? '#332E9E' : '#64748B' }};border-radius:8px;padding:3px 10px;margin-left:auto;">{{ $planLabel }}</span>
+        @if($planLabel)
+          <span style="font-size:.64rem;font-weight:700;color:#fff;background:#332E9E;border-radius:8px;padding:3px 10px;margin-left:auto;">{{ $planLabel }}</span>
+        @endif
+        @if($canEditPayment)
+          <button type="button" wire:click="togglePaymentSectionEditing" class="bv-edit-pencil" style="width:auto;padding:4px 10px;border-radius:6px;gap:4px;">{{ $paymentSectionEditing ? 'Done' : 'Edit' }}</button>
         @endif
       </div>
       <div class="bv-section-body">
-        <x-styled-select modelName="selected_payment_method" placeholder="Choose plan..." :options="[
-          ['value'=>'full','label'=>'Full Payment'],
-          ['value'=>'awaiting','label'=>'Payment Awaiting'],
-          ['value'=>'payment_plan','label'=>'Payment Plan'],
-          ['value'=>'dnpl','label'=>'DNPL'],
-        ]" live="true" />
+
+        {{-- Payment method selector --}}
+        @if($paymentSectionEditing)
+          <x-styled-select modelName="selected_payment_method" placeholder="Choose plan..." :options="[
+            ['value'=>'full','label'=>'Full Payment'],
+            ['value'=>'awaiting','label'=>'Payment Awaiting'],
+            ['value'=>'payment_plan','label'=>'Payment Plan'],
+            ['value'=>'dnpl','label'=>'DNPL'],
+          ]" />
+        @elseif(!$selected_payment_method)
+          <div style="padding:10px 12px;border-radius:10px;background:rgba(148,163,184,.06);">
+            <span style="font-size:.72rem;color:#94A3B8;">No payment plan set — click Edit to configure.</span>
+          </div>
+        @endif
+
+        {{-- Instalments --}}
         @if($selected_payment_method)
-          <div style="margin-top:14px;padding:14px 16px;background:linear-gradient(135deg,#F8FAFF,#EEF2FF);border-radius:12px;border:1px solid rgba(51,46,158,.10);">
+          <div style="margin-top:{{ $paymentSectionEditing ? '14px' : '0' }};padding:14px 16px;background:linear-gradient(135deg,#F8FAFF,#EEF2FF);border-radius:12px;border:1px solid rgba(51,46,158,.10);">
             <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#332E9E;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ph ph-calendar-blank"></i> Instalments</div>
             @foreach($payment_instalments as $i => $inst)
-              <div wire:key="show-pay-inst-{{ $i }}" class="d-flex align-items-center gap-3 mb-2" style="background:#fff;border-radius:10px;padding:8px 12px;border:1px solid rgba(51,46,158,.08);">
-                <input type="checkbox" wire:model="instalment_paid.{{ $i }}" style="width:16px;height:16px;accent-color:#16A34A;cursor:pointer;flex-shrink:0;">
+              <div wire:key="pay-inst-{{ $i }}" class="d-flex align-items-center mb-2" style="background:#fff;border-radius:10px;padding:8px 12px;border:1px solid rgba(51,46,158,.08);gap:10px;">
+                @php $canTickInstalment = in_array($role, ['admin','manager','accounts']); @endphp
+                <input type="checkbox" wire:model="instalment_paid.{{ $i }}"
+                  @if(!$canTickInstalment) disabled @endif
+                  style="width:17px;height:17px;accent-color:#16A34A;cursor:{{ $canTickInstalment ? 'pointer' : 'default' }};flex-shrink:0;margin:0;opacity:{{ $canTickInstalment ? '1' : '.5' }}">
                 <span style="width:22px;height:22px;border-radius:50%;background:rgba(51,46,158,.08);display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $i + 1 }}</span>
-                @if($inst['editing'])
-                  <div class="d-flex align-items-center gap-1" style="flex:1;min-width:0;">
-                    <span style="font-size:.68rem;color:#64748B;flex-shrink:0;">&pound;</span>
-                    <input type="number" wire:model="payment_instalments.{{ $i }}.amount" step="0.01" min="0" placeholder="0.00" style="width:65px;flex-shrink:0;padding:4px 6px;font-size:.75rem;border:1px solid rgba(51,46,158,.14);border-radius:6px;outline:none;">
-                    <div style="flex-shrink:0;width:110px;"><x-date-picker :modelName="'payment_instalments.'.$i.'.date'" :compact="true" /></div>
-                    <button type="button" wire:click="toggleEditInstalment({{ $i }})" style="background:#332E9E;color:#fff;border:none;border-radius:6px;padding:3px 8px;flex-shrink:0;cursor:pointer;font-size:.72rem;"><i class="ph ph-check"></i></button>
+                @if($paymentSectionEditing)
+                  <div style="display:flex;align-items:center;gap:0;border:1px solid rgba(51,46,158,.18);border-radius:7px;overflow:hidden;flex-shrink:0;">
+                    <span style="padding:4px 7px;background:#F8FAFF;font-size:.72rem;color:#64748B;border-right:1px solid rgba(51,46,158,.12);">&pound;</span>
+                    <input type="number" wire:model="payment_instalments.{{ $i }}.amount" step="0.01" min="0" placeholder="0.00" style="width:70px;padding:4px 6px;font-size:.75rem;border:none;outline:none;background:#fff;">
                   </div>
+                  <div style="flex-shrink:0;min-width:130px;"><x-date-picker :modelName="'payment_instalments.'.$i.'.date'" :compact="true" /></div>
                 @else
-                  <span class="fw-bold" style="color:#1E293B;font-size:.78rem;">&pound;{{ $inst['amount'] ? number_format((float)$inst['amount'],2) : '0.00' }}</span>
+                  <span class="fw-bold" style="color:{{ !empty($instalment_paid[$i]) ? '#16A34A' : '#1E293B' }};font-size:.78rem;text-decoration:{{ !empty($instalment_paid[$i]) ? 'line-through' : 'none' }};">&pound;{{ $inst['amount'] ? number_format((float)$inst['amount'],2) : '0.00' }}</span>
                   <span style="color:#94A3B8;font-size:.66rem;">{{ $inst['date'] ? \Carbon\Carbon::parse($inst['date'])->format('d M Y') : 'No date' }}</span>
-                  <button type="button" wire:click="toggleEditInstalment({{ $i }})" class="bv-edit-pencil" style="margin-left:auto;"><i class="ph ph-pencil-simple"></i></button>
+                  @if(!empty($instalment_paid[$i]))
+                    <span style="font-size:.58rem;font-weight:700;color:#16A34A;background:rgba(22,163,74,.08);border-radius:5px;padding:2px 6px;margin-left:auto;">PAID</span>
+                  @endif
                 @endif
               </div>
             @endforeach
+            @if($paymentSectionEditing)
             <div class="d-flex gap-2 mt-3">
               <button type="button" wire:click="addPaymentInstalment" style="border:1.5px dashed rgba(51,46,158,.25);background:transparent;color:#332E9E;border-radius:10px;padding:6px 16px;font-size:.68rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><i class="ph ph-plus-circle"></i> Add Instalment</button>
               @if(count($payment_instalments) > 1)
                 <button type="button" wire:click="removePaymentInstalment" style="border:1.5px solid rgba(220,38,38,.15);background:transparent;color:#DC2626;border-radius:10px;padding:6px 12px;font-size:.68rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;"><i class="ph ph-minus-circle"></i> Remove</button>
               @endif
             </div>
+            @endif
           </div>
         @endif
+
+
       </div>
     </div>
 

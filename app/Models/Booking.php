@@ -189,6 +189,7 @@ class Booking extends Model
         'notes',
         'activity_log',
         'excursion_data',
+        'payment_reviewed',
     ];
 
     protected function casts(): array
@@ -201,6 +202,7 @@ class Booking extends Model
             'last_issue_date' => 'date',
             'activity_log'  => 'array',
             'excursion_data' => 'array',
+            'payment_reviewed' => 'boolean',
         ];
     }
 
@@ -265,6 +267,11 @@ class Booking extends Model
     public function flightDetail(): HasOne
     {
         return $this->hasOne(BookingFlightDetail::class);
+    }
+
+    public function flightDetails(): HasMany
+    {
+        return $this->hasMany(BookingFlightDetail::class);
     }
 
     public function flightCosts(): HasMany

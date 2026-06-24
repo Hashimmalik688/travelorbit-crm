@@ -26,9 +26,13 @@ See [design/taste.md](design/taste.md)
 
 # Activity Logging
 - Every action in the CRM must be logged in the activity log — including payment charge request approvals, view actions, and any action regardless of who performs it. Nothing is exempt from logging; logging applies to every account and every action, including view/access events. Confidence: 0.92
+- Activity log entries and comments are immutable once created — snapshot agent name, avatar_url, and avatar_initials into the log entry at write time; never re-resolve from current user records at read time. Old log entries must never change even if users are renamed, deleted, or their profile photos change. Confidence: 0.85
 
 # Communication
 - Keep responses brief and action-focused; avoid extra explanation, verbose descriptions, or commentary unless explicitly requested. Confidence: 0.75
+
+# Project Scope
+- Never edit files outside the TravelOrbit CRM project directory (/opt/travelorbit-crm) — do not navigate to, read, or modify files in other projects (e.g., taurus-crm) even when investigating errors or searching for patterns. Stay strictly within the current project. Confidence: 0.90
 
 # Role-Based Access
 - Only admin has access to user management; regular users, agents, and other roles have no profile page, settings view, or self-service account modification (password, avatar, etc.). Admin manages all user passwords and profile images centrally. Confidence: 0.85

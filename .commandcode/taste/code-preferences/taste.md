@@ -1,4 +1,5 @@
 # Code Preferences
+- When asked to improve performance or speed up a UI interaction (e.g., make buttons faster), make minimal targeted changes — do not refactor the entire interaction architecture (e.g., swapping Livewire wire:click for Alpine @click or converting inline styles to CSS classes) unless explicitly requested. Scope changes strictly to what was asked. Confidence: 0.75
 - Keep related dropdown options in sync — when two selects reference the same domain (e.g., booking_type and previous_booking_type), they must have identical value sets. Confidence: 0.70
 - Remove emojis from select option labels in forms. Confidence: 0.75
 - Do not use emoji characters anywhere in the CRM UI — no emojis in section headers, labels, buttons, or any rendered text. Confidence: 0.88
@@ -14,3 +15,4 @@
 - For booking form DOB calculations: Infant (0-1y 364d), Child (2-11y 364d), Youth (12-15y 364d), Adult (16y+). Round days to integers, show ONLY the next PTC transition date (not all future transitions). Confidence: 0.80
 - Validate passenger DOB matches selected passenger type — prevent mismatched entries (e.g., child's age in adult field, adult age in infant field). Confidence: 0.70
 - Do not repurpose placeholder buttons (e.g., renamed "Fetch PNR" to "Add PNR") — some buttons are intentionally left as future API integration placeholders. Ask before changing button labels or functionality. Confidence: 0.65
+- Use "Youth" as the label for GBE passenger type (not "GBE" and not "Adult (GBE)"). Confidence: 0.75

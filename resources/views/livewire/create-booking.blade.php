@@ -469,14 +469,7 @@
                         </div>
                         <div class="col-md-2">
                           <label class="form-label fw-semibold mb-1" style="font-size:0.7rem; color:#5A6080;">GDS <span class="text-danger">*</span></label>
-                          <x-styled-select :modelName="'flightSegments.'.$si.'.gds'" :placeholder="'GDS'" :optgroup="false" :options="[
-                            ['value' => 'AMADEUS',    'label' => 'Amadeus'],
-                            ['value' => 'GALILEO',    'label' => 'Galileo'],
-                            ['value' => 'SABRE',      'label' => 'Sabre'],
-                            ['value' => 'WORLDSPAN',  'label' => 'Worldspan'],
-                            ['value' => 'APOLLO',     'label' => 'Apollo'],
-                            ['value' => 'TRAVELPORT', 'label' => 'Travelport'],
-                          ]" />
+                          <x-styled-select :modelName="'flightSegments.'.$si.'.gds'" :placeholder="'GDS'" :optgroup="false" :options="$gdsOptions" />
                           @error("flightSegments.{$si}.gds") <small class="text-danger d-block" style="font-size:0.65rem;">{{ $message }}</small> @enderror
                         </div>
                         <div class="col-md-2">

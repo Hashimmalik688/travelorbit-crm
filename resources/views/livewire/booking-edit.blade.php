@@ -172,7 +172,7 @@
 </div>
 
 {{-- ═══ FLIGHT ═══ --}}
-@php $canEditFlightHotel = in_array(Auth::user()->role, ['admin','manager','operations','issuance']); @endphp
+@php $canEditFlightHotel = in_array(Auth::user()->role, ['admin','manager','operations','issuance']) || (Auth::user()->role === 'agent' && $booking->booking_status === 'pending'); @endphp
 <div class="be-section">
   <div class="be-hdr" style="{{ !$canEditFlightHotel ? 'background:rgba(51,46,158,.03);' : '' }}">
     <div class="be-icon" style="background:rgba(14,165,233,.08);"><i class="ph ph-airplane" style="color:#0EA5E9;font-size:1rem;"></i></div>
@@ -219,7 +219,7 @@
     <div class="row g-3 mb-3">
       <div class="col-md-2"><label class="be-label">Airline (2 chars)</label><input type="text" wire:model="flight_airline" class="be-input" maxlength="2" placeholder="EK" oninput="this.value=this.value.toUpperCase()"></div>
       <div class="col-md-3"><label class="be-label">Vendor</label><x-styled-select modelName="flight_vendor" :options="array_merge([['value'=>'','label'=>'Select Vendor']], $vendorOptions)" placeholder="Select Vendor" /></div>
-      <div class="col-md-3"><label class="be-label">GDS</label><x-styled-select modelName="flight_gds" :options="[['value'=>'','label'=>'Select GDS'],['value'=>'AMADEUS','label'=>'Amadeus'],['value'=>'GALILEO','label'=>'Galileo'],['value'=>'SABRE','label'=>'Sabre'],['value'=>'WORLDSPAN','label'=>'Worldspan'],['value'=>'TRAVELPORT','label'=>'Travelport']]" placeholder="Select GDS" /></div>
+      <div class="col-md-3"><label class="be-label">GDS</label><x-styled-select modelName="flight_gds" :options="array_merge([['value'=>'','label'=>'Select GDS']], $gdsOptions)" placeholder="Select GDS" /></div>
       <div class="col-md-4"><label class="be-label">Cabin</label><x-styled-select modelName="flight_cabin" :options="[['value'=>'','label'=>'Select Cabin'],['value'=>'Economy','label'=>'Economy'],['value'=>'Premium Economy','label'=>'Premium Economy'],['value'=>'Business','label'=>'Business'],['value'=>'First Class','label'=>'First Class']]" placeholder="Select Cabin" /></div>
     </div>
     <div class="row g-3 mb-3">

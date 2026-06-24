@@ -133,6 +133,9 @@ class BookingShow extends Component
 
     // Instalment payment tracking
     public $instalment_paid = [];
+    public $flightSectionEditing = false;
+    public $paymentSectionEditing = false;
+    public $paymentReviewed = false;
     public $billing_address = '';
     public $billing_postcode = '';
 
@@ -143,9 +146,14 @@ class BookingShow extends Component
     // Document preview
     public $previewDoc = null;
 
+    // Cached static data (loaded once at mount, not on every render)
+    public array $cachedVendorOptions = [];
+    public array $cachedGdsOptions = [];
+
     // Activity
     public $mandatory_comment = '';
     public array $activity_log_entries = [];
+    public bool $activityLogDirty = false;
     public ?int $reasonEditIndex = null;
     public string $reasonEditText = '';
 
@@ -153,12 +161,30 @@ class BookingShow extends Component
     {
         $this->booking = $booking->load([
             'passengers', 'payment', 'paymentHistory', 'documents',
-            'flightDetail', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
+            'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
             'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
         ]);
         $this->bookingStatus = $booking->booking_status;
         $this->activityLog = $this->buildActivityLog($booking);
+        $this->cachedVendorOptions = \App\Models\Setting::getValue('vendor_options', []);
+        $this->cachedGdsOptions = \App\Models\Setting::getValue('gds_options', [
+            ['value' => 'AMADEUS',    'label' => 'Amadeus'],
+            ['value' => 'GALILEO',    'label' => 'Galileo'],
+            ['value' => 'SABRE',      'label' => 'Sabre'],
+            ['value' => 'WORLDSPAN',  'label' => 'Worldspan'],
+            ['value' => 'APOLLO',     'label' => 'Apollo'],
+            ['value' => 'TRAVELPORT', 'label' => 'Travelport'],
+        ]);
         $this->loadBookingData();
+
+        // If status is payment_charge_request but no pending charge requests exist, revert to pending
+        if ($booking->booking_status === 'payment_charge_request') {
+            $hasPending = $booking->paymentHistory->contains(fn($h) => $h->status === 'pending');
+            if (!$hasPending) {
+                $booking->update(['booking_status' => 'pending']);
+                $this->bookingStatus = 'pending';
+            }
+        }
 
         // Always log "Opened Booking" — every view is tracked
         $this->logActivity('Opened Booking', 'Booking opened for viewing', 'navigated', bypassViewerCheck: true);
@@ -397,32 +423,36 @@ class BookingShow extends Component
             ];
         }
 
-        if ($b->flightDetail) {
-            $fd = $b->flightDetail;
-            $this->flightSegments[] = [
-                'pnr' => $fd->pnr ?? '',
-                'locator' => $fd->locator ?? '',
-                'airline_locator' => $fd->airline_locator ?? '',
-                'type_issuer' => $fd->type_issuer ?? '',
-                'reservation_status' => $fd->reservation_status ?? '',
-                'flight_type' => $fd->flight_type ?? 'return',
-                'airline' => $fd->airline ?? '',
-                'vendor' => $fd->vendor ?? '',
-                'gds' => $fd->gds ?? '',
-                'cabin' => $fd->cabin ?? '',
-                'ticket_issue_limit' => $fd->ticket_issue_limit ? $fd->ticket_issue_limit->format('Y-m-d\TH:i') : '',
-                'cost' => $fd->cost ?? '',
-                'sold' => $fd->sold ?? '',
-                'passenger_costs' => $fd->passenger_costs ?? [],
-                'departure_airport' => $fd->departure_airport ?? '',
-                'arrival_airport' => $fd->arrival_airport ?? '',
-                'departure_date' => $fd->departure_date ? $fd->departure_date->format('Y-m-d') : '',
-                'return_date' => $fd->return_date ? $fd->return_date->format('Y-m-d') : '',
-            ];
-            $this->flight_folder_number = $fd->folder_number ?? '';
-            $this->flight_atol = $fd->atol;
-            $this->flight_safi = $fd->safi;
-            $this->flight_selling_price = $fd->selling_price ?? '';
+        $this->flightSegments = [];
+        $allSegments = $b->flightDetails ?? collect();
+        if ($allSegments->isNotEmpty()) {
+            $firstFd = $allSegments->first();
+            $this->flight_folder_number = $firstFd->folder_number ?? '';
+            $this->flight_atol = $firstFd->atol;
+            $this->flight_safi = $firstFd->safi;
+            $this->flight_selling_price = $firstFd->selling_price ?? '';
+            foreach ($allSegments as $fd) {
+                $this->flightSegments[] = [
+                    'pnr' => $fd->pnr ?? '',
+                    'locator' => $fd->locator ?? '',
+                    'airline_locator' => $fd->airline_locator ?? '',
+                    'type_issuer' => $fd->type_issuer ?? '',
+                    'reservation_status' => $fd->reservation_status ?? '',
+                    'flight_type' => $fd->flight_type ?? 'return',
+                    'airline' => $fd->airline ?? '',
+                    'vendor' => $fd->vendor ?? '',
+                    'gds' => $fd->gds ?? '',
+                    'cabin' => $fd->cabin ?? '',
+                    'ticket_issue_limit' => $fd->ticket_issue_limit ? $fd->ticket_issue_limit->format('Y-m-d\TH:i') : '',
+                    'cost' => $fd->cost ?? '',
+                    'sold' => $fd->sold ?? '',
+                    'passenger_costs' => $fd->passenger_costs ?? [],
+                    'departure_airport' => $fd->departure_airport ?? '',
+                    'arrival_airport' => $fd->arrival_airport ?? '',
+                    'departure_date' => $fd->departure_date ? $fd->departure_date->format('Y-m-d') : '',
+                    'return_date' => $fd->return_date ? $fd->return_date->format('Y-m-d') : '',
+                ];
+            }
         } else {
             $this->flightSegments = [[
                 'pnr' => '', 'locator' => '', 'airline_locator' => '', 'type_issuer' => '',
@@ -533,10 +563,14 @@ class BookingShow extends Component
             $saved = $b->payment->payment_instalments;
             if ($saved && is_array($saved)) {
                 $instData = isset($saved['instalments']) ? $saved['instalments'] : $saved;
-                $this->payment_instalments = array_map(fn($inst) => array_merge(['amount' => '', 'date' => '', 'editing' => false], (array) $inst), $instData);
+                $this->payment_instalments = array_map(fn($inst) => array_merge(['amount' => '', 'date' => ''], (array) $inst), $instData);
                 $this->instalment_paid = $saved['paid'] ?? [];
+            } elseif (empty($this->payment_instalments)) {
+                $this->payment_instalments = [['amount' => '', 'date' => '']];
             }
         }
+
+        $this->paymentReviewed = (bool)($b->payment_reviewed ?? false);
 
         $jsonLog = $b->activity_log ?? [];
         if (is_string($jsonLog)) $jsonLog = json_decode($jsonLog, true) ?? [];
@@ -850,6 +884,75 @@ class BookingShow extends Component
         }
     }
 
+    public function togglePaymentSectionEditing(): void
+    {
+        $this->abortIfViewer();
+        if ($this->paymentSectionEditing) {
+            $this->paymentSectionEditing = false;
+            $this->savePaymentStructure();
+        } else {
+            $this->paymentSectionEditing = true;
+        }
+    }
+
+    private function savePaymentStructure(): void
+    {
+        $instalments = array_values(array_filter($this->payment_instalments, fn($i) => $i['amount'] !== '' || $i['date'] !== ''));
+        BookingPayment::updateOrCreate(
+            ['booking_id' => $this->booking->id],
+            [
+                'booking_plan'        => $this->selected_payment_method ?: null,
+                'payment_instalments' => count($instalments) ? ['instalments' => $instalments, 'paid' => $this->instalment_paid] : null,
+            ]
+        );
+        $this->booking->refresh();
+    }
+
+    public function updatedSelectedPaymentMethod(string $value): void
+    {
+        $this->abortIfViewer();
+        // Only reset when the plan type actually differs from what's saved
+        $saved = $this->booking->payment?->booking_plan;
+        if ($value !== $saved) {
+            $this->payment_instalments = [['amount' => '', 'date' => '']];
+            $this->instalment_paid = [false];
+        }
+    }
+
+    public function addPaymentInstalment(): void
+    {
+        $this->abortIfViewer();
+        $this->payment_instalments[] = ['amount' => '', 'date' => ''];
+        $this->instalment_paid[] = false;
+    }
+
+    public function removePaymentInstalment(): void
+    {
+        $this->abortIfViewer();
+        if (count($this->payment_instalments) > 1) {
+            array_pop($this->payment_instalments);
+            array_pop($this->instalment_paid);
+        }
+    }
+
+    public function togglePaymentReviewed(): void
+    {
+        if (!in_array(Auth::user()->role, ['admin', 'manager', 'accounts'])) return;
+        $this->paymentReviewed = !$this->paymentReviewed;
+        $this->booking->update(['payment_reviewed' => $this->paymentReviewed]);
+    }
+
+    public function toggleFlightSectionEditing(): void
+    {
+        $this->abortIfViewer();
+        if ($this->flightSectionEditing) {
+            $this->flightSectionEditing = false;
+            $this->autoSave();
+        } else {
+            $this->flightSectionEditing = true;
+        }
+    }
+
     // ── Flight segments ────────────────────────────────────────────────
     public function addFlightSegment(): void
     {
@@ -989,46 +1092,6 @@ class BookingShow extends Component
         $this->logActivity('Removed Transfer Dropoff', $loc.' removed', 'update');
     }
 
-    // ── Payment method / instalments ───────────────────────────────────
-    public function updatedSelectedPaymentMethod(): void
-    {
-        $this->abortIfViewer();
-        $this->payment_instalments = [[
-            'amount' => '',
-            'date' => '',
-            'editing' => false,
-        ]];
-        $this->instalment_paid = [];
-    }
-
-    public function addPaymentInstalment(): void
-    {
-        $this->abortIfViewer();
-        $this->payment_instalments[] = [
-            'amount' => '',
-            'date' => '',
-            'editing' => false,
-        ];
-        $this->logActivity('Added Payment Instalment', '', 'update', bypassViewerCheck: true);
-    }
-
-    public function removePaymentInstalment(): void
-    {
-        $this->abortIfViewer();
-        if (count($this->payment_instalments) > 1) {
-            array_pop($this->payment_instalments);
-            array_pop($this->instalment_paid);
-        }
-        $this->logActivity('Removed Payment Instalment', '', 'update', bypassViewerCheck: true);
-    }
-
-    public function toggleEditInstalment(int $index): void
-    {
-        if (isset($this->payment_instalments[$index])) {
-            $this->payment_instalments[$index]['editing'] = !$this->payment_instalments[$index]['editing'];
-        }
-    }
-
     // ── Payment management ─────────────────────────────────────────────
     public function sendToAccounts(int $historyId): void
     {
@@ -1046,7 +1109,7 @@ class BookingShow extends Component
         $this->booking->refresh();
         $this->booking->load([
             'passengers', 'payment', 'paymentHistory', 'documents',
-            'flightDetail', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
+            'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
             'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
         ]);
         $this->activityLog = $this->buildActivityLog($this->booking);
@@ -1095,8 +1158,9 @@ class BookingShow extends Component
             'type'            => $type,
         ];
 
-        // Persist immediately — every logged action is durable, not just after Save
-        $this->booking->update(['activity_log' => array_values($this->activity_log_entries)]);
+        // Mark dirty — actual DB write is batched in dehydrate() so multiple
+        // logActivity calls in one round-trip produce only one UPDATE.
+        $this->activityLogDirty = true;
 
         $jsonIndex = count($this->activity_log_entries) - 1;
 
@@ -1241,17 +1305,13 @@ class BookingShow extends Component
         $this->abortIfViewer();
         if (!in_array(Auth::user()->role, ['admin', 'manager', 'operations'])) return;
 
-        // Mark all flight segments as Cancelled
-        $segments = $this->flightSegments;
-        foreach ($segments as $i => $seg) {
-            $segments[$i]['reservation_status'] = 'Cancelled';
+        // Mark all flight segments as Cancelled in memory
+        foreach ($this->flightSegments as $i => $_) {
+            $this->flightSegments[$i]['reservation_status'] = 'Cancelled';
         }
-        $this->flightSegments = $segments;
 
-        // Persist via flight detail update
-        if ($this->booking->flightDetail) {
-            $this->booking->flightDetail->update(['segments' => array_values($segments)]);
-        }
+        // Persist: update every BookingFlightDetail row for this booking
+        $this->booking->flightDetails()->update(['reservation_status' => 'Cancelled']);
 
         AuditLogger::log(Auth::user(), $this->booking, 'pnr_cancelled', 'All PNR segments marked as Cancelled');
         $this->logActivity('Cancel PNR', 'All flight segments marked Cancelled', 'update');
@@ -1492,7 +1552,6 @@ class BookingShow extends Component
             'passengers.*.date_of_birth' => 'required|date',
             'passengers.*.passport_number' => 'required|string|max:255',
             'passengers.*.contact_number' => 'required|string|max:255|regex:/^[0-9]+$/',
-            'booking_plan'              => 'required',
             'booking_status'            => 'required|in:pending,payment_charge_request,issuance_queue,ticket_in_process,invoiced,confirmed,cancelled,refund_queue,issued,issued_payment_awaiting,issued_payment_plan',
             'mandatory_comment'         => 'required|string|min:3',
         ]);
@@ -1531,6 +1590,9 @@ class BookingShow extends Component
                 'booking_status' => $this->bookingStatus,
                 'activity_log' => $activityLog,
             ]);
+            // Keep in-memory entries in sync with what was just written; dehydrate() will see dirty=false.
+            $this->activity_log_entries = array_values($activityLog);
+            $this->activityLogDirty = false;
 
             // Activity log record
             BookingActivityLog::create([
@@ -1585,7 +1647,7 @@ class BookingShow extends Component
             BookingPassenger::where('booking_id', $b->id)->whereNotIn('id', $updatedIds)->delete();
 
             // Flight
-            $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']);
+            $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']) || (Auth::user()->role === 'agent' && $b->booking_status === 'pending');
             if ($canEditFlightHotel) {
                 $hasFlightData = collect($this->flightSegments)->contains(fn($s) => $s['airline'] || $s['pnr'] || $s['departure_airport']);
                 if ($hasFlightData) {
@@ -1804,73 +1866,6 @@ class BookingShow extends Component
                 }
             }
 
-            // Payment
-            if (!empty($this->selected_payment_method)) {
-                $this->booking_plan = $this->selected_payment_method;
-            }
-            $hotelTotalSold = collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0));
-            $total = $this->totalFlightSold + $hotelTotalSold;
-            $a = 0; $b_balance = 0; $d = 0;
-            if ($this->booking_plan === 'full') { $a = $total; }
-            elseif ($this->booking_plan === 'awaiting') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'payment_plan') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'dnpl') { $d = (float)($this->deposit_amount ?: 0); $b_balance = $total; }
-
-            $primaryMethod = $this->payment_method ?: $this->payment_mode;
-            if ($b->payment) {
-                $b->payment->update([
-                    'booking_plan' => $this->booking_plan,
-                    'amount_paid' => $a,
-                    'total_amount' => $total,
-                    'balance_remaining' => $b_balance,
-                    'due_date' => $this->due_date ?: null,
-                    'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
-                    'debit_card_change' => $this->debit_card_change,
-                    'deposit_amount' => $d,
-                    'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
-                    'payment_mode' => $primaryMethod ?: 'none',
-                    'payment_mode_2' => $this->payment_mode_2 ?: null,
-                    'cc_charges' => $this->cc_charges ?: 0,
-                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
-                ]);
-            } elseif ($primaryMethod) {
-                BookingPayment::create([
-                    'booking_id' => $b->id, 'booking_plan' => $this->booking_plan,
-                    'amount_paid' => $a, 'total_amount' => $total,
-                    'balance_remaining' => $b_balance, 'due_date' => $this->due_date ?: null,
-                    'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
-                    'debit_card_change' => false, 'deposit_amount' => $d,
-                    'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
-                    'payment_mode' => $primaryMethod, 'payment_mode_2' => null,
-                    'cc_charges' => $this->cc_charges ?: 0, 'invoice_generated' => false,
-                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
-                ]);
-            }
-
-            // Payment history (single entry for non-payment_plan bookings only)
-            $historyEntries = $this->booking_plan === 'payment_plan'
-                ? []
-                : [[
-                    'date' => $this->payment_date ?: now()->toDateString(),
-                    'method' => $this->payment_method,
-                    'amount' => $this->booking_plan === 'dnpl' ? $this->deposit_amount : $this->amount_paid,
-                    'receipt' => $this->receipt_number,
-                ]];
-            foreach ($historyEntries as $ph) {
-                $amt = (float)($ph['amount'] ?? 0);
-                if ($amt > 0) {
-                    BookingPaymentHistory::create([
-                        'booking_id' => $b->id, 'user_id' => Auth::id(),
-                        'payment_date' => !empty($ph['date']) ? \Carbon\Carbon::parse($ph['date'])->toDateString() : now()->toDateString(),
-                        'payment_method' => $ph['method'] ?: null,
-                        'amount' => $amt,
-                        'receipt_number' => $ph['receipt'] ?: null,
-                    ]);
-                }
-            }
-
             // Documents
             if (!empty($this->newDocuments)) {
                 foreach ($this->newDocuments as $i => $f) {
@@ -1887,8 +1882,9 @@ class BookingShow extends Component
         $this->newDocumentTypes = [];
         $this->mandatory_comment = '';
         $this->booking->refresh();
-        $this->booking->load(['passengers', 'payment', 'paymentHistory', 'documents', 'flightDetail', 'flightCosts', 'hotels.rooms', 'transfers', 'visas', 'comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
+        $this->booking->load(['passengers', 'payment', 'paymentHistory', 'documents', 'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas', 'comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
         $this->loadBookingData();
+        $this->activityLogDirty = false; // activity_log was already written inside the transaction
         $this->activityLog = $this->buildActivityLog($this->booking);
         session()->flash('success', "Booking #{$this->booking->booking_number} updated.");
     }
@@ -1903,14 +1899,6 @@ class BookingShow extends Component
         if (empty($this->passengers)) {
             return;
         }
-        // Sync selected_payment_method → booking_plan if user picked a plan via the payment structure UI
-        if (!empty($this->selected_payment_method)) {
-            $this->booking_plan = $this->selected_payment_method;
-        }
-        if (empty($this->booking_plan)) {
-            return;
-        }
-
         try {
         DB::transaction(function () {
             $b = $this->booking;
@@ -1926,7 +1914,6 @@ class BookingShow extends Component
                 $b->update([
                     'booking_type' => $this->booking_type,
                     'passenger_count' => count($this->passengers),
-                    'booking_status' => $this->bookingStatus,
                 ]);
 
                 // Passengers
@@ -1963,7 +1950,7 @@ class BookingShow extends Component
                 BookingPassenger::where('booking_id', $b->id)->whereNotIn('id', $updatedIds)->delete();
 
                 // Flight
-                $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']);
+                $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']) || (Auth::user()->role === 'agent' && $b->booking_status === 'pending');
                 if ($canEditFlightHotel) {
                     $hasFlightData = collect($this->flightSegments)->contains(fn($s) => $s['airline'] || $s['pnr'] || $s['departure_airport']);
                     if ($hasFlightData) {
@@ -2154,63 +2141,6 @@ class BookingShow extends Component
                 }
             }
 
-            // Payment
-            $hotelTotalSold = collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0));
-            $total = $this->totalFlightSold + $hotelTotalSold;
-            $a = 0; $b_balance = 0; $d = 0;
-            if ($this->booking_plan === 'full') { $a = $total; }
-            elseif ($this->booking_plan === 'awaiting') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'payment_plan') { $a = (float)($this->amount_paid ?: 0); $b_balance = $total - $a; }
-            elseif ($this->booking_plan === 'dnpl') { $d = (float)($this->deposit_amount ?: 0); $b_balance = $total; }
-
-            // Map installment period to valid DB enum: 'none', '30_days', '2_months'
-            $instPeriod = $this->booking_plan === 'payment_plan'
-                ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days')
-                : 'none';
-
-            $primaryMethod = $this->payment_method ?: $this->payment_mode;
-            if ($b->payment) {
-                $b->payment->update([
-                    'booking_plan' => $this->booking_plan, 'amount_paid' => $a,
-                    'total_amount' => $total, 'balance_remaining' => $b_balance,
-                    'due_date' => $this->due_date ?: null,
-                    'installment_period' => $instPeriod,
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
-                    'debit_card_change' => $this->debit_card_change, 'deposit_amount' => $d,
-                    'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
-                    'payment_mode' => $primaryMethod ?: 'none', 'payment_mode_2' => $this->payment_mode_2 ?: null,
-                    'cc_charges' => $this->cc_charges ?: 0,
-                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
-                ]);
-            } elseif ($primaryMethod) {
-                BookingPayment::create([
-                    'booking_id' => $b->id, 'booking_plan' => $this->booking_plan,
-                    'amount_paid' => $a, 'total_amount' => $total,
-                    'balance_remaining' => $b_balance, 'due_date' => $this->due_date ?: null,
-                    'installment_period' => $instPeriod,
-                    'installment_first_amount' => $this->payment_instalments[0]['amount'] ?? null,
-                    'debit_card_change' => false, 'deposit_amount' => $d,
-                    'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
-                    'payment_mode' => $primaryMethod, 'payment_mode_2' => null,
-                    'cc_charges' => $this->cc_charges ?: 0, 'invoice_generated' => false,
-                    'payment_instalments' => count($this->payment_instalments) ? ['instalments' => $this->payment_instalments, 'paid' => $this->instalment_paid] : null,
-                ]);
-            }
-
-            $historyEntries = $this->booking_plan === 'payment_plan'
-                ? []
-                : [['date' => $this->payment_date ?: now()->toDateString(), 'method' => $this->payment_method, 'amount' => $this->booking_plan === 'dnpl' ? $this->deposit_amount : $this->amount_paid, 'receipt' => $this->receipt_number]];
-            foreach ($historyEntries as $ph) {
-                $amt = (float)($ph['amount'] ?? 0);
-                if ($amt > 0) {
-                    BookingPaymentHistory::create([
-                        'booking_id' => $b->id, 'user_id' => Auth::id(),
-                        'payment_date' => !empty($ph['date']) ? \Carbon\Carbon::parse($ph['date'])->toDateString() : now()->toDateString(),
-                        'payment_method' => $ph['method'] ?: null, 'amount' => $amt, 'receipt_number' => $ph['receipt'] ?: null,
-                    ]);
-                }
-            }
-
             if (!empty($this->newDocuments)) {
                 foreach ($this->newDocuments as $i => $f) {
                     if ($f) {
@@ -2226,10 +2156,33 @@ class BookingShow extends Component
             return;
         }
 
+        // Lightweight post-save refresh — skip reloading all relationships since
+        // in-memory state was just written to DB and is already current.
+        // Flush pending activity log entries to DB first so buildActivityLog sees them.
+        if ($this->activityLogDirty && !empty($this->activity_log_entries)) {
+            $this->booking->update(['activity_log' => array_values($this->activity_log_entries)]);
+            $this->activityLogDirty = false;
+        }
         $this->booking->refresh();
-        $this->booking->load(['passengers', 'payment', 'paymentHistory', 'documents', 'flightDetail', 'flightCosts', 'hotels.rooms', 'transfers', 'visas', 'comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
-        $this->loadBookingData();
+        // Sync IDs for any passengers that were just created (had no ID before save)
+        $dbPassengers = $this->booking->passengers()->pluck('id', 'full_name');
+        foreach ($this->passengers as $i => $p) {
+            if (empty($p['id'])) {
+                $fullName = trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? ''));
+                if ($dbPassengers->has($fullName)) {
+                    $this->passengers[$i]['id'] = $dbPassengers[$fullName];
+                }
+            }
+        }
         $this->activityLog = $this->buildActivityLog($this->booking);
+    }
+
+    public function dehydrate(): void
+    {
+        if ($this->activityLogDirty && !empty($this->activity_log_entries)) {
+            $this->booking->update(['activity_log' => array_values($this->activity_log_entries)]);
+            $this->activityLogDirty = false;
+        }
     }
 
     public function render()
@@ -2237,7 +2190,8 @@ class BookingShow extends Component
         return view('livewire.booking-show', [
             'countries' => $this->countries(),
             'paymentMethods' => $this->paymentMethodOptions(),
-            'vendorOptions' => \App\Models\Setting::getValue('vendor_options', []),
+            'vendorOptions' => $this->cachedVendorOptions,
+            'gdsOptions' => $this->cachedGdsOptions,
         ]);
     }
 }

@@ -25,4 +25,9 @@ class SettingsController extends Controller
     {
         return view('content.settings.vendors');
     }
+
+    public function gds()
+    {
+        return view('content.settings.gds');
+    }
 }

@@ -12,7 +12,10 @@
       "Bash(php -r \"require 'vendor/autoload.php'; echo 'autoload ok';\")",
       "Bash(grep -n \"public function\\\\|public \\\\$\" /opt/travelorbit-crm/app/Livewire/RefundIndex.php)",
       "Bash(grep -n \"public function\\\\|public \\\\$\" /opt/travelorbit-crm/app/Livewire/SalesReport.php)",
-      "Bash(php /opt/travelorbit-crm/artisan schema:dump)"
+      "Bash(php /opt/travelorbit-crm/artisan schema:dump)",
+      "Bash(git -C /opt/travelorbit-crm diff resources/views/livewire/booking-show.blade.php)",
+      "Bash(git -C /opt/travelorbit-crm diff resources/views/livewire/partials/editable-field.blade.php)",
+      "Bash(grep -v \"^[0-9]\\\\{1,3\\\\}:\")"
     ]
   }
 }

@@ -1652,6 +1652,17 @@ class CreateBooking extends Component
                 ['value' => 'Trailfinders',  'label' => 'Trailfinders'],
                 ['value' => 'Other',         'label' => 'Other'],
             ]),
+            'gdsOptions' => array_merge(
+                [['value' => '', 'label' => 'GDS']],
+                Setting::getValue('gds_options', [
+                    ['value' => 'AMADEUS',    'label' => 'Amadeus'],
+                    ['value' => 'GALILEO',    'label' => 'Galileo'],
+                    ['value' => 'SABRE',      'label' => 'Sabre'],
+                    ['value' => 'WORLDSPAN',  'label' => 'Worldspan'],
+                    ['value' => 'APOLLO',     'label' => 'Apollo'],
+                    ['value' => 'TRAVELPORT', 'label' => 'Travelport'],
+                ])
+            ),
         ]);
     }
 }
