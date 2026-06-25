@@ -37,6 +37,7 @@ See [design/taste.md](design/taste.md)
 # Role-Based Access
 - Only admin has access to user management; regular users, agents, and other roles have no profile page, settings view, or self-service account modification (password, avatar, etc.). Admin manages all user passwords and profile images centrally. Confidence: 0.85
 - Admin has universal edit access — every field should be editable for any user and any booking, regardless of status or state restrictions applied to other roles. This includes bypassing "View-Only Access" UI banners and restrictions at both the PHP logic layer and the Blade template layer. Confidence: 0.85
+- Sidebar menu visibility and route access must be synchronized — if a role cannot see a page in the sidebar, that role should also be blocked from accessing that page via direct URL. Add role middleware checks to routes to match sidebar role restrictions. Confidence: 0.88
 
 # User Management
 - Display the stored plain text password as a visible column in the user management table (index/list view), not only in the edit modal. Confidence: 0.65

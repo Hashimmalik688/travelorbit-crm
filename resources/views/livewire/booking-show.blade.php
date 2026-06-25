@@ -238,17 +238,6 @@
       </div>
     @endif
 
-    {{-- VIEWER-ONLY NOTICE --}}
-    @if($viewerOnly)
-      <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2" style="background:rgba(51,46,158,.06);border:1.5px solid rgba(51,46,158,.15);border-radius:10px;">
-        <i class="ph ph-eye" style="color:#332E9E;font-size:1rem;flex-shrink:0;"></i>
-        <div>
-          <div style="font-size:.72rem;font-weight:700;color:#332E9E;">View-Only Access</div>
-          <div style="font-size:.65rem;color:#64748B;">You are viewing a booking created by another agent. Only the Request Payment Charge function is available.</div>
-        </div>
-      </div>
-    @endif
-
     {{-- LEAD & CALLER --}}
     <div class="bv-section" x-data="{ sectionEditing: false }">
       <div class="bv-section-hdr">
@@ -831,7 +820,7 @@
     @php
       $planLabel = ['full'=>'Full Payment','awaiting'=>'Payment Awaiting','payment_plan'=>'Payment Plan','dnpl'=>'DNPL'][$selected_payment_method ?? ''] ?? '';
     @endphp
-    <div class="bv-section mb-3" style="{{ !$canEditPayment ? 'opacity:.5;pointer-events:none;' : '' }}">
+    <div class="bv-section mb-3" style="{{ !$canEditPayment ? 'opacity:.5;' : '' }}">
       <div class="bv-section-hdr">
         <div class="bv-icon" style="background:rgba(14,165,233,.08);"><i class="ph ph-credit-card" style="color:#0EA5E9;font-size:.9rem;"></i></div>
         <h2>Payment Structure</h2>
@@ -864,17 +853,18 @@
             <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#332E9E;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ph ph-calendar-blank"></i> Instalments</div>
             @foreach($payment_instalments as $i => $inst)
               <div wire:key="pay-inst-{{ $i }}" class="d-flex align-items-center mb-2" style="background:#fff;border-radius:10px;padding:8px 12px;border:1px solid rgba(51,46,158,.08);gap:10px;">
-                @php $canTickInstalment = in_array($role, ['admin','manager','accounts']); @endphp
-                <input type="checkbox" wire:model="instalment_paid.{{ $i }}"
+                @php $canTickInstalment = $role === 'accounts'; @endphp
+                <input type="checkbox" wire:model="instalment_paid.{{ $i }}" wire:change="savePaymentStructure"
                   @if(!$canTickInstalment) disabled @endif
                   style="width:17px;height:17px;accent-color:#16A34A;cursor:{{ $canTickInstalment ? 'pointer' : 'default' }};flex-shrink:0;margin:0;opacity:{{ $canTickInstalment ? '1' : '.5' }}">
                 <span style="width:22px;height:22px;border-radius:50%;background:rgba(51,46,158,.08);display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $i + 1 }}</span>
                 @if($paymentSectionEditing)
-                  <div style="display:flex;align-items:center;gap:0;border:1px solid rgba(51,46,158,.18);border-radius:7px;overflow:hidden;flex-shrink:0;">
-                    <span style="padding:4px 7px;background:#F8FAFF;font-size:.72rem;color:#64748B;border-right:1px solid rgba(51,46,158,.12);">&pound;</span>
-                    <input type="number" wire:model="payment_instalments.{{ $i }}.amount" step="0.01" min="0" placeholder="0.00" style="width:70px;padding:4px 6px;font-size:.75rem;border:none;outline:none;background:#fff;">
+                  @php $paid = !empty($instalment_paid[$i]); @endphp
+                  <div style="display:flex;align-items:center;gap:0;border:1px solid rgba(51,46,158,.18);border-radius:7px;overflow:hidden;flex-shrink:0;{{ $paid ? 'opacity:.55;' : '' }}">
+                    <span style="padding:4px 7px;background:{{ $paid ? '#F1F5F9' : '#F8FAFF' }};font-size:.72rem;color:{{ $paid ? '#94A3B8' : '#64748B' }};border-right:1px solid rgba(51,46,158,.12);">&pound;</span>
+                    <input type="number" wire:model="payment_instalments.{{ $i }}.amount" step="0.01" min="0" placeholder="0.00" {{ $paid ? 'disabled' : '' }} style="width:70px;padding:4px 6px;font-size:.75rem;border:none;outline:none;background:{{ $paid ? '#F1F5F9' : '#fff' }};{{ $paid ? 'color:#94A3B8;cursor:not-allowed;' : '' }}">
                   </div>
-                  <div style="flex-shrink:0;min-width:130px;"><x-date-picker :modelName="'payment_instalments.'.$i.'.date'" :compact="true" /></div>
+                  <div style="flex-shrink:0;min-width:130px;{{ $paid ? 'opacity:.55;pointer-events:none;' : '' }}"><x-date-picker :modelName="'payment_instalments.'.$i.'.date'" :compact="true" /></div>
                 @else
                   <span class="fw-bold" style="color:{{ !empty($instalment_paid[$i]) ? '#16A34A' : '#1E293B' }};font-size:.78rem;text-decoration:{{ !empty($instalment_paid[$i]) ? 'line-through' : 'none' }};">&pound;{{ $inst['amount'] ? number_format((float)$inst['amount'],2) : '0.00' }}</span>
                   <span style="color:#94A3B8;font-size:.66rem;">{{ $inst['date'] ? \Carbon\Carbon::parse($inst['date'])->format('d M Y') : 'No date' }}</span>
@@ -949,17 +939,19 @@
               $tColor = $bvTypeColors[$t];
               $tMgn   = $tData['sold'] - $tData['cost'];
             @endphp
-            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(51,46,158,.05);border-left:3px solid {{ $tData['count'] > 0 ? $tColor : 'transparent' }};{{ $tData['count'] == 0 ? 'opacity:.35;' : '' }}">
+            @if($tData['count'] > 0)
+            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(51,46,158,.05);border-left:3px solid {{ $tColor }};">
               <div>
                 <span style="font-size:.64rem;font-weight:700;color:{{ $tColor }};">{{ $bvTypeLabels[$t] }}</span>
-                @if($tData['count'] > 0 && $tMgn != 0)
+                @if($tMgn != 0)
                   <span style="font-size:.54rem;font-weight:700;color:{{ $tMgn >= 0 ? '#16A34A' : '#DC2626' }};display:block;">{{ $tMgn >= 0 ? '+' : '' }}&pound;{{ number_format($tMgn,2) }}</span>
                 @endif
               </div>
-              <span style="font-size:.64rem;font-weight:700;color:{{ $tData['count'] > 0 ? $tColor : '#94A3B8' }};text-align:center;">{{ $tData['count'] > 0 ? $tData['count'] : '–' }}</span>
-              <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">{{ $tData['count'] > 0 ? '£'.number_format($tData['cost'],2) : '—' }}</span>
-              <span style="font-size:.68rem;font-weight:700;color:#111827;text-align:right;">{{ $tData['count'] > 0 ? '£'.number_format($tData['sold'],2) : '—' }}</span>
+              <span style="font-size:.64rem;font-weight:700;color:{{ $tColor }};text-align:center;">{{ $tData['count'] }}</span>
+              <span style="font-size:.68rem;font-weight:600;color:#374151;text-align:right;">&pound;{{ number_format($tData['cost'],2) }}</span>
+              <span style="font-size:.68rem;font-weight:700;color:#111827;text-align:right;">&pound;{{ number_format($tData['sold'],2) }}</span>
             </div>
+            @endif
           @endforeach
           @if($this->safiTax > 0)
             <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(51,46,158,.03);border-bottom:1px solid rgba(51,46,158,.06);border-left:3px solid #332E9E;">
@@ -1164,34 +1156,47 @@
         {{-- DOCUMENTS --}}
         <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
           <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:6px;">Documents</div>
-          @if($booking->documents?->isNotEmpty())
-            @foreach($booking->documents as $doc)
-              <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:6px;font-size:.66rem;">
-                <span><i class="ph ph-file me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }} <span style="font-size:.55rem;font-weight:600;color:#7C3AED;background:rgba(124,58,237,.08);border-radius:6px;padding:2px 7px;text-transform:capitalize;">{{ $doc->document_type ?? 'other' }}</span></span>
-                <div class="d-flex gap-1">
-                  <button type="button" wire:click="previewDocument({{ $doc->id }})" style="color:#332E9E;font-size:.9rem;background:none;border:none;cursor:pointer;padding:2px;" title="Preview"><i class="ph ph-eye"></i></button>
-                  <a href="{{ Storage::url($doc->file_path) }}" target="_blank" style="color:#7C3AED;font-size:.9rem;" title="Download"><i class="ph ph-download-simple"></i></a>
+
+          {{-- Existing documents --}}
+          @if(count($booking->documents))
+            <div style="margin-bottom:8px;">
+              @foreach($booking->documents as $doc)
+                <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:7px;">
+                  <button type="button" wire:click="previewDocument({{ $doc->id }})" style="background:none;border:none;font-size:.72rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;">
+                    <i class="ph ph-file me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }}
+                    <span style="font-size:.6rem;color:#94A3B8;font-weight:500;margin-left:6px;">{{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</span>
+                  </button>
+                  @if(Auth::user()->role === 'admin')
+                    <button type="button" wire:click="deleteDocument({{ $doc->id }})" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:5px;padding:1px 7px;font-size:.6rem;cursor:pointer;">✕</button>
+                  @endif
                 </div>
-              </div>
-            @endforeach
-          @else
-            <p style="color:#C4C9D4;font-size:.68rem;margin-bottom:6px;">No documents uploaded yet.</p>
+              @endforeach
+            </div>
           @endif
 
           {{-- Upload new documents --}}
           @if(!$isLocked || $isPrivileged)
           @foreach($newDocuments as $di => $nd)
             <div class="d-flex gap-2 align-items-center mb-2">
-              <input type="file" wire:model="newDocuments.{{ $di }}" class="form-control form-control-sm" style="font-size:.68rem;border-radius:7px;flex:1;">
-              <select wire:model="newDocumentTypes.{{ $di }}" class="form-control form-control-sm" style="font-size:.68rem;border-radius:7px;width:110px;flex-shrink:0;">
+              <select wire:model="newDocumentTypes.{{ $di }}" class="form-control form-control-sm" style="font-size:.68rem;border-radius:7px;width:120px;flex-shrink:0;">
                 <option value="">Type</option>
+                <option value="e_ticket">E-Ticket</option>
+                <option value="hotel_voucher">Hotel Voucher</option>
                 <option value="passport">Passport</option>
                 <option value="visa">Visa</option>
                 <option value="itinerary">Itinerary</option>
                 <option value="invoice">Invoice</option>
                 <option value="other">Other</option>
               </select>
-              <button type="button" wire:click="removeDocument({{ $di }})" style="background:rgba(220,38,38,.08);color:#DC2626;border:none;border-radius:6px;font-size:.7rem;padding:3px 8px;cursor:pointer;">✕</button>
+              @if($nd && method_exists($nd, 'getClientOriginalName'))
+                <span style="font-size:.72rem;flex:1;color:#1E293B;">
+                  <i class="ph ph-file me-1" style="color:#7C3AED;"></i>{{ $nd->getClientOriginalName() }}
+                </span>
+                <button type="button" wire:click="saveDocument({{ $di }})" style="background:rgba(22,163,74,.10);color:#16A34A;border:none;border-radius:6px;font-size:.7rem;padding:3px 8px;cursor:pointer;font-weight:700;">✓</button>
+                <button type="button" wire:click="removeDocument({{ $di }})" style="background:rgba(220,38,38,.08);color:#DC2626;border:none;border-radius:6px;font-size:.7rem;padding:3px 8px;cursor:pointer;">✕</button>
+              @else
+                <input type="file" wire:model="newDocuments.{{ $di }}" class="form-control form-control-sm" style="font-size:.68rem;border-radius:7px;flex:1;">
+              @endif
             </div>
           @endforeach
           <button type="button" wire:click="addDocument" style="font-size:.64rem;font-weight:600;padding:4px 12px;border-radius:7px;background:rgba(124,58,237,.07);color:#7C3AED;border:1.5px dashed rgba(124,58,237,.25);cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px;">

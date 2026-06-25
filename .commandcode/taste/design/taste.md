@@ -1,4 +1,5 @@
 # Design
+- For document upload interactions, prefer explicit confirmation (tick/checkmark button per upload row) over auto-save-on-upload or save-all-at-once buttons — users should explicitly confirm each document before it persists. Confidence: 0.60
 - Use "booking" terminology, not "sale"/"sales" — the system refers to bookings, not sales. Never label booking activity as "sales" in any UI element. Confidence: 0.70
 - When modifying cost/margin displays, make minimal targeted changes — don't redesign the entire box or transform the layout. Only change what's explicitly requested. Confidence: 0.70
 - Use custom-styled UI dropdowns matching the design system instead of native browser `<select>` elements. Confidence: 0.65

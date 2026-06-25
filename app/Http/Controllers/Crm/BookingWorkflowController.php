@@ -61,15 +61,17 @@ class BookingWorkflowController extends Controller
     {
         $this->authorize('removeFromIssuanceQueue', $booking);
         $booking->update(['booking_status' => Booking::STATUS_PENDING]);
-        $this->appendBookingActivity($booking, 'status_changed', 'Removed from Issuance Queue — restored to Pending');
+        $reason = request('reason');
+        $detail = 'Rejected from Issuance Queue — returned to Pending' . ($reason ? " — $reason" : '');
+        $this->appendBookingActivity($booking, 'status_changed', $detail);
         AuditLog::logAction(
-            action: 'booking_removed_from_queue',
+            action: 'booking_rejected_from_queue',
             user: Auth::user(),
             model: 'Booking',
             model_id: $booking->id,
-            description: "Booking #{$booking->booking_number} removed from issuance queue",
+            description: "Booking #{$booking->booking_number} rejected from issuance queue" . ($reason ? ": $reason" : ""),
         );
-        return back()->with('success', "Booking #{$booking->booking_number} removed from issuance queue.");
+        return back()->with('success', "Booking #{$booking->booking_number} rejected from issuance queue.");
     }
 
     public function markTicketInProcess(Booking $booking)
@@ -79,13 +81,15 @@ class BookingWorkflowController extends Controller
             'booking_status'       => Booking::STATUS_TICKET_IN_PROCESS,
             'ticket_processed_at'  => now(),
         ]);
-        $this->appendBookingActivity($booking, 'status_changed', 'Ticket In Process');
+        $reason = request('reason');
+        $detail = 'Ticket In Process' . ($reason ? " — $reason" : '');
+        $this->appendBookingActivity($booking, 'status_changed', $detail);
         AuditLog::logAction(
             action: 'booking_ticket_in_process',
             user: Auth::user(),
             model: 'Booking',
             model_id: $booking->id,
-            description: "Booking #{$booking->booking_number} marked as Ticket in Process",
+            description: "Booking #{$booking->booking_number} marked as Ticket in Process" . ($reason ? ": $reason" : ""),
         );
         return back()->with('success', "Booking #{$booking->booking_number} marked as Ticket in Process.");
     }
@@ -112,13 +116,15 @@ class BookingWorkflowController extends Controller
     {
         $this->authorize('restoreToPending', $booking);
         $booking->update(['booking_status' => Booking::STATUS_PENDING]);
-        $this->appendBookingActivity($booking, 'status_changed', 'Restored to Pending');
+        $reason = request('reason');
+        $detail = 'Restored to Pending' . ($reason ? " — $reason" : '');
+        $this->appendBookingActivity($booking, 'status_changed', $detail);
         AuditLog::logAction(
             action: 'booking_restored_to_pending',
             user: Auth::user(),
             model: 'Booking',
             model_id: $booking->id,
-            description: "Booking #{$booking->booking_number} restored to Pending",
+            description: "Booking #{$booking->booking_number} restored to Pending" . ($reason ? ": $reason" : ""),
         );
         return back()->with('success', "Booking #{$booking->booking_number} restored to Pending.");
     }

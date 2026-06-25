@@ -1311,11 +1311,13 @@
                           <input type="file" wire:model.lazy="documents.{{ $i }}" class="form-control form-control-sm" style="max-width:220px;border-radius:8px;">
                           <div style="width:130px;flex-shrink:0;">
                             <x-styled-select-sm :modelName="'document_types.' . $i" :placeholder="'Type'" :optgroup="false" :options="[
-                              ['value' => 'passport',  'label' => 'Passport'],
-                              ['value' => 'visa',      'label' => 'Visa'],
-                              ['value' => 'itinerary', 'label' => 'Itinerary'],
-                              ['value' => 'invoice',   'label' => 'Invoice'],
-                              ['value' => 'other',     'label' => 'Other'],
+                              ['value' => 'e_ticket',      'label' => 'E-Ticket'],
+                              ['value' => 'hotel_voucher', 'label' => 'Hotel Voucher'],
+                              ['value' => 'passport',      'label' => 'Passport'],
+                              ['value' => 'visa',          'label' => 'Visa'],
+                              ['value' => 'itinerary',     'label' => 'Itinerary'],
+                              ['value' => 'invoice',       'label' => 'Invoice'],
+                              ['value' => 'other',         'label' => 'Other'],
                             ]" />
                           </div>
                           <button type="button" wire:click="removeDocument({{ $i }})" class="btn btn-sm btn-outline-danger px-2 py-0" style="border-radius:6px;">&times;</button>

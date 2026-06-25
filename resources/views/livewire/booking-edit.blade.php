@@ -441,7 +441,7 @@
     @foreach($newDocuments as $i => $doc)
       <div class="d-flex gap-2 align-items-center mb-2">
         <input type="file" wire:model="newDocuments.{{ $i }}" class="be-input" style="font-size:.78rem;padding:.35rem .65rem;">
-        <x-styled-select-sm :modelName="'newDocumentTypes.'.$i" :options="[['value'=>'','label'=>'Type'],['value'=>'passport','label'=>'Passport'],['value'=>'visa','label'=>'Visa'],['value'=>'itinerary','label'=>'Itinerary'],['value'=>'invoice','label'=>'Invoice'],['value'=>'other','label'=>'Other']]" placeholder="Type" />
+        <x-styled-select-sm :modelName="'newDocumentTypes.'.$i" :options="[['value'=>'','label'=>'Type'],['value'=>'e_ticket','label'=>'E-Ticket'],['value'=>'hotel_voucher','label'=>'Hotel Voucher'],['value'=>'passport','label'=>'Passport'],['value'=>'visa','label'=>'Visa'],['value'=>'itinerary','label'=>'Itinerary'],['value'=>'invoice','label'=>'Invoice'],['value'=>'other','label'=>'Other']]" placeholder="Type" />
         <button type="button" wire:click="removeDocument({{ $i }})" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:7px;padding:5px 10px;font-size:.8rem;cursor:pointer;flex-shrink:0;">✕</button>
       </div>
     @endforeach

@@ -895,7 +895,7 @@ class BookingShow extends Component
         }
     }
 
-    private function savePaymentStructure(): void
+    public function savePaymentStructure(): void
     {
         $instalments = array_values(array_filter($this->payment_instalments, fn($i) => $i['amount'] !== '' || $i['date'] !== ''));
         BookingPayment::updateOrCreate(
@@ -1118,6 +1118,54 @@ class BookingShow extends Component
     // ── Documents ──────────────────────────────────────────────────────
     public function addDocument(): void { $this->abortIfViewer(); $this->newDocuments[] = null; $this->newDocumentTypes[] = ''; $this->logActivity('Added Document Upload', '', 'update'); }
     public function removeDocument(int $i): void { $this->abortIfViewer(); unset($this->newDocuments[$i]); unset($this->newDocumentTypes[$i]); $this->newDocuments = array_values($this->newDocuments); $this->newDocumentTypes = array_values($this->newDocumentTypes); $this->logActivity('Removed Document Upload', '', 'update'); }
+
+    public function saveDocument(int $i): void
+    {
+        $this->abortIfViewer();
+        if (!isset($this->newDocuments[$i]) || !$this->newDocuments[$i]) {
+            session()->flash('error', 'Please select a file first.');
+            return;
+        }
+        if (empty($this->newDocumentTypes[$i])) {
+            session()->flash('error', 'Please select a document type.');
+            return;
+        }
+
+        try {
+            $f = $this->newDocuments[$i];
+            $type = $this->newDocumentTypes[$i];
+            $path = $f->store('booking-documents', 'public');
+            \App\Models\BookingDocument::create([
+                'booking_id' => $this->booking->id,
+                'uploaded_by' => Auth::id(),
+                'file_name' => $f->getClientOriginalName(),
+                'file_path' => $path,
+                'file_type' => $f->getClientMimeType(),
+                'document_type' => $type,
+            ]);
+            $this->logActivity('Document Uploaded', $f->getClientOriginalName() . ' (' . $type . ')', 'update', bypassViewerCheck: true);
+            unset($this->newDocuments[$i]);
+            unset($this->newDocumentTypes[$i]);
+            $this->newDocuments = array_values($this->newDocuments);
+            $this->newDocumentTypes = array_values($this->newDocumentTypes);
+            $this->booking->load('documents');
+            session()->flash('success', 'Document saved.');
+        } catch (\Throwable $e) {
+            \Log::error('BookingShow.saveDocument failed: '.$e->getMessage());
+            session()->flash('error', 'Failed to save document.');
+        }
+    }
+
+    public function deleteDocument(int $docId): void
+    {
+        if (Auth::user()->role !== 'admin') return;
+        $doc = \App\Models\BookingDocument::where('booking_id', $this->booking->id)->find($docId);
+        if (!$doc) return;
+        \Illuminate\Support\Facades\Storage::disk('public')->delete($doc->file_path);
+        $doc->delete();
+        $this->logActivity('Document Deleted', $doc->file_name, 'update', bypassViewerCheck: true);
+        $this->booking->load('documents');
+    }
 
     public function previewDocument(int $docId): void
     {
@@ -2141,16 +2189,8 @@ class BookingShow extends Component
                 }
             }
 
-            if (!empty($this->newDocuments)) {
-                foreach ($this->newDocuments as $i => $f) {
-                    if ($f) {
-                        $path = $f->store('booking-documents', 'public');
-                        BookingDocument::create(['booking_id' => $b->id, 'uploaded_by' => Auth::id(), 'file_name' => $f->getClientOriginalName(), 'file_path' => $path, 'file_type' => $f->getClientMimeType(), 'document_type' => $this->newDocumentTypes[$i] ?? 'other']);
-                        $this->logActivity('Document Uploaded', $f->getClientOriginalName() . ' (' . ($this->newDocumentTypes[$i] ?? 'other') . ')', 'update', bypassViewerCheck: true);
-                    }
-                }
-            }
         });
+
         } catch (\Throwable $e) {
             \Log::error('BookingShow.autoSave failed: '.$e->getMessage(), ['booking_id' => $this->booking->id, 'trace' => $e->getTraceAsString()]);
             return;
@@ -2187,6 +2227,19 @@ class BookingShow extends Component
 
     public function render()
     {
+        // When not editing payment, reload from DB so other users' changes show up
+        if (!$this->paymentSectionEditing) {
+            $this->booking->load('payment');
+            $b = $this->booking;
+            if ($b->payment) {
+                $this->selected_payment_method = $b->payment->booking_plan ?? '';
+                $saved = $b->payment->payment_instalments;
+                if ($saved && is_array($saved)) {
+                    $this->instalment_paid = $saved['paid'] ?? [];
+                }
+            }
+        }
+
         return view('livewire.booking-show', [
             'countries' => $this->countries(),
             'paymentMethods' => $this->paymentMethodOptions(),

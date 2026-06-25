@@ -126,15 +126,15 @@ class DashboardController extends Controller
 
     protected function issuanceDashboard()
     {
-        $inQueue    = Booking::where('booking_status', 'issuance_queue')->count();
-        $inProcess  = Booking::where('booking_status', 'ticket_in_process')->count();
-        $doneToday  = Booking::where('booking_status', 'ticket_in_process')->whereDate('ticket_processed_at', today())->count();
+        $inQueue   = Booking::where('booking_status', 'issuance_queue')->count();
+        $doneToday = Booking::where('booking_status', 'ticket_in_process')
+            ->whereDate('ticket_processed_at', today())->count();
 
-        $queueBookings = Booking::whereIn('booking_status', ['issuance_queue','ticket_in_process'])
+        $queueBookings = Booking::where('booking_status', 'issuance_queue')
             ->orderBy('issuance_queued_at')->take(20)->with(['user','flightDetail','passengers'])->get();
 
         return view('content.dashboard.issuance-dashboard', compact(
-            'inQueue', 'inProcess', 'doneToday', 'queueBookings'
+            'inQueue', 'doneToday', 'queueBookings'
         ));
     }
 

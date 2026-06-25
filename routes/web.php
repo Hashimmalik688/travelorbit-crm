@@ -40,15 +40,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/my-bookings', [BookingController::class, 'myBookings'])->name('bookings.mine');
         Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create');
         Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
-        Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
         Route::get('/bookings/{booking}/edit', fn($booking) => redirect()->route('bookings.show', $booking));
         Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
 
-        // Booking workflow actions
-        Route::post('/bookings/{booking}/queue-issuance',    [BookingWorkflowController::class, 'queueForIssuance'])->name('bookings.queue-issuance');
+        Route::post('/bookings/{booking}/queue-issuance', [BookingWorkflowController::class, 'queueForIssuance'])->name('bookings.queue-issuance');
+        Route::post('/bookings/{booking}/invoice',        [BookingWorkflowController::class, 'invoice'])->name('bookings.invoice');
+    });
+
+    // Booking show + issuance workflow — also accessible by issuance role
+    Route::middleware('role:issuance,admin,manager,operations,agent,accounts')->group(function () {
+        Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+
         Route::post('/bookings/{booking}/remove-issuance',   [BookingWorkflowController::class, 'removeFromIssuanceQueue'])->name('bookings.remove-issuance');
         Route::post('/bookings/{booking}/ticket-in-process', [BookingWorkflowController::class, 'markTicketInProcess'])->name('bookings.ticket-in-process');
-        Route::post('/bookings/{booking}/invoice',           [BookingWorkflowController::class, 'invoice'])->name('bookings.invoice');
         Route::post('/bookings/{booking}/restore-pending',   [BookingWorkflowController::class, 'restoreToPending'])->name('bookings.restore-pending');
     });
 

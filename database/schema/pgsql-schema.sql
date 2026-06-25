@@ -147,7 +147,7 @@ CREATE TABLE public.booking_documents (
     document_type character varying(255) NOT NULL,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    CONSTRAINT booking_documents_document_type_check CHECK (((document_type)::text = ANY ((ARRAY['passport'::character varying, 'cnic'::character varying, 'other'::character varying, 'visa'::character varying, 'itinerary'::character varying, 'invoice'::character varying])::text[])))
+    CONSTRAINT booking_documents_document_type_check CHECK (((document_type)::text = ANY ((ARRAY['e_ticket'::character varying, 'hotel_voucher'::character varying, 'passport'::character varying, 'cnic'::character varying, 'visa'::character varying, 'itinerary'::character varying, 'invoice'::character varying, 'other'::character varying])::text[])))
 );
 
 
