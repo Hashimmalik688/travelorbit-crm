@@ -5,7 +5,6 @@
     { "url": "/my-dashboard",   "name": "Accounts Hub",      "icon": "menu-icon icon-base ph ph-bank",            "slug": "my.dashboard",     "roles": ["accounts"] },
     { "menuHeader": "Bookings", "roles": ["admin","manager","operations","agent","accounts"] },
     {
-      "url": "javascript:void(0);",
       "name": "Bookings",
       "icon": "menu-icon icon-base ph ph-book-open",
       "slug": "bookings",

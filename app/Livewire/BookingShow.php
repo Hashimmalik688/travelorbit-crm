@@ -559,7 +559,6 @@ class BookingShow extends Component
             $this->installment_first_amount = $b->payment->installment_first_amount ?? '';
             $this->debit_card_change = $b->payment->debit_card_change ?? false;
             $this->deposit_amount = $b->payment->deposit_amount ?? '';
-            $this->cc_charges = $b->payment->cc_charges ?? '';
             $this->payment_method = $b->payment->payment_mode ?? '';
 
             $saved = $b->payment->payment_instalments;
@@ -571,6 +570,10 @@ class BookingShow extends Component
                 $this->payment_instalments = [['amount' => '', 'date' => '']];
             }
         }
+
+        // Calculate total CC charges from payment history records
+        // Each charge request stores its CC fee in payment_details['cc_charge']
+        $this->refreshCcChargesFromHistory();
 
         $this->paymentReviewed = (bool)($b->payment_reviewed ?? false);
 
@@ -982,6 +985,25 @@ class BookingShow extends Component
         }
     }
 
+    public function updatedFlightSegments($value, $key): void
+    {
+        // When cost or sold changes for one passenger, sync to all passengers of the same type
+        if (!preg_match('/^(\d+)\.passenger_costs\.(\d+)\.(cost|sold)$/', $key, $m)) {
+            return;
+        }
+        $si    = (int) $m[1];
+        $pi    = (int) $m[2];
+        $field = $m[3];
+        $type  = $this->passengers[$pi]['type'] ?? null;
+        if (!$type) return;
+
+        foreach ($this->passengers as $otherPi => $pax) {
+            if ($otherPi === $pi) continue;
+            if (($pax['type'] ?? '') !== $type) continue;
+            $this->flightSegments[$si]['passenger_costs'][$otherPi][$field] = $value;
+        }
+    }
+
     // ── Hotels ─────────────────────────────────────────────────────────
     public function addHotel(): void
     {
@@ -1104,6 +1126,33 @@ class BookingShow extends Component
         $this->logActivity('Payment Sent to Accounts', 'Payment #' . $historyId . ' forwarded for approval', 'update', bypassViewerCheck: true);
         session()->flash('success', 'Payment sent to accounts for approval.');
         $this->refreshBooking();
+    }
+
+    public function deletePaymentHistory(int $historyId): void
+    {
+        if (Auth::user()->role !== 'admin') return;
+
+        $ph = BookingPaymentHistory::where('booking_id', $this->booking->id)->find($historyId);
+        if (!$ph) return;
+
+        $amount = $ph->amount;
+        $ph->delete();
+
+        AuditLogger::log(Auth::user(), $this->booking, 'payment_deleted', "Payment history #{$historyId} deleted (£" . number_format($amount, 2) . ')');
+        $this->logActivity('Payment Deleted', '£' . number_format($amount, 2) . ' payment record removed', 'update', bypassViewerCheck: true);
+
+        $this->booking->load('paymentHistory');
+        $this->refreshCcChargesFromHistory();
+
+        if ($this->booking->booking_status === 'payment_charge_request') {
+            $hasPending = $this->booking->paymentHistory->contains(fn($h) => $h->status === 'pending');
+            if (!$hasPending) {
+                $this->booking->update(['booking_status' => 'pending']);
+                $this->bookingStatus = 'pending';
+            }
+        }
+
+        session()->flash('success', 'Payment record deleted.');
     }
 
     private function refreshBooking(): void
@@ -1429,6 +1478,24 @@ class BookingShow extends Component
             'chargeMethod' => 'required|string',
         ]);
 
+        // Calculate CC charge for this payment
+        $this->recalculateChargeCcAmount();
+        $ccAmountForThisCharge = $this->chargeCcAmount;
+
+        // Build payment details including CC charge info
+        $paymentDetails = array_merge(
+            in_array($this->chargeMethod, ['debit_card','credit_card','amex']) ? [
+                'card_number' => $this->card_number,
+                'card_expiry' => $this->card_expiry,
+                'card_cvv' => $this->card_cvv,
+                'card_holder_name' => $this->card_holder_name,
+            ] : [],
+            [
+                'cc_charge'      => $ccAmountForThisCharge,
+                'cc_charge_rate' => $this->chargeCcRate ? (float)$this->chargeCcRate : null,
+            ],
+        );
+
         BookingPaymentHistory::create([
             'booking_id' => $this->booking->id,
             'user_id' => Auth::id(),
@@ -1437,12 +1504,7 @@ class BookingShow extends Component
             'receipt_number' => $this->chargeReceipt ?: null,
             'payment_date' => now(),
             'status' => 'pending',
-            'payment_details' => in_array($this->chargeMethod, ['debit_card','credit_card','amex']) ? json_encode([
-                'card_number' => $this->card_number,
-                'card_expiry' => $this->card_expiry,
-                'card_cvv' => $this->card_cvv,
-                'card_holder_name' => $this->card_holder_name,
-            ]) : null,
+            'payment_details' => $paymentDetails,
         ]);
 
         // Lock the form until accounts approves
@@ -1453,14 +1515,14 @@ class BookingShow extends Component
         AuditLogger::log(Auth::user(), $this->booking, 'payment_requested', 'Payment charge of £' . number_format((float)$this->chargeAmount, 2) . ' requested via ' . $this->chargeMethod);
         $this->logActivity('Request Payment Charge', '£' . number_format((float)$this->chargeAmount, 2) . ' via ' . ucwords(str_replace('_', ' ', $this->chargeMethod)), 'update', bypassViewerCheck: true);
 
-        // Save CC rate and charges to booking_payments so Cost & Margin box reflects them
-        $this->recalculateChargeCcAmount();
-        if ($this->booking->payment) {
-            $this->booking->payment->update([
-                'cc_charge_rate' => $this->chargeCcRate ?: null,
-                'cc_charges'     => $this->chargeCcAmount ?: 0,
-            ]);
+        // Save the rate to booking_payments for display alongside the CC total
+        if ($this->booking->payment && $this->chargeCcRate) {
+            $this->booking->payment->update(['cc_charge_rate' => $this->chargeCcRate]);
         }
+
+        // Reload payment history and recalculate total CC charges from all records
+        $this->booking->load('paymentHistory');
+        $this->refreshCcChargesFromHistory();
 
         $this->showChargeModal = false;
         $this->chargeAmount = '';
@@ -1504,6 +1566,58 @@ class BookingShow extends Component
         $this->chargeCcAmount = $rate > 0 && $amount > 0
             ? round($amount * $rate / 100, 2)
             : 0;
+    }
+
+    /**
+     * Recalculate cc_charges by summing the CC fee from every approved payment.
+     *
+     * Each approved record's fee is taken from payment_details['cc_charge']
+     * when present.  For older records that pre-date per-transaction tracking,
+     * the fee is derived from the payment amount and the rate stored in
+     * payment_details['cc_charge_rate'] (or the method's default rate).
+     * Only approved payments are counted; pending/rejected records are excluded.
+     */
+    private function refreshCcChargesFromHistory(): void
+    {
+        $cardRates = [
+            'epay_debit'  => 1.5,
+            'epay_credit' => 2.5,
+            'debit_card'  => 1.5,
+            'credit_card' => 2.5,
+            'amex'        => 2.5,
+        ];
+
+        $history  = $this->booking->paymentHistory ?? collect();
+        $approved = $history->filter(fn($ph) => $ph->status === 'approved');
+
+        if ($approved->isEmpty()) {
+            $this->cc_charges = '';
+            return;
+        }
+
+        $bookingCcRate = (float) ($this->booking->payment?->cc_charge_rate ?? 0);
+
+        $total = $approved->sum(function ($ph) use ($cardRates, $bookingCcRate) {
+            if (isset($ph->payment_details['cc_charge'])) {
+                return (float) $ph->payment_details['cc_charge'];
+            }
+            // Fallback for records without a stored cc_charge: use the rate from
+            // payment_details if present, then the booking-level rate, then the
+            // method default.
+            $method = $ph->payment_method;
+            if (!isset($cardRates[$method])) {
+                return 0;
+            }
+            $rate = isset($ph->payment_details['cc_charge_rate'])
+                ? (float) $ph->payment_details['cc_charge_rate']
+                : ($bookingCcRate ?: $cardRates[$method]);
+            return round((float) $ph->amount * $rate / 100, 2);
+        });
+
+        $this->cc_charges = $total;
+        if ($this->booking->payment) {
+            $this->booking->payment->update(['cc_charges' => $total]);
+        }
     }
 
     // ── Comments ───────────────────────────────────────────────────────

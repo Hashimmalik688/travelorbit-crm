@@ -85,6 +85,7 @@ class PaymentChargeRequest extends Component
             if ($booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
                 $booking->update(['booking_status' => Booking::STATUS_PENDING]);
             }
+            $this->syncCcCharges($booking);
         }
 
         $this->closeModal();
@@ -113,6 +114,7 @@ class PaymentChargeRequest extends Component
             if ($booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
                 $booking->update(['booking_status' => Booking::STATUS_PENDING]);
             }
+            $this->syncCcCharges($booking);
         }
 
         $this->closeModal();
@@ -131,6 +133,10 @@ class PaymentChargeRequest extends Component
         }
 
         $ph->delete();
+
+        if ($booking) {
+            $this->syncCcCharges($booking);
+        }
 
         session()->flash('success', 'Payment charge deleted.');
     }
@@ -162,6 +168,49 @@ class PaymentChargeRequest extends Component
         ];
 
         $booking->update(['activity_log' => $log]);
+    }
+
+    /**
+     * Recalculate booking_payments.cc_charges from all approved payment history
+     * records.  Mirrors the logic in BookingShow so the stored total stays in
+     * sync when requests are approved/rejected/deleted.
+     */
+    private function syncCcCharges(Booking $booking): void
+    {
+        $cardRates = [
+            'epay_debit'  => 1.5,
+            'epay_credit' => 2.5,
+            'debit_card'  => 1.5,
+            'credit_card' => 2.5,
+            'amex'        => 2.5,
+        ];
+
+        $booking->load('paymentHistory', 'payment');
+        $history  = $booking->paymentHistory ?? collect();
+        $approved = $history->filter(fn($ph) => $ph->status === 'approved');
+
+        $bookingCcRate = (float) ($booking->payment?->cc_charge_rate ?? 0);
+
+        $total = $approved->sum(function ($ph) use ($cardRates, $bookingCcRate) {
+            if (isset($ph->payment_details['cc_charge'])) {
+                return (float) $ph->payment_details['cc_charge'];
+            }
+            // Fallback for records without a stored cc_charge: use the rate from
+            // payment_details if present, then the booking-level rate, then the
+            // method default.
+            $method = $ph->payment_method;
+            if (!isset($cardRates[$method])) {
+                return 0;
+            }
+            $rate = isset($ph->payment_details['cc_charge_rate'])
+                ? (float) $ph->payment_details['cc_charge_rate']
+                : ($bookingCcRate ?: $cardRates[$method]);
+            return round((float) $ph->amount * $rate / 100, 2);
+        });
+
+        if ($booking->payment) {
+            $booking->payment->update(['cc_charges' => $total]);
+        }
     }
 
     public function render()

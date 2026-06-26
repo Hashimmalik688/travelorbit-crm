@@ -1592,16 +1592,29 @@ class CreateBooking extends Component
                     'receipt' => $this->receipt_number,
                 ]];
 
+            $cardRates = [
+                'epay_debit'  => 1.5, 'epay_credit' => 2.5,
+                'debit_card'  => 1.5, 'credit_card' => 2.5,
+                'amex'        => 2.5,
+            ];
             foreach ($historyEntries as $ph) {
                 $amt = (float)($ph['amount'] ?? 0);
                 if ($amt > 0) {
+                    $method        = $ph['method'] ?? null;
+                    $entryRate     = $method && isset($cardRates[$method]) ? $cardRates[$method] : null;
+                    $entryCcCharge = $entryRate ? round($amt * $entryRate / 100, 2) : 0;
+                    $paymentDetails = $entryCcCharge > 0
+                        ? ['cc_charge' => $entryCcCharge, 'cc_charge_rate' => $entryRate]
+                        : [];
+
                     BookingPaymentHistory::create([
-                        'booking_id'     => $booking->id,
-                        'user_id'        => Auth::id(),
-                        'payment_date'   => !empty($ph['date']) ? \Carbon\Carbon::parse($ph['date'])->toDateString() : now()->toDateString(),
-                        'payment_method' => $ph['method'] ?: null,
-                        'amount'         => $amt,
-                        'receipt_number' => $ph['receipt'] ?: null,
+                        'booking_id'      => $booking->id,
+                        'user_id'         => Auth::id(),
+                        'payment_date'    => !empty($ph['date']) ? \Carbon\Carbon::parse($ph['date'])->toDateString() : now()->toDateString(),
+                        'payment_method'  => $method,
+                        'amount'          => $amt,
+                        'receipt_number'  => $ph['receipt'] ?: null,
+                        'payment_details' => $paymentDetails ?: null,
                     ]);
                 }
             }

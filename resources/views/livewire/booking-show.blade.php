@@ -390,46 +390,52 @@
                 <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Return Date','model'=>"flightSegments.{$si}.return_date",'val'=>$seg['return_date'] ? \Carbon\Carbon::parse($seg['return_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 @endif
               </div>
-              {{-- Passenger Pricing (above PNR details, aggregated by type) --}}
+              {{-- Passenger Pricing grouped by type --}}
               @if(count($passengers) > 0)
                 @php
                   $pPtcOrder  = ['adult','gbe','child','infant'];
                   $pPtcLabels = ['adult'=>'Adult','gbe'=>'Youth','child'=>'Child','infant'=>'Infant'];
                   $pPtcColors = ['adult'=>'#332E9E','gbe'=>'#D83F87','child'=>'#D97706','infant'=>'#16A34A'];
                   $pPtcBg     = ['adult'=>'rgba(51,46,158,.07)','gbe'=>'rgba(216,63,135,.07)','child'=>'rgba(217,119,6,.07)','infant'=>'rgba(22,163,74,.07)'];
+                  // First passenger index per type (editing wires to this; updatedFlightSegments syncs the rest)
+                  $pTypeFirstIdx = [];
+                  foreach ($passengers as $pi => $p) {
+                      $t = $p['type'] ?? 'adult';
+                      if (!isset($pTypeFirstIdx[$t])) $pTypeFirstIdx[$t] = $pi;
+                  }
                 @endphp
                 <div class="mb-3 pb-3" style="border-bottom:2px solid rgba(51,46,158,.07);">
                   <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;margin-bottom:8px;">Cost per Passenger Type</div>
-                  {{-- per-pax input rows --}}
-                  @foreach($passengers as $pi => $p)
-                    @php
-                      $pType = $p['type'] ?? 'adult';
-                      $pColor = $pPtcColors[$pType] ?? '#332E9E';
-                      $pBg    = $pPtcBg[$pType] ?? 'rgba(51,46,158,.07)';
-                      $pNum   = 1; for ($j=0; $j<$pi; $j++) { if(($passengers[$j]['type']??'')===$pType) $pNum++; }
-                      $pLabel = ($pPtcLabels[$pType]??'Pax').' '.$pNum;
-                    @endphp
-                    <div style="display:grid;grid-template-columns:1fr 120px 120px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(51,46,158,.04);">
-                      <span style="padding:2px 9px;border-radius:20px;background:{{ $pBg }};color:{{ $pColor }};font-size:.62rem;font-weight:700;display:inline-block;width:fit-content;">{{ $pLabel }}</span>
-                      <div>
-                        <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Cost</div>
-                        @if($canEditFlightHotel)
-                          @if(!$flightSectionEditing)<div><span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span></div>
-                          @else<div><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.cost" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>@endif
-                        @else
-                          <span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span>
-                        @endif
+                  @foreach($pPtcOrder as $pType)
+                    @if(isset($pTypeFirstIdx[$pType]))
+                      @php
+                        $pi     = $pTypeFirstIdx[$pType];
+                        $pColor = $pPtcColors[$pType];
+                        $pBg    = $pPtcBg[$pType];
+                        $pLabel = $pPtcLabels[$pType];
+                      @endphp
+                      <div style="display:grid;grid-template-columns:1fr 120px 120px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(51,46,158,.04);">
+                        <span style="padding:2px 9px;border-radius:20px;background:{{ $pBg }};color:{{ $pColor }};font-size:.62rem;font-weight:700;display:inline-block;width:fit-content;">{{ $pLabel }}</span>
+                        <div>
+                          <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Cost</div>
+                          @if($canEditFlightHotel)
+                            @if(!$flightSectionEditing)<div><span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span></div>
+                            @else<div><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.cost" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>@endif
+                          @else
+                            <span style="font-size:.7rem;font-weight:600;color:#374151;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['cost'] ?? 0), 2) }}</span>
+                          @endif
+                        </div>
+                        <div>
+                          <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Sold</div>
+                          @if($canEditFlightHotel)
+                            @if(!$flightSectionEditing)<div><span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span></div>
+                            @else<div><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.sold" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>@endif
+                          @else
+                            <span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span>
+                          @endif
+                        </div>
                       </div>
-                      <div>
-                        <div style="font-size:.56rem;color:#94A3B8;margin-bottom:2px;">Sold</div>
-                        @if($canEditFlightHotel)
-                          @if(!$flightSectionEditing)<div><span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span></div>
-                          @else<div><input type="number" wire:model.blur="flightSegments.{{ $si }}.passenger_costs.{{ $pi }}.sold" step="0.01" min="0" class="bv-input-inline" style="font-size:.7rem;padding:3px 6px;width:100%;" placeholder="0.00"></div>@endif
-                        @else
-                          <span style="font-size:.7rem;font-weight:700;color:#111827;">&pound;{{ number_format((float)($seg['passenger_costs'][$pi]['sold'] ?? 0), 2) }}</span>
-                        @endif
-                      </div>
-                    </div>
+                    @endif
                   @endforeach
                 </div>
               @endif
@@ -918,7 +924,16 @@
           $excCost    = (float)($excursion_actual_cost ?: 0);
           $excSold    = (float)($excursion_selling_price ?: 0);
           $ccAmt      = (float)($cc_charges ?: 0);
-          $ccRate     = $booking->payment?->cc_charge_rate ?? null;
+          // Derive rate(s) from per-transaction payment_details so multiple
+          // charges with the same/different rates are reflected accurately.
+          $ccRates = $booking->paymentHistory
+              ?->filter(fn($ph) => $ph->status === 'approved')
+              ?->pluck('payment_details.cc_charge_rate')
+              ?->filter(fn($r) => $r !== null && $r > 0)
+              ?->unique()
+              ?->values()
+              ?->toArray() ?? [];
+          $ccRate = count($ccRates) === 1 ? $ccRates[0] : (count($ccRates) > 1 ? 'mixed' : ($booking->payment?->cc_charge_rate ?? null));
         @endphp
         <div style="border-top:1px solid rgba(51,46,158,.06);">
 
@@ -1087,8 +1102,10 @@
               <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);margin-bottom:10px;">
                 <div>
                   <span style="font-size:.62rem;font-weight:700;color:#DC2626;">CC Charges</span>
-                  @if($ccRate)
+                  @if($ccRate && $ccRate !== 'mixed')
                     <span style="font-size:.56rem;color:#94A3B8;margin-left:4px;">({{ $ccRate }}%)</span>
+                  @elseif($ccRate === 'mixed')
+                    <span style="font-size:.56rem;color:#94A3B8;margin-left:4px;" title="Multiple charges at different rates">(mixed rates)</span>
                   @endif
                 </div>
                 <span style="font-size:.72rem;font-weight:800;color:#DC2626;">–&pound;{{ number_format($ccAmt,2) }}</span>
@@ -1139,7 +1156,9 @@
                   <span class="d-block" style="font-size:.6rem;color:#64748B;">{{ ucfirst(str_replace('_',' ',$ph->payment_method ?? 'N/A')) }} · {{ \Carbon\Carbon::parse($ph->payment_date)->format('d M Y') }}</span>
                 </div>
                 <span style="font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:10px;{{ $status==='approved' ? 'color:#16A34A;background:rgba(22,163,74,.08);' : 'color:#F59E0B;background:rgba(245,158,11,.08);' }}">{{ $statusLabel }}</span>
-
+                @if(Auth::user()->role === 'admin')
+                  <button type="button" wire:click="deletePaymentHistory({{ $ph->id }})" onclick="return confirm('Delete this payment record?')" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:5px;padding:1px 7px;font-size:.6rem;cursor:pointer;flex-shrink:0;">✕</button>
+                @endif
               </div>
             @endforeach
           @else
