@@ -24,6 +24,7 @@ class BookingPayment extends Model
         'payment_mode',
         'payment_mode_2',
         'cc_charges',
+        'cc_charge_rate',
         'margin_without_cc',
         'total_margin_amount',
         'invoice_generated',

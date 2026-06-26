@@ -124,6 +124,8 @@ class BookingShow extends Component
     public $chargeAmount = '';
     public $chargeMethod = '';
     public $chargeReceipt = '';
+    public $chargeCcRate = '';
+    public $chargeCcAmount = '';
 
     // Card payment fields
     public $card_number = '';
@@ -1406,6 +1408,8 @@ class BookingShow extends Component
         $this->chargeAmount = '';
         $this->chargeMethod = '';
         $this->chargeReceipt = '';
+        $this->chargeCcRate = '';
+        $this->chargeCcAmount = '';
         $this->card_number = '';
         $this->card_expiry = '';
         $this->card_cvv = '';
@@ -1449,13 +1453,57 @@ class BookingShow extends Component
         AuditLogger::log(Auth::user(), $this->booking, 'payment_requested', 'Payment charge of £' . number_format((float)$this->chargeAmount, 2) . ' requested via ' . $this->chargeMethod);
         $this->logActivity('Request Payment Charge', '£' . number_format((float)$this->chargeAmount, 2) . ' via ' . ucwords(str_replace('_', ' ', $this->chargeMethod)), 'update', bypassViewerCheck: true);
 
+        // Save CC rate and charges to booking_payments so Cost & Margin box reflects them
+        $this->recalculateChargeCcAmount();
+        if ($this->booking->payment) {
+            $this->booking->payment->update([
+                'cc_charge_rate' => $this->chargeCcRate ?: null,
+                'cc_charges'     => $this->chargeCcAmount ?: 0,
+            ]);
+        }
+
         $this->showChargeModal = false;
         $this->chargeAmount = '';
         $this->chargeMethod = '';
         $this->chargeReceipt = '';
-        $this->booking->load('paymentHistory');
+        $this->chargeCcRate = '';
+        $this->chargeCcAmount = '';
+        $this->booking->load('payment', 'paymentHistory');
         $this->activityLog = $this->buildActivityLog($this->booking);
         session()->flash('success', 'Payment charge requested successfully.');
+    }
+
+    // ── CC charge rate auto-calculation ──────────────────────────────
+    public function updatedChargeMethod(): void
+    {
+        $cardRates = [
+            'epay_debit'   => 1.5,
+            'epay_credit'  => 2.5,
+            'debit_card'   => 1.5,
+            'credit_card'  => 2.5,
+            'amex'         => 2.5,
+        ];
+        if (isset($cardRates[$this->chargeMethod])) {
+            $this->chargeCcRate = $cardRates[$this->chargeMethod];
+            $this->recalculateChargeCcAmount();
+        } else {
+            $this->chargeCcRate = '';
+            $this->chargeCcAmount = 0;
+        }
+    }
+
+    public function updatedChargeCcRate(): void
+    {
+        $this->recalculateChargeCcAmount();
+    }
+
+    private function recalculateChargeCcAmount(): void
+    {
+        $amount = (float)($this->chargeAmount ?: 0);
+        $rate   = (float)($this->chargeCcRate ?: 0);
+        $this->chargeCcAmount = $rate > 0 && $amount > 0
+            ? round($amount * $rate / 100, 2)
+            : 0;
     }
 
     // ── Comments ───────────────────────────────────────────────────────

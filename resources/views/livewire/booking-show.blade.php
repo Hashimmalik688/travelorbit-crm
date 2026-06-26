@@ -1275,16 +1275,36 @@
         @endif
 
         {{-- Amount & Receipt --}}
-        <div class="row g-3 mb-2">
-          <div class="col-6">
-            <label class="bv-label">Amount (&pound;)</label>
-            <input type="number" wire:model="chargeAmount" step="0.01" min="1" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.85rem;font-weight:700;" placeholder="0.00">
-            @error('chargeAmount') <small class="text-danger">{{ $message }}</small> @enderror
-          </div>
-          <div class="col-6">
-            <label class="bv-label">Receipt # (optional)</label>
-            <input type="text" wire:model="chargeReceipt" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.82rem;" placeholder="Receipt number">
-          </div>
+        <div class="row g-3 mb-2" wire:key="charge-amt-row">
+          @if(in_array($chargeMethod, ['epay_credit','credit_card','debit_card','amex']))
+            <div class="col-3" wire:key="chg-amt-col">
+              <label class="bv-label">Amount (&pound;)</label>
+              <input type="number" wire:model="chargeAmount" step="0.01" min="1" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.85rem;font-weight:700;" placeholder="0.00">
+              @error('chargeAmount') <small class="text-danger">{{ $message }}</small> @enderror
+            </div>
+            <div class="col-3" wire:key="chg-rate-col">
+              <label class="bv-label">CC Charge Rate (%)</label>
+              <input type="number" wire:model.live.debounce.500ms="chargeCcRate" step="0.1" min="0" max="100" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.82rem;" placeholder="2.5">
+            </div>
+            <div class="col-3" wire:key="chg-cc-col">
+              <label class="bv-label">CC Charge (&pound;)</label>
+              <div style="padding:8px 12px;font-size:.85rem;font-weight:700;color:#DC2626;background:#FFF1F0;border-radius:10px;border:1px solid rgba(220,38,38,.12);">&pound;{{ number_format((float)$chargeCcAmount, 2) }}</div>
+            </div>
+            <div class="col-3" wire:key="chg-rec-col">
+              <label class="bv-label">Receipt # (optional)</label>
+              <input type="text" wire:model="chargeReceipt" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.82rem;" placeholder="Receipt number">
+            </div>
+          @else
+            <div class="col-6" wire:key="chg-amt-col">
+              <label class="bv-label">Amount (&pound;)</label>
+              <input type="number" wire:model="chargeAmount" step="0.01" min="1" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.85rem;font-weight:700;" placeholder="0.00">
+              @error('chargeAmount') <small class="text-danger">{{ $message }}</small> @enderror
+            </div>
+            <div class="col-6" wire:key="chg-rec-col">
+              <label class="bv-label">Receipt # (optional)</label>
+              <input type="text" wire:model="chargeReceipt" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:.82rem;" placeholder="Receipt number">
+            </div>
+          @endif
         </div>
 
         <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.08);">
