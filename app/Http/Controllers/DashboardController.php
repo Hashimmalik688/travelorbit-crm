@@ -149,18 +149,22 @@ class DashboardController extends Controller
         $myTotalBookings = Booking::where('user_id', $userId)->whereBetween('created_at', [$som, $eom])->count();
         $myTodayBookings = Booking::where('user_id', $userId)->whereDate('created_at', today())->count();
 
-        // ── FRESH: total revenue (sold) from all bookings ever ──
+        $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan'];
+
+        // ── FRESH: total revenue (sold) from bookings NOT yet issued ──
         $myFresh = (float) DB::table('booking_passengers')
             ->join('bookings', 'bookings.id', '=', 'booking_passengers.booking_id')
             ->where('bookings.user_id', $userId)
             ->whereNull('bookings.deleted_at')
+            ->whereNotIn('bookings.booking_status', $issuedStatuses)
             ->sum('booking_passengers.sold_per_pax');
 
-        // ── ISSUED: total amount actually received (payment history) ──
+        // ── ISSUED: total amount actually received for issued bookings ──
         $myIssued = (float) DB::table('booking_payment_history')
             ->join('bookings', 'bookings.id', '=', 'booking_payment_history.booking_id')
             ->where('bookings.user_id', $userId)
             ->whereNull('bookings.deleted_at')
+            ->whereIn('bookings.booking_status', $issuedStatuses)
             ->sum('booking_payment_history.amount');
 
         // ── PENDING: total outstanding balance ──

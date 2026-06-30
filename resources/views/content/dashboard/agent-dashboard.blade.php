@@ -103,8 +103,8 @@
 <div class="row g-3 mb-4 ad-up d2">
   @php
     $moneyStats = [
-      ['key'=>'fresh',  'label'=>'Fresh',   'sub'=>'Total revenue all-time',      'val'=>$myFresh,   'icon'=>'ph ph-trend-up',      'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)','hint'=>'All sold revenue from day 1 to today'],
-      ['key'=>'issued', 'label'=>'Issued',  'sub'=>'Payments received',           'val'=>$myIssued,  'icon'=>'ph ph-check-circle',  'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)','hint'=>'Total amount actually collected'],
+      ['key'=>'fresh',  'label'=>'Fresh',   'sub'=>'Margin not yet issued',       'val'=>$myFresh,   'icon'=>'ph ph-trend-up',      'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)','hint'=>'Revenue from bookings not yet issued'],
+      ['key'=>'issued', 'label'=>'Issued',  'sub'=>'Margin issued',               'val'=>$myIssued,  'icon'=>'ph ph-check-circle',  'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)','hint'=>'Payments collected for issued bookings'],
       ['key'=>'pending','label'=>'Pending', 'sub'=>'Outstanding balance',         'val'=>$myPending, 'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)','hint'=>'Remaining unpaid balance across all bookings'],
     ];
   @endphp
