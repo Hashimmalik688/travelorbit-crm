@@ -1258,10 +1258,13 @@ a:hover { color: var(--to-indigo); }
 .to-date-trigger--open, .to-date-trigger-sm--open { border-color: #332E9E; box-shadow: 0 0 0 3px rgba(51,46,158,0.10); }
 
 .to-date-dropdown-c, .to-date-dropdown-sm-c {
-  position: fixed; z-index: 99999;
+  position: absolute; top: 100%; left: 0; z-index: 99999;
   background: #fff; border-radius: 14px; border: 1px solid rgba(51,46,158,0.12);
   box-shadow: 0 8px 32px rgba(32,36,43,0.12), 0 2px 8px rgba(51,46,158,0.06);
   padding: 12px; width: 280px;
+}
+.to-date-dropdown-c--up, .to-date-dropdown-sm-c--up {
+  top: auto; bottom: 100%;
 }
 
 .to-date-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 4px; }

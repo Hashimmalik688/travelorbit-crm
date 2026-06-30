@@ -151,21 +151,19 @@ class DashboardController extends Controller
 
         $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan'];
 
-        // ── FRESH: total revenue (sold) from bookings NOT yet issued ──
-        $myFresh = (float) DB::table('booking_passengers')
-            ->join('bookings', 'bookings.id', '=', 'booking_passengers.booking_id')
-            ->where('bookings.user_id', $userId)
-            ->whereNull('bookings.deleted_at')
-            ->whereNotIn('bookings.booking_status', $issuedStatuses)
-            ->sum('booking_passengers.sold_per_pax');
+        // ── FRESH: margin (sale - cost) from bookings NOT yet issued ──
+        $freshBookings = Booking::where('user_id', $userId)
+            ->whereNotIn('booking_status', $issuedStatuses)
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas'])
+            ->get();
+        $myFresh = (float) $freshBookings->sum(fn (Booking $b) => $b->total_margin);
 
-        // ── ISSUED: total amount actually received for issued bookings ──
-        $myIssued = (float) DB::table('booking_payment_history')
-            ->join('bookings', 'bookings.id', '=', 'booking_payment_history.booking_id')
-            ->where('bookings.user_id', $userId)
-            ->whereNull('bookings.deleted_at')
-            ->whereIn('bookings.booking_status', $issuedStatuses)
-            ->sum('booking_payment_history.amount');
+        // ── ISSUED: margin (sale - cost) from issued bookings ──
+        $issuedBookings = Booking::where('user_id', $userId)
+            ->whereIn('booking_status', $issuedStatuses)
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas'])
+            ->get();
+        $myIssued = (float) $issuedBookings->sum(fn (Booking $b) => $b->total_margin);
 
         // ── PENDING: total outstanding balance ──
         $myPending = (float) \App\Models\BookingPayment::whereHas('booking', fn ($q) => $q->where('user_id', $userId))
@@ -180,34 +178,22 @@ class DashboardController extends Controller
             ->pluck('total', 'day')
             ->toArray();
 
-        // ── Last 12 months booking days - for the navigable calendar ──
-        $allMonthData = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $m    = $now->copy()->subMonths($i);
-            $mSom = $m->copy()->startOfMonth();
-            $mEom = $m->copy()->endOfMonth();
-            $days = Booking::where('user_id', $userId)
-                ->whereBetween('created_at', [$mSom, $mEom])
-                ->selectRaw('DATE(created_at) as day, count(*) as total')
-                ->groupBy('day')
-                ->pluck('total', 'day')
-                ->toArray();
-            $startDow = (int) $mSom->dayOfWeek;
-            $startDow = $startDow === 0 ? 6 : $startDow - 1;
-            $key = $m->format('Y-m');
-            $allMonthData[$key] = [
-                'label'       => $m->format('F Y'),
-                'shortLabel'  => $m->format('M Y'),
-                'daysInMonth' => $m->daysInMonth,
+        // ── Current month calendar data ──
+        $startDow = (int) $som->dayOfWeek;
+        $startDow = $startDow === 0 ? 6 : $startDow - 1;
+        $currentKey = $now->format('Y-m');
+        $allMonthData = [
+            $currentKey => [
+                'label'       => $now->format('F Y'),
+                'daysInMonth' => $now->daysInMonth,
                 'startDow'    => $startDow,
-                'days'        => $days,
-                'total'       => array_sum($days),
-                'year'        => $m->year,
-                'month'       => $m->month,
-                'key'         => $key,
-                'isCurrent'   => $m->isSameMonth($now),
-            ];
-        }
+                'days'        => $calendarDays,
+                'total'       => array_sum($calendarDays),
+                'year'        => $now->year,
+                'month'       => $now->month,
+                'isCurrent'   => true,
+            ],
+        ];
 
         // ── Recent bookings ──
         $myRecentBookings = Booking::where('user_id', $userId)

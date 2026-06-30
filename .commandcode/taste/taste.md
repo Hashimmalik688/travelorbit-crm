@@ -28,6 +28,10 @@ See [design/taste.md](design/taste.md)
 - Every action in the CRM must be logged in the activity log — including payment charge request approvals, view actions, and any action regardless of who performs it. Nothing is exempt from logging; logging applies to every account and every action, including view/access events. Confidence: 0.92
 - Activity log entries and comments are immutable once created — snapshot agent name, avatar_url, and avatar_initials into the log entry at write time; never re-resolve from current user records at read time. Old log entries must never change even if users are renamed, deleted, or their profile photos change. Confidence: 0.85
 
+# Dashboard
+- Agent dashboard Fresh KPI must show margin (sale_price minus cost_price) for non-issued bookings, not just raw sold/revenue amounts. Confidence: 0.65
+- Dashboard KPI values (Fresh, Issued, Pending) should display with up to 2 decimal places (e.g., £1,234.56). Confidence: 0.70
+
 # Communication
 - Keep responses brief and action-focused; avoid extra explanation, verbose descriptions, or commentary unless explicitly requested. Confidence: 0.75
 

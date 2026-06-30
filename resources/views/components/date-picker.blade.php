@@ -29,7 +29,7 @@ $inputClass = $compact ? 'to-date-input-text-sm' : 'to-date-input-text';
     </button>
   </div>
   <div x-show="open" x-transition class="{{ $ddClass }}"
-    :style="{ top: ddTop + 'px', left: ddLeft + 'px' }" x-cloak>
+    :class="{ 'to-date-dropdown-sm-c--up': dropUp }" x-cloak>
     <div class="to-date-nav">
       <button type="button" x-on:click="prevMonth()" class="to-date-nav-btn">&larr;</button>
       <select x-model="viewMonth" class="to-date-select-m">

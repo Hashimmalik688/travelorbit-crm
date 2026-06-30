@@ -103,8 +103,8 @@
 <div class="row g-3 mb-4 ad-up d2">
   @php
     $moneyStats = [
-      ['key'=>'fresh',  'label'=>'Fresh',   'sub'=>'Margin not yet issued',       'val'=>$myFresh,   'icon'=>'ph ph-trend-up',      'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)','hint'=>'Revenue from bookings not yet issued'],
-      ['key'=>'issued', 'label'=>'Issued',  'sub'=>'Margin issued',               'val'=>$myIssued,  'icon'=>'ph ph-check-circle',  'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)','hint'=>'Payments collected for issued bookings'],
+      ['key'=>'fresh',  'label'=>'Fresh',   'sub'=>'Margin not yet issued',       'val'=>$myFresh,   'icon'=>'ph ph-trend-up',      'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)','hint'=>'Margin (sale price minus cost) for non-issued bookings'],
+      ['key'=>'issued', 'label'=>'Issued',  'sub'=>'Margin issued',               'val'=>$myIssued,  'icon'=>'ph ph-check-circle',  'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)','hint'=>'Margin (sale price minus cost) for issued bookings'],
       ['key'=>'pending','label'=>'Pending', 'sub'=>'Outstanding balance',         'val'=>$myPending, 'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)','hint'=>'Remaining unpaid balance across all bookings'],
     ];
   @endphp
@@ -118,8 +118,8 @@
           <span style="font-size:.62rem;color:#94A3B8;text-align:right;max-width:100px;line-height:1.3;">{{ $ms['hint'] }}</span>
         </div>
         <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:4px;">{{ $ms['label'] }}</div>
-        <div class="ad-count" data-target="{{ (int)$ms['val'] }}" style="font-size:1.75rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1;">
-          £{{ number_format($ms['val'], 0) }}
+        <div class="ad-count" data-target="{{ $ms['val'] }}" style="font-size:1.75rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1;">
+          £{{ number_format($ms['val'], 2) }}
         </div>
         <div style="font-size:.71rem;color:#64748B;margin-top:4px;">{{ $ms['sub'] }}</div>
       </div>
@@ -256,30 +256,17 @@
     @endif
 
     {{-- Calendar --}}
-    @php $monthKeys = array_keys($allMonthData); $currentKey = now()->format('Y-m'); @endphp
+    @php $currentKey = now()->format('Y-m'); @endphp
     <div class="ad-up d4" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);"
       x-data="{
-        months: @js($allMonthData),
-        keys:   @js($monthKeys),
-        idx:    {{ count($monthKeys) - 1 }},
-        get cur(){ return this.months[this.keys[this.idx]]; },
-        prev(){ if(this.idx > 0) this.idx--; },
-        next(){ if(this.idx < this.keys.length-1) this.idx++; }
+        cur: @js($allMonthData[$currentKey])
       }">
 
-      {{-- Header with nav --}}
-      <div class="px-4 pt-4 pb-2 d-flex align-items-center justify-content-between">
-        <button @click="prev" :disabled="idx===0"
-          style="width:28px;height:28px;border-radius:8px;background:rgba(51,46,158,.07);border:none;color:#332E9E;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;"
-          :style="idx===0?'opacity:.3;cursor:default;':''">‹</button>
-        <div class="text-center">
-          <div class="fw-bold" style="font-size:.88rem;color:#0F172A;" x-text="cur.label"></div>
-          <div style="font-size:.65rem;margin-top:1px;" x-text="cur.total + ' booking' + (cur.total!==1?'s':'')"
-            :style="cur.total>0?'color:#16A34A;font-weight:600;':'color:#CBD5E1;'"></div>
-        </div>
-        <button @click="next" :disabled="idx===keys.length-1"
-          style="width:28px;height:28px;border-radius:8px;background:rgba(51,46,158,.07);border:none;color:#332E9E;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;"
-          :style="idx===keys.length-1?'opacity:.3;cursor:default;':''">›</button>
+      {{-- Header --}}
+      <div class="px-4 pt-4 pb-2 text-center">
+        <div class="fw-bold" style="font-size:.88rem;color:#0F172A;" x-text="cur.label"></div>
+        <div style="font-size:.65rem;margin-top:1px;" x-text="cur.total + ' booking' + (cur.total!==1?'s':'')"
+          :style="cur.total>0?'color:#16A34A;font-weight:600;':'color:#CBD5E1;'"></div>
       </div>
 
       {{-- Legend --}}
@@ -326,14 +313,16 @@
 
 <script>
 document.querySelectorAll('.ad-count').forEach(el => {
-  const t = parseInt(el.getAttribute('data-target')) || 0;
+  const t = parseFloat(el.getAttribute('data-target')) || 0;
+  if (t === 0 && el.getAttribute('data-target') === '0') el.textContent = (el.getAttribute('data-prefix')||'') + '0.00';
   if (!t) return;
+  const isMoney = el.getAttribute('data-prefix') === '£';
   let s = 0, dur = 900;
-  const run = ts => { if (!s) s = ts; const p = Math.min((ts-s)/dur,1), e = 1-Math.pow(1-p,3); el.textContent = (el.textContent.includes('£') ? '£' : '') + Math.floor(e*t).toLocaleString(); if (p<1) requestAnimationFrame(run); else el.textContent = (el.getAttribute('data-prefix')||'') + t.toLocaleString(); };
+  const run = ts => { if (!s) s = ts; const p = Math.min((ts-s)/dur,1), e = 1-Math.pow(1-p,3); const v = e * t; el.textContent = (isMoney ? '£' : '') + (isMoney ? v.toFixed(2) : Math.floor(v).toLocaleString()); if (p<1) requestAnimationFrame(run); else el.textContent = (el.getAttribute('data-prefix')||'') + (isMoney ? t.toFixed(2) : t.toLocaleString()); };
   requestAnimationFrame(run);
 });
 document.querySelectorAll('[data-target]').forEach(el => {
-  const t = parseInt(el.getAttribute('data-target')) || 0;
+  const t = parseFloat(el.getAttribute('data-target')) || 0;
   const isGbp = el.closest('.ad-money') !== null;
   el.setAttribute('data-prefix', isGbp ? '£' : '');
 });

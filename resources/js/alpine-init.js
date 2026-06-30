@@ -86,8 +86,6 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('datePicker', (modelKey, withTime) => ({
     open: false,
     dropUp: false,
-    ddTop: 0,
-    ddLeft: 0,
     viewYear: new Date().getFullYear(),
     viewMonth: new Date().getMonth(),
     selectedDate: null,
@@ -233,20 +231,8 @@ document.addEventListener('alpine:init', () => {
     toggle() {
       if (this.open) { this.open = false; return; }
       if (this.selectedDate) { this.viewYear = this.selectedDate.getFullYear(); this.viewMonth = this.selectedDate.getMonth(); }
-      const rect = this.$el.getBoundingClientRect();
-      const zoom = parseFloat(getComputedStyle(document.body).zoom) || 1;
-      // Chrome 108+: getBoundingClientRect() returns visual (post-zoom) coords.
-      // position:fixed top/left are in logical (pre-zoom) coords when body has CSS zoom.
-      // Divide visual rect values by zoom to get the logical values needed for position:fixed.
-      const vw = window.innerWidth  / zoom;
-      const vh = window.innerHeight / zoom;
-      const ddW = 280, ddH = withTime ? 370 : 330;
-      let top  = rect.bottom / zoom + 4;
-      let left = rect.left   / zoom;
-      if (left + ddW > vw - 8) left = rect.right / zoom - ddW;
-      if (top  + ddH > vh - 8) top  = rect.top   / zoom - ddH - 4;
-      this.ddTop  = Math.max(8, top);
-      this.ddLeft = Math.max(8, left);
+      const ddH = withTime ? 370 : 330;
+      this.dropUp = shouldDropUp(this.$el, ddH);
       this.open = true;
     },
     close() { this.open = false; }
