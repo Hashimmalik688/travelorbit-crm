@@ -1777,7 +1777,7 @@ class BookingShow extends Component
             $oldExcursion = $b->excursion_data;
             $oldTransfers = $b->transfers()->get()->toArray();
 
-            if (!$this->isLocked) {
+            if (!$this->isLocked || in_array(Auth::user()->role, ['admin', 'manager'])) {
 
             // Activity JSON — build on in-memory entries (already includes all field-edit entries flushed live)
             $saveUser = Auth::user();
@@ -1859,7 +1859,7 @@ class BookingShow extends Component
             // Flight
             $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']) || (Auth::user()->role === 'agent' && $b->booking_status === 'pending');
             if ($canEditFlightHotel) {
-                $hasFlightData = collect($this->flightSegments)->contains(fn($s) => $s['airline'] || $s['pnr'] || $s['departure_airport']);
+                $hasFlightData = collect($this->flightSegments)->contains(fn($s) => $s['airline'] || $s['pnr'] || $s['departure_airport'] || $s['cabin'] || $s['locator']);
                 if ($hasFlightData) {
                     BookingFlightDetail::where('booking_id', $b->id)->delete();
                     foreach ($this->flightSegments as $seg) {
@@ -2120,7 +2120,7 @@ class BookingShow extends Component
             $oldExcursion = $b->excursion_data;
             $oldTransfers = $b->transfers()->get()->toArray();
 
-            if (!$this->isLocked) {
+            if (!$this->isLocked || in_array(Auth::user()->role, ['admin', 'manager'])) {
                 $b->update([
                     'booking_type' => $this->booking_type,
                     'passenger_count' => count($this->passengers),
@@ -2162,7 +2162,7 @@ class BookingShow extends Component
                 // Flight
                 $canEditFlightHotel = in_array(Auth::user()->role, ['admin', 'manager', 'operations', 'issuance']) || (Auth::user()->role === 'agent' && $b->booking_status === 'pending');
                 if ($canEditFlightHotel) {
-                    $hasFlightData = collect($this->flightSegments)->contains(fn($s) => $s['airline'] || $s['pnr'] || $s['departure_airport']);
+                    $hasFlightData = collect($this->flightSegments)->contains(fn($s) => $s['airline'] || $s['pnr'] || $s['departure_airport'] || $s['cabin'] || $s['locator']);
                     if ($hasFlightData) {
                         BookingFlightDetail::where('booking_id', $b->id)->delete();
                         foreach ($this->flightSegments as $seg) {

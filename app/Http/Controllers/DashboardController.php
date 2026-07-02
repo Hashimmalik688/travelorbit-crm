@@ -110,17 +110,21 @@ class DashboardController extends Controller
         $som = $now->copy()->startOfMonth();
         $eom = $now->copy()->endOfMonth();
 
-        $readyToInvoice  = Booking::where('booking_status', 'ticket_in_process')->count();
-        $invoicedToday   = Booking::where('booking_status', 'invoiced')->whereDate('invoiced_at', today())->count();
-        $invoicedMonth   = Booking::where('booking_status', 'invoiced')->whereBetween('invoiced_at', [$som, $eom])->count();
+        $ticketsInProcess = Booking::where('booking_status', 'ticket_in_process')->count();
+        $readyToInvoice   = Booking::where('booking_status', 'issued')->count();
+        $invoicedToday    = Booking::where('booking_status', 'invoiced')->whereDate('invoiced_at', today())->count();
+        $invoicedMonth    = Booking::where('booking_status', 'invoiced')->whereBetween('invoiced_at', [$som, $eom])->count();
         $outstandingTotal = BookingPayment::where('balance_remaining', '>', 0)->sum('balance_remaining');
 
-        $recentBookings = Booking::whereIn('booking_status', ['ticket_in_process','invoiced','pending','confirmed'])
-            ->orderByDesc('updated_at')->take(15)->with(['user','payment'])->get();
+        $issueQueueBookings = Booking::where('booking_status', 'ticket_in_process')
+            ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
+
+        $invoiceQueueBookings = Booking::where('booking_status', 'issued')
+            ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
 
         return view('content.dashboard.accounts-dashboard', compact(
-            'readyToInvoice', 'invoicedToday', 'invoicedMonth',
-            'outstandingTotal', 'recentBookings'
+            'ticketsInProcess', 'readyToInvoice', 'invoicedToday', 'invoicedMonth',
+            'outstandingTotal', 'issueQueueBookings', 'invoiceQueueBookings'
         ));
     }
 

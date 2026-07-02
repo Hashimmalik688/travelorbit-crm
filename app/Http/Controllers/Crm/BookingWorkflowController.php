@@ -77,19 +77,20 @@ class BookingWorkflowController extends Controller
     public function markTicketInProcess(Booking $booking)
     {
         $this->authorize('markTicketInProcess', $booking);
+        $processedDate = request('processed_date', now()->toDateString());
         $booking->update([
             'booking_status'       => Booking::STATUS_TICKET_IN_PROCESS,
-            'ticket_processed_at'  => now(),
+            'ticket_processed_at'  => $processedDate . ' ' . now()->format('H:i:s'),
         ]);
         $reason = request('reason');
-        $detail = 'Ticket In Process' . ($reason ? " — $reason" : '');
+        $detail = 'Ticket In Process' . ($reason ? " — $reason" : '') . ' (Date: ' . $processedDate . ')';
         $this->appendBookingActivity($booking, 'status_changed', $detail);
         AuditLog::logAction(
             action: 'booking_ticket_in_process',
             user: Auth::user(),
             model: 'Booking',
             model_id: $booking->id,
-            description: "Booking #{$booking->booking_number} marked as Ticket in Process" . ($reason ? ": $reason" : ""),
+            description: "Booking #{$booking->booking_number} marked as Ticket in Process" . ($reason ? ": $reason" : "") . " (Date: {$processedDate})",
         );
         return back()->with('success', "Booking #{$booking->booking_number} marked as Ticket in Process.");
     }
@@ -110,6 +111,35 @@ class BookingWorkflowController extends Controller
             description: "Booking #{$booking->booking_number} invoiced",
         );
         return back()->with('success', "Booking #{$booking->booking_number} invoiced.");
+    }
+
+    public function issue(Booking $booking, Request $request)
+    {
+        $this->authorize('issue', $booking);
+
+        $request->validate([
+            'payment_type' => 'required|string|in:issued,issued_payment_plan,issued_payment_awaiting',
+        ]);
+
+        $paymentType = $request->input('payment_type');
+        $oldStatus = $booking->booking_status;
+
+        $booking->update([
+            'booking_status' => $paymentType,
+        ]);
+
+        $label = Booking::STATUS_LABELS[$paymentType] ?? 'Issued';
+
+        $this->appendBookingActivity($booking, 'status_changed', "Issued — {$label}");
+        AuditLog::logAction(
+            action: 'booking_issued',
+            user: Auth::user(),
+            model: 'Booking',
+            model_id: $booking->id,
+            description: "Booking #{$booking->booking_number} issued — {$label}",
+        );
+
+        return back()->with('success', "Booking #{$booking->booking_number} issued — {$label}.");
     }
 
     public function restoreToPending(Booking $booking)

@@ -32,8 +32,11 @@ See [design/taste.md](design/taste.md)
 - Agent dashboard Fresh KPI must show margin (sale_price minus cost_price) for non-issued bookings, not just raw sold/revenue amounts. Confidence: 0.65
 - Dashboard KPI values (Fresh, Issued, Pending) should display with up to 2 decimal places (e.g., £1,234.56). Confidence: 0.70
 
+# Bootstrap 5
+- When modals need `backdrop: false`, initialize them manually via `new bootstrap.Modal(el, { backdrop: false })` in JavaScript rather than relying on `data-bs-backdrop="false"` HTML attribute, which is unreliable. Remove `data-bs-toggle` and `data-bs-target` from trigger buttons and use `.show(btn)` to pass `relatedTarget`. Confidence: 0.70
+
 # Communication
-- Keep responses brief and action-focused; avoid extra explanation, verbose descriptions, or commentary unless explicitly requested. Confidence: 0.75
+- Keep responses brief and action-focused; avoid extra explanation, verbose descriptions, or commentary unless explicitly requested. Confidence: 0.80
 
 # Project Scope
 - Never edit files outside the TravelOrbit CRM project directory (/opt/travelorbit-crm) — do not navigate to, read, or modify files in other projects (e.g., taurus-crm) even when investigating errors or searching for patterns. Stay strictly within the current project. Confidence: 0.90

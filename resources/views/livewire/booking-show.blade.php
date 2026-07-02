@@ -854,7 +854,7 @@
         @endif
 
         {{-- Instalments --}}
-        @if($selected_payment_method)
+        @if($selected_payment_method && $selected_payment_method !== 'full')
           <div style="margin-top:{{ $paymentSectionEditing ? '14px' : '0' }};padding:14px 16px;background:linear-gradient(135deg,#F8FAFF,#EEF2FF);border-radius:12px;border:1px solid rgba(51,46,158,.10);">
             <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#332E9E;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ph ph-calendar-blank"></i> Instalments</div>
             @foreach($payment_instalments as $i => $inst)
@@ -1173,7 +1173,21 @@
         </div>
 
         {{-- DOCUMENTS --}}
-        <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
+        <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);" x-data="{
+            preview: null,
+            loading: false,
+            docs: {{ Js::from($booking->documents->map(fn($d) => [
+                'id' => $d->id,
+                'file_name' => $d->file_name,
+                'file_path' => Storage::url($d->file_path),
+                'document_type' => $d->document_type,
+                'ext' => strtolower(pathinfo($d->file_name, PATHINFO_EXTENSION)),
+            ])->values()) }},
+            open(doc) { this.loading = true; this.preview = doc; },
+            close() { this.loading = false; this.preview = null; },
+            isImage(doc) { return ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(doc.ext); },
+            isPdf(doc) { return doc.ext === 'pdf'; }
+        }">
           <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:6px;">Documents</div>
 
           {{-- Existing documents --}}
@@ -1181,7 +1195,7 @@
             <div style="margin-bottom:8px;">
               @foreach($booking->documents as $doc)
                 <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:7px;">
-                  <button type="button" wire:click="previewDocument({{ $doc->id }})" style="background:none;border:none;font-size:.72rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;">
+                  <button type="button" @click="open(docs.find(d => d.id === {{ $doc->id }}))" style="background:none;border:none;font-size:.72rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;">
                     <i class="ph ph-file me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }}
                     <span style="font-size:.6rem;color:#94A3B8;font-weight:500;margin-left:6px;">{{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</span>
                   </button>
@@ -1223,10 +1237,60 @@
           </button>
           @endif
         </div>
+
+        {{-- Alpine-driven preview modal (instant open/close, no server round-trip) --}}
+        <template x-if="preview">
+          <div x-show="preview" x-transition.opacity.duration.100ms
+               style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:32px;"
+               @click="close()">
+            <div x-show="preview" x-transition.scale.origin.top.duration.100ms
+                 style="background:#fff;border-radius:20px;width:100%;max-width:1400px;max-height:95vh;display:flex;flex-direction:column;box-shadow:0 32px 96px rgba(0,0,0,.4);overflow:hidden;"
+                 @click.stop="">
+              <div style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(51,46,158,.08);flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <i class="ph ph-file-text" style="font-size:1.1rem;color:#332E9E;"></i>
+                  <div>
+                    <div style="font-size:.8rem;font-weight:700;color:#0F172A;" x-text="preview.file_name"></div>
+                    <div style="font-size:.64rem;color:#94A3B8;" x-text="preview.document_type ? preview.document_type.charAt(0).toUpperCase() + preview.document_type.slice(1).replace(/_/g,' ') : 'Document'"></div>
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <a :href="preview.file_path" target="_blank" style="background:rgba(51,46,158,.08);color:#332E9E;border:none;border-radius:8px;padding:6px 14px;font-size:.68rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download</a>
+                  <button type="button" @click="close()" style="background:rgba(0,0,0,.06);color:#64748B;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;">✕</button>
+                </div>
+              </div>
+              <div style="overflow-y:auto;flex:1;background:#F1F5F9;display:flex;align-items:center;justify-content:center;padding:24px;min-height:300px;">
+                <template x-if="isImage(preview)">
+                  <img :src="preview.file_path" :alt="preview.file_name" loading="lazy"
+                       style="max-width:100%;max-height:88vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);"
+                       x-on:load="loading = false" x-on:error="loading = false">
+                </template>
+                <template x-if="isPdf(preview)">
+                  <iframe :src="preview.file_path" loading="lazy"
+                          style="width:100%;height:88vh;border:none;border-radius:12px;"
+                          x-on:load="loading = false"></iframe>
+                </template>
+                <template x-if="!isImage(preview) && !isPdf(preview)">
+                  <div style="text-align:center;padding:40px;color:#64748B;">
+                    <i class="ph ph-file-x" style="font-size:3rem;color:#CBD5E1;display:block;margin-bottom:12px;"></i>
+                    <div style="font-size:.9rem;font-weight:600;color:#1E293B;margin-bottom:4px;">Preview not available</div>
+                    <div style="font-size:.72rem;margin-bottom:16px;">This file type cannot be previewed inline.</div>
+                    <a :href="preview.file_path" target="_blank" style="background:#332E9E;color:#fff;border:none;border-radius:10px;padding:8px 20px;font-size:.73rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download to View</a>
+                  </div>
+                </template>
+                <div x-show="loading" style="position:absolute;display:flex;flex-direction:column;align-items:center;gap:12px;color:#64748B;">
+                  <div style="width:40px;height:40px;border:3px solid rgba(51,46,158,.12);border-top:3px solid #332E9E;border-radius:50%;" class="spinning"></div>
+                  <div style="font-size:.72rem;font-weight:600;">Loading document…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
-
   </div>
+
+</div>
 </div>
 
 {{-- REQUEST PAYMENT CHARGE MODAL --}}
@@ -1373,45 +1437,4 @@
   </div>
 @endif
 
-{{-- DOCUMENT PREVIEW MODAL --}}
-@if($previewDoc)
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:32px;" wire:click="closePreview">
-    <div style="background:#fff;border-radius:20px;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 96px rgba(0,0,0,.4);overflow:hidden;" wire:click.stop="">
-      {{-- Header --}}
-      <div style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(51,46,158,.08);flex-shrink:0;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <i class="ph ph-file-text" style="font-size:1.1rem;color:#332E9E;"></i>
-          <div>
-            <div style="font-size:.8rem;font-weight:700;color:#0F172A;">{{ $previewDoc->file_name }}</div>
-            <div style="font-size:.64rem;color:#94A3B8;">{{ $previewDoc->document_type ? ucfirst($previewDoc->document_type) : 'Document' }}</div>
-          </div>
-        </div>
-        <div class="d-flex gap-2">
-          <a href="{{ Storage::url($previewDoc->file_path) }}" target="_blank" style="background:rgba(51,46,158,.08);color:#332E9E;border:none;border-radius:8px;padding:6px 14px;font-size:.68rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download</a>
-          <button type="button" wire:click="closePreview" style="background:rgba(0,0,0,.06);color:#64748B;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;">✕</button>
-        </div>
-      </div>
-      {{-- Content --}}
-      <div style="overflow-y:auto;flex:1;background:#F1F5F9;display:flex;align-items:center;justify-content:center;padding:24px;min-height:300px;">
-        @php
-          $ext = strtolower(pathinfo($previewDoc->file_name, PATHINFO_EXTENSION));
-          $isImage = in_array($ext, ['jpg','jpeg','png','gif','webp','svg','bmp']);
-          $isPdf = $ext === 'pdf';
-        @endphp
-        @if($isImage)
-          <img src="{{ Storage::url($previewDoc->file_path) }}" alt="{{ $previewDoc->file_name }}" style="max-width:100%;max-height:70vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);">
-        @elseif($isPdf)
-          <iframe src="{{ Storage::url($previewDoc->file_path) }}" style="width:100%;height:70vh;border:none;border-radius:12px;"></iframe>
-        @else
-          <div style="text-align:center;padding:40px;color:#64748B;">
-            <i class="ph ph-file-x" style="font-size:3rem;color:#CBD5E1;display:block;margin-bottom:12px;"></i>
-            <div style="font-size:.9rem;font-weight:600;color:#1E293B;margin-bottom:4px;">Preview not available</div>
-            <div style="font-size:.72rem;margin-bottom:16px;">This file type cannot be previewed inline.</div>
-            <a href="{{ Storage::url($previewDoc->file_path) }}" target="_blank" style="background:#332E9E;color:#fff;border:none;border-radius:10px;padding:8px 20px;font-size:.73rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download to View</a>
-          </div>
-        @endif
-      </div>
-    </div>
-  </div>
-@endif
 </div>

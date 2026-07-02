@@ -54,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/bookings/{booking}/remove-issuance',   [BookingWorkflowController::class, 'removeFromIssuanceQueue'])->name('bookings.remove-issuance');
         Route::post('/bookings/{booking}/ticket-in-process', [BookingWorkflowController::class, 'markTicketInProcess'])->name('bookings.ticket-in-process');
         Route::post('/bookings/{booking}/restore-pending',   [BookingWorkflowController::class, 'restoreToPending'])->name('bookings.restore-pending');
+        Route::post('/bookings/{booking}/issue',             [BookingWorkflowController::class, 'issue'])->name('bookings.issue');
     });
 
     Route::middleware('role:admin,manager,operations,agent,accounts')->group(function () {

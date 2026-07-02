@@ -89,12 +89,14 @@ class Booking extends Model
         }
 
         if ($role === 'accounts') {
-            // Accounts can only act on ticket_in_process (to invoice)
             return !in_array($status, [
                 self::STATUS_TICKET_IN_PROCESS,
                 self::STATUS_INVOICED,
                 self::STATUS_PENDING,
                 self::STATUS_CONFIRMED,
+                self::STATUS_ISSUED,
+                self::STATUS_ISSUED_PAYMENT_PLAN,
+                self::STATUS_ISSUED_PAYMENT_AWAITING,
             ]);
         }
 
@@ -133,6 +135,11 @@ class Booking extends Model
     }
 
     public function canInvoice(): bool
+    {
+        return $this->booking_status === self::STATUS_ISSUED;
+    }
+
+    public function canIssue(): bool
     {
         return $this->booking_status === self::STATUS_TICKET_IN_PROCESS;
     }

@@ -104,15 +104,13 @@
           </div>
         </div>
         <div class="d-flex gap-1 flex-shrink-0">
-          <button type="button" class="is-btn" style="background:rgba(14,165,233,.12);color:#0369A1;"
-            data-bs-toggle="modal" data-bs-target="#processModal"
+          <button type="button" class="is-btn process-btn" style="background:rgba(14,165,233,.12);color:#0369A1;"
             data-booking-id="{{ $bk->id }}"
             data-booking-ref="{{ $bk->booking_number }}"
             data-route="{{ route('bookings.ticket-in-process', $bk) }}">
             <i class="ph ph-airplane-takeoff"></i> Process
           </button>
-          <button type="button" class="is-btn" style="background:rgba(220,38,38,.08);color:#DC2626;"
-            data-bs-toggle="modal" data-bs-target="#rejectModal"
+          <button type="button" class="is-btn reject-btn" style="background:rgba(220,38,38,.08);color:#DC2626;"
             data-booking-id="{{ $bk->id }}"
             data-booking-ref="{{ $bk->booking_number }}"
             data-route="{{ route('bookings.remove-issuance', $bk) }}">
@@ -128,37 +126,53 @@
 </div>
 
 {{-- ══ PROCESS MODAL ══ --}}
-<div class="modal fade" id="processModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-sm modal-dialog-centered">
+<div id="processModal" style="display:none;position:fixed;inset:0;z-index:1055;align-items:center;justify-content:center;background:rgba(15,23,42,0.3);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);">
+  <div style="background:#fff;border-radius:20px;width:400px;max-width:92vw;box-shadow:0 25px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.04);overflow:hidden;animation:processModalIn .25s ease;">
     <form method="POST" action="" id="processForm">
       @csrf
-      <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 24px 80px rgba(0,0,0,.25);">
-        <div class="modal-header" style="border-bottom:1px solid rgba(51,46,158,.06);padding:18px 22px;">
-          <h6 class="fw-bold mb-0" style="font-size:.82rem;display:flex;align-items:center;gap:8px;">
-            <span style="width:28px;height:28px;border-radius:8px;background:rgba(14,165,233,.12);display:flex;align-items:center;justify-content:center;">
-              <i class="ph ph-airplane-takeoff" style="font-size:.85rem;color:#0EA5E9;"></i>
-            </span>
-            Process Booking
-          </h6>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div style="background:linear-gradient(135deg,#0EA5E9 0%,#0284C7 100%);padding:20px 24px;position:relative;">
+        <div style="position:absolute;right:-30px;top:-30px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.08);pointer-events:none;"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;">
+            <i class="ph ph-airplane-takeoff" style="font-size:1.1rem;color:#fff;"></i>
+          </div>
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:#fff;">Process Booking</div>
+            <div style="font-size:.64rem;color:rgba(255,255,255,0.65);">Move to Ticket in Process</div>
+          </div>
         </div>
-        <div class="modal-body" style="padding:18px 22px;">
-          <p style="font-size:.75rem;color:#64748B;margin-bottom:12px;">
-            Mark <strong id="processBookingRef" style="color:#1E293B;"></strong> as <strong>Ticket in Process</strong>?
-          </p>
-          <div class="mb-2" style="font-size:.68rem;font-weight:600;color:#374151;">Reason <span style="color:#DC2626;">*</span></div>
-          <textarea name="reason" class="form-control" rows="3" style="font-size:.78rem;border-radius:10px;resize:vertical;" placeholder="Why is this booking being processed?" required></textarea>
+        <button type="button" onclick="document.getElementById('processModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.85rem;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">✕</button>
+      </div>
+      <div style="padding:20px 24px;">
+        <div style="background:#F8FAFC;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:.68rem;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px;">Booking Reference</div>
+          <div style="font-size:.90rem;font-weight:700;color:#0F172A;" id="processBookingRef"></div>
         </div>
-        <div class="modal-footer" style="border-top:1px solid rgba(51,46,158,.06);padding:14px 22px;">
-          <button type="button" class="btn btn-sm" style="background:rgba(51,46,158,.06);color:#64748B;border-radius:10px;font-size:.72rem;font-weight:600;" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-sm" style="background:#0EA5E9;color:#fff;border-radius:10px;font-size:.72rem;font-weight:600;border:none;">
-            <i class="ph ph-check"></i> Confirm Process
-          </button>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:.72rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Processed Date <span style="color:#DC2626;">*</span></label>
+          <input type="date" name="processed_date" id="processDate" class="form-control" style="font-size:.78rem;border-radius:10px;border-color:#E2E8F0;padding:9px 14px;" required>
         </div>
+        <div style="margin-bottom:4px;">
+          <label style="font-size:.72rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Reason <span style="color:#DC2626;">*</span></label>
+          <textarea name="reason" class="form-control" rows="3" style="font-size:.78rem;border-radius:10px;border-color:#E2E8F0;resize:vertical;padding:10px 14px;" placeholder="Why is this booking being processed?" required></textarea>
+        </div>
+      </div>
+      <div style="padding:14px 24px;border-top:1px solid #F1F5F9;display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" onclick="document.getElementById('processModal').style.display='none'" style="background:#F1F5F9;color:#64748B;border:none;border-radius:10px;padding:8px 18px;font-size:.74rem;font-weight:600;cursor:pointer;">Cancel</button>
+        <button type="submit" style="background:linear-gradient(135deg,#0EA5E9,#0284C7);color:#fff;border:none;border-radius:10px;padding:8px 24px;font-size:.74rem;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(14,165,233,0.3);">
+          <i class="ph ph-check" style="margin-right:5px;"></i> Confirm Process
+        </button>
       </div>
     </form>
   </div>
 </div>
+
+<style>
+@keyframes processModalIn {
+  from { opacity:0; transform:scale(.94) translateY(8px); }
+  to { opacity:1; transform:scale(1) translateY(0); }
+}
+</style>
 
 {{-- ══ REJECT MODAL ══ --}}
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
@@ -197,21 +211,33 @@
 {{-- ══ MODAL SCRIPT ══ --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const processModal = document.getElementById('processModal');
-  if (processModal) {
-    processModal.addEventListener('show.bs.modal', function (event) {
-      const btn = event.relatedTarget;
+  const processModalEl = document.getElementById('processModal');
+  document.querySelectorAll('.process-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(event) {
       document.getElementById('processForm').action = btn.getAttribute('data-route');
       document.getElementById('processBookingRef').textContent = btn.getAttribute('data-booking-ref');
+      document.getElementById('processDate').value = new Date().toISOString().split('T')[0];
+      processModalEl.style.display = 'flex';
     });
-  }
+  });
 
-  const rejectModal = document.getElementById('rejectModal');
-  if (rejectModal) {
-    rejectModal.addEventListener('show.bs.modal', function (event) {
+  processModalEl.addEventListener('click', function(e) {
+    if (e.target === processModalEl) processModalEl.style.display = 'none';
+  });
+
+  const rejectModalEl = document.getElementById('rejectModal');
+  let rejectModal;
+  if (rejectModalEl) {
+    rejectModal = new bootstrap.Modal(rejectModalEl, { backdrop: false, keyboard: false });
+    rejectModalEl.addEventListener('show.bs.modal', function (event) {
       const btn = event.relatedTarget;
       document.getElementById('rejectForm').action = btn.getAttribute('data-route');
       document.getElementById('rejectBookingRef').textContent = btn.getAttribute('data-booking-ref');
+    });
+    document.querySelectorAll('.reject-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        rejectModal.show(btn);
+      });
     });
   }
 });

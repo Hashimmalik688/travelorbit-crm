@@ -22,6 +22,7 @@ class BookingFlightDetail extends Model
         'airline',
         'vendor',
         'gds',
+        'cabin',
         'ticket_issue_limit',
         'atol',
         'safi',

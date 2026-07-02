@@ -71,6 +71,12 @@ class User extends Authenticatable
             && $booking->canInvoice();
     }
 
+    public function canIssue(Booking $booking): bool
+    {
+        return in_array($this->role, ['accounts', 'admin', 'manager'])
+            && $booking->canIssue();
+    }
+
     public function roleLabel(): string
     {
         return self::ROLE_LABELS[$this->role] ?? ucfirst($this->role);

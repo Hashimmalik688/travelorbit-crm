@@ -58,6 +58,11 @@ class BookingPolicy
         return $user->canInvoice($booking);
     }
 
+    public function issue(User $user, Booking $booking): bool
+    {
+        return $user->canIssue($booking);
+    }
+
     public function chargePayment(User $user, Booking $booking): bool
     {
         return $user->canChargePayment();
