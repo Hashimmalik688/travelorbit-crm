@@ -76,7 +76,7 @@
                 </a>
             @endforeach
         </div>
-    @elseif ($isOpen && strlen($query) >= 2)
+    @elseif ($isOpen && strlen($query) >= 1)
         <div class="position-absolute top-100 start-0 mt-2 bg-white rounded-3 shadow-lg p-3" style="width: 420px; z-index: 1050;">
             <small class="text-muted text-center d-block">No results found.</small>
         </div>

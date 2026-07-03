@@ -56,7 +56,7 @@
 
 @php
   $role       = Auth::user()->role;
-  $status     = $booking->booking_status;
+  $status     = $booking->booking_status === 'invoiced' ? 'issued' : $booking->booking_status;
   $btype      = $booking->booking_type ?? 'flight';
   $isPrivileged = in_array($role, ['admin', 'manager']);
   $isAdmin    = $role === 'admin';
@@ -138,9 +138,11 @@
 
 @php
   $stStatus = $booking->booking_status;
-  $stColors = \App\Models\Booking::STATUS_COLORS[$stStatus] ?? ['bg'=>'#64748B','text'=>'#fff','badge_bg'=>'rgba(148,163,184,.12)','badge_color'=>'#64748B'];
-  $stLabel  = \App\Models\Booking::STATUS_LABELS[$stStatus] ?? ucfirst(str_replace('_',' ',$stStatus));
-  $stIcon   = \App\Models\Booking::STATUS_ICONS[$stStatus] ?? 'ph-circle';
+  // "Invoiced" is a label displayed next to the booking number, not a banner status
+  $displayStatus = ($stStatus === 'invoiced') ? 'issued' : $stStatus;
+  $stColors = \App\Models\Booking::STATUS_COLORS[$displayStatus] ?? ['bg'=>'#64748B','text'=>'#fff','badge_bg'=>'rgba(148,163,184,.12)','badge_color'=>'#64748B'];
+  $stLabel  = \App\Models\Booking::STATUS_LABELS[$displayStatus] ?? ucfirst(str_replace('_',' ',$displayStatus));
+  $stIcon   = \App\Models\Booking::STATUS_ICONS[$displayStatus] ?? 'ph-circle';
   $typeIcons = ['flight'=>'ph-airplane','hotel'=>'ph-buildings','holiday'=>'ph-island','umrah'=>'ph-mosque','visa'=>'ph-identification-card','transfers'=>'ph-van','excursion'=>'ph-binoculars'];
   $typeIcon  = $typeIcons[$booking->booking_type ?? ''] ?? 'ph-ticket';
   $fd = $booking->flightDetail;
@@ -176,9 +178,27 @@
         <span class="d-flex align-items-center gap-1" style="font-size:.64rem;font-weight:500;color:#64748B;background:rgba(148,163,184,.08);padding:3px 8px;border-radius:10px;">
           <i class="ph {{ $typeIcon }}" style="color:#332E9E;font-size:.7rem;"></i> {{ ucfirst($booking->booking_type ?? '-') }}
         </span>
+
+        <span style="font-size:.72rem;color:#64748B;display:flex;align-items:center;gap:4px;">
+          <i class="ph ph-calendar" style="font-size:.8rem;color:#94A3B8;"></i>
+          {{ $booking->created_at->format('d M Y') }}
+        </span>
       </div>
     </div>
   </div>
+  @if($booking->invoiced_at)
+    <div style="position:relative;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+      <div style="transform:rotate(-12deg);border:4px double #D4A017;border-radius:10px;padding:10px 28px;background:linear-gradient(135deg,rgba(212,160,23,.08),rgba(255,215,0,.05));">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <i class="ph ph-seal-check" style="font-size:1.6rem;color:#D4A017;"></i>
+          <div>
+            <div style="font-size:.45rem;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:#D4A017;">Booking</div>
+            <div style="font-size:.95rem;font-weight:900;color:#D4A017;letter-spacing:.03em;line-height:1;">INVOICED</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  @endif
   <div class="d-flex gap-2 align-items-center flex-wrap">
 
     {{-- ── Action buttons: REQUEST dispositions only. Approvals/marking happen on dedicated dashboards. ── --}}
@@ -1179,12 +1199,12 @@
             docs: {{ Js::from($booking->documents->map(fn($d) => [
                 'id' => $d->id,
                 'file_name' => $d->file_name,
-                'file_path' => Storage::url($d->file_path),
+                'file_path' => Storage::disk('public')->url($d->file_path),
                 'document_type' => $d->document_type,
                 'ext' => strtolower(pathinfo($d->file_name, PATHINFO_EXTENSION)),
             ])->values()) }},
-            open(doc) { this.loading = true; this.preview = doc; },
-            close() { this.loading = false; this.preview = null; },
+            openDoc(doc) { this.loading = true; this.preview = doc; },
+            closeDoc() { this.loading = false; this.preview = null; },
             isImage(doc) { return ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(doc.ext); },
             isPdf(doc) { return doc.ext === 'pdf'; }
         }">
@@ -1195,7 +1215,7 @@
             <div style="margin-bottom:8px;">
               @foreach($booking->documents as $doc)
                 <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:7px;">
-                  <button type="button" @click="open(docs.find(d => d.id === {{ $doc->id }}))" style="background:none;border:none;font-size:.72rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;">
+                  <button type="button" @click="openDoc(docs.find(d => d.id === {{ $doc->id }}))" style="background:none;border:none;font-size:.72rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;">
                     <i class="ph ph-file me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }}
                     <span style="font-size:.6rem;color:#94A3B8;font-weight:500;margin-left:6px;">{{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</span>
                   </button>
@@ -1236,15 +1256,12 @@
             <i class="ph ph-upload-simple"></i> Upload Document
           </button>
           @endif
-        </div>
 
         {{-- Alpine-driven preview modal (instant open/close, no server round-trip) --}}
         <template x-if="preview">
-          <div x-show="preview" x-transition.opacity.duration.100ms
-               style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:32px;"
-               @click="close()">
-            <div x-show="preview" x-transition.scale.origin.top.duration.100ms
-                 style="background:#fff;border-radius:20px;width:100%;max-width:1400px;max-height:95vh;display:flex;flex-direction:column;box-shadow:0 32px 96px rgba(0,0,0,.4);overflow:hidden;"
+          <div style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:32px;"
+               @click="closeDoc()">
+            <div style="background:#fff;border-radius:20px;width:100%;max-width:1400px;max-height:95vh;display:flex;flex-direction:column;box-shadow:0 32px 96px rgba(0,0,0,.4);overflow:hidden;"
                  @click.stop="">
               <div style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(51,46,158,.08);flex-shrink:0;">
                 <div style="display:flex;align-items:center;gap:10px;">
@@ -1256,7 +1273,7 @@
                 </div>
                 <div class="d-flex gap-2">
                   <a :href="preview.file_path" target="_blank" style="background:rgba(51,46,158,.08);color:#332E9E;border:none;border-radius:8px;padding:6px 14px;font-size:.68rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download</a>
-                  <button type="button" @click="close()" style="background:rgba(0,0,0,.06);color:#64748B;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;">✕</button>
+                  <button type="button" @click="closeDoc()" style="background:rgba(0,0,0,.06);color:#64748B;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;">✕</button>
                 </div>
               </div>
               <div style="overflow-y:auto;flex:1;background:#F1F5F9;display:flex;align-items:center;justify-content:center;padding:24px;min-height:300px;">
@@ -1286,6 +1303,7 @@
             </div>
           </div>
         </template>
+        </div>
       </div>
     </div>
   </div>

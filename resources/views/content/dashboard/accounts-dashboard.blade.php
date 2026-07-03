@@ -168,7 +168,7 @@
 
 {{-- ══ ISSUE MODAL (3 dispositions) ══ --}}
 <div id="issueModal" style="display:none;position:fixed;inset:0;z-index:1055;align-items:center;justify-content:center;background:rgba(15,23,42,0.3);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);">
-  <div style="background:#fff;border-radius:20px;width:440px;max-width:92vw;box-shadow:0 25px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.04);overflow:hidden;animation:issueModalIn .25s ease;">
+  <div style="background:#fff;border-radius:20px;width:440px;max-width:92vw;max-height:88vh;box-shadow:0 25px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.04);overflow-y:auto;overflow-x:hidden;animation:issueModalIn .25s ease;display:flex;flex-direction:column;">
     <form method="POST" action="" id="issueForm">
       @csrf
       <input type="hidden" name="payment_type" id="issuePaymentType" value="">
@@ -190,6 +190,12 @@
         <div style="background:#F8FAFC;border-radius:12px;padding:14px 16px;margin-bottom:18px;">
           <div style="font-size:.68rem;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px;">Booking Reference</div>
           <div style="font-size:.90rem;font-weight:700;color:#0F172A;" id="issueBookingRef"></div>
+        </div>
+
+        <div style="margin-bottom:18px;">
+          <label style="font-size:.68rem;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:6px;">Issue Date</label>
+          <input type="date" name="issue_date" id="issueDate" required
+            style="width:100%;padding:10px 12px;border:1px solid #E2E8F0;border-radius:10px;font-size:.82rem;color:#0F172A;box-sizing:border-box;">
         </div>
 
         <div style="font-size:.72rem;font-weight:600;color:#374151;margin-bottom:12px;">Payment Disposition</div>
@@ -234,6 +240,20 @@
             </div>
           </button>
         </div>
+
+        <div id="issueLastPaymentWrap" style="display:none;margin-top:14px;">
+          <label style="font-size:.68rem;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:6px;">Last Payment Date</label>
+          <input type="date" name="last_payment_date" id="issueLastPaymentDate"
+            style="width:100%;padding:10px 12px;border:1px solid #E2E8F0;border-radius:10px;font-size:.82rem;color:#0F172A;box-sizing:border-box;">
+        </div>
+
+        <div id="issueConfirmWrap" style="display:none;margin-top:18px;">
+          <button type="submit" id="issueConfirmBtn"
+            style="width:100%;background:linear-gradient(135deg,#D97706 0%,#B45309 100%);color:#fff;border:none;border-radius:12px;padding:13px;font-size:.82rem;font-weight:700;cursor:pointer;transition:filter .15s;"
+            onmouseover="this.style.filter='brightness(1.05)'" onmouseout="this.style.filter='none'">
+            Confirm &amp; Issue
+          </button>
+        </div>
       </div>
     </form>
   </div>
@@ -250,34 +270,57 @@
 document.addEventListener('DOMContentLoaded', function () {
   const issueModalEl = document.getElementById('issueModal');
   const activeClass = 'issue-disp-btn-active';
+  const confirmWrap = document.getElementById('issueConfirmWrap');
+  const lastPaymentWrap = document.getElementById('issueLastPaymentWrap');
+  const issueDateInput = document.getElementById('issueDate');
+  const lastPaymentInput = document.getElementById('issueLastPaymentDate');
+
+  function todayStr() {
+    const d = new Date();
+    const off = d.getTimezoneOffset();
+    return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+  }
+
+  function resetDispositions() {
+    document.querySelectorAll('.issue-disp-btn').forEach(function(b) {
+      b.style.borderWidth = '2px';
+      b.style.borderStyle = 'solid';
+      b.classList.remove(activeClass);
+    });
+  }
 
   document.querySelectorAll('.issue-btn').forEach(function(btn) {
     btn.addEventListener('click', function(event) {
       document.getElementById('issueForm').action = btn.getAttribute('data-route');
       document.getElementById('issueBookingRef').textContent = btn.getAttribute('data-booking-ref');
       document.getElementById('issuePaymentType').value = '';
-      document.querySelectorAll('.issue-disp-btn').forEach(function(b) {
-        b.style.borderWidth = '2px';
-        b.style.borderStyle = 'solid';
-        b.classList.remove(activeClass);
-      });
+      resetDispositions();
+      // reset date fields
+      issueDateInput.value = todayStr();
+      lastPaymentWrap.style.display = 'none';
+      lastPaymentInput.value = '';
+      lastPaymentInput.required = false;
+      confirmWrap.style.display = 'none';
       issueModalEl.style.display = 'flex';
     });
   });
 
   document.querySelectorAll('.issue-disp-btn').forEach(function(dispBtn) {
     dispBtn.addEventListener('click', function() {
-      document.querySelectorAll('.issue-disp-btn').forEach(function(b) {
-        b.style.borderWidth = '2px';
-        b.style.borderStyle = 'solid';
-        b.classList.remove(activeClass);
-      });
+      resetDispositions();
       dispBtn.style.borderWidth = '3px';
       dispBtn.classList.add(activeClass);
 
-      document.getElementById('issuePaymentType').value = dispBtn.getAttribute('data-payment');
+      const paymentType = dispBtn.getAttribute('data-payment');
+      document.getElementById('issuePaymentType').value = paymentType;
 
-      document.getElementById('issueForm').submit();
+      // Last payment date only required for plan / awaiting dispositions
+      const needsLastPayment = (paymentType === 'issued_payment_plan' || paymentType === 'issued_payment_awaiting');
+      lastPaymentWrap.style.display = needsLastPayment ? 'block' : 'none';
+      lastPaymentInput.required = needsLastPayment;
+      if (!needsLastPayment) lastPaymentInput.value = '';
+
+      confirmWrap.style.display = 'block';
     });
   });
 

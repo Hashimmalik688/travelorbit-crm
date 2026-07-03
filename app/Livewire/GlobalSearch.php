@@ -13,12 +13,12 @@ class GlobalSearch extends Component
 
     public function updatedQuery(): void
     {
-        $this->isOpen = strlen($this->query) >= 2;
+        $this->isOpen = strlen($this->query) >= 1;
     }
 
     public function updatedFilter(): void
     {
-        $this->isOpen = strlen($this->query) >= 2;
+        $this->isOpen = strlen($this->query) >= 1;
     }
 
     public function closeDropdown(): void
@@ -31,7 +31,7 @@ class GlobalSearch extends Component
     {
         $bookings = collect();
 
-        if (strlen($this->query) >= 2) {
+        if (strlen($this->query) >= 1) {
             $q = $this->query;
 
             $bookings = match ($this->filter) {

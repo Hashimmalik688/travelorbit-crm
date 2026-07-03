@@ -118,15 +118,24 @@ class BookingWorkflowController extends Controller
         $this->authorize('issue', $booking);
 
         $request->validate([
-            'payment_type' => 'required|string|in:issued,issued_payment_plan,issued_payment_awaiting',
+            'payment_type'      => 'required|string|in:issued,issued_payment_plan,issued_payment_awaiting',
+            'issue_date'        => 'required|date',
+            'last_payment_date' => 'nullable|date|required_if:payment_type,issued_payment_plan,issued_payment_awaiting',
         ]);
 
         $paymentType = $request->input('payment_type');
         $oldStatus = $booking->booking_status;
 
-        $booking->update([
-            'booking_status' => $paymentType,
-        ]);
+        $updates = [
+            'booking_status'  => $paymentType,
+            'last_issue_date' => $request->input('issue_date'),
+        ];
+        // Last payment date only applies to payment plan / payment awaiting dispositions
+        if (in_array($paymentType, [Booking::STATUS_ISSUED_PAYMENT_PLAN, Booking::STATUS_ISSUED_PAYMENT_AWAITING], true)) {
+            $updates['last_payment_date'] = $request->input('last_payment_date');
+        }
+
+        $booking->update($updates);
 
         $label = Booking::STATUS_LABELS[$paymentType] ?? 'Issued';
 
