@@ -103,9 +103,9 @@
 <div class="row g-3 mb-4 ad-up d2">
   @php
     $moneyStats = [
-      ['key'=>'fresh',  'label'=>'Fresh',   'sub'=>'Margin not yet issued',       'val'=>$myFresh,   'icon'=>'ph ph-trend-up',      'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)','hint'=>'Margin (sale price minus cost) for non-issued bookings'],
-      ['key'=>'issued', 'label'=>'Issued',  'sub'=>'Margin issued',               'val'=>$myIssued,  'icon'=>'ph ph-check-circle',  'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)','hint'=>'Margin (sale price minus cost) for issued bookings'],
-      ['key'=>'pending','label'=>'Pending', 'sub'=>'Outstanding balance',         'val'=>$myPending, 'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)','hint'=>'Remaining unpaid balance across all bookings'],
+      ['key'=>'fresh',  'label'=>'Fresh',   'sub'=>'Margin not yet issued',       'val'=>$myFresh,   'icon'=>'ph ph-trend-up',      'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)','hint'=>'Margin (sale price minus cost) for non-issued bookings created this month'],
+      ['key'=>'issued', 'label'=>'Issued',  'sub'=>'Margin issued & fully paid',   'val'=>$myIssued,  'icon'=>'ph ph-check-circle',  'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)','hint'=>'Margin for issued bookings whose balance was fully paid this month'],
+      ['key'=>'pending','label'=>'Pending', 'sub'=>'Margin awaiting full payment', 'val'=>$myPending, 'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)','hint'=>'Margin for issued bookings still on a payment plan or awaiting payment'],
     ];
   @endphp
   @foreach ($moneyStats as $ms)

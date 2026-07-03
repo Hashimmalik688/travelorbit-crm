@@ -153,26 +153,41 @@ class DashboardController extends Controller
         $myTotalBookings = Booking::where('user_id', $userId)->whereBetween('created_at', [$som, $eom])->count();
         $myTodayBookings = Booking::where('user_id', $userId)->whereDate('created_at', today())->count();
 
-        $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan'];
+        // 'invoiced' is included because invoicing only happens after a booking is
+        // issued and fully paid — it must not be miscounted as "Fresh".
+        $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan', 'invoiced'];
 
-        // ── FRESH: margin (sale - cost) from bookings NOT yet issued ──
+        // Net margin = gross margin (sale - cost) minus CC charges — always used for these figures.
+        $netMargin = fn (Booking $b) => $b->total_margin - (float) ($b->payment->cc_charges ?? 0);
+
+        // ── FRESH: net margin from bookings NOT yet issued, created this month ──
         $freshBookings = Booking::where('user_id', $userId)
             ->whereNotIn('booking_status', $issuedStatuses)
-            ->with(['flightDetail', 'passengers', 'hotels', 'visas'])
+            ->whereBetween('created_at', [$som, $eom])
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
-        $myFresh = (float) $freshBookings->sum(fn (Booking $b) => $b->total_margin);
+        $myFresh = (float) $freshBookings->sum($netMargin);
 
-        // ── ISSUED: margin (sale - cost) from issued bookings ──
+        // ── ISSUED: net margin from issued bookings that are FULLY PAID, counted in the
+        //    month the balance was cleared to zero (not the month they were booked/issued) ──
         $issuedBookings = Booking::where('user_id', $userId)
             ->whereIn('booking_status', $issuedStatuses)
-            ->with(['flightDetail', 'passengers', 'hotels', 'visas'])
+            ->whereHas('payment', function ($q) use ($som, $eom) {
+                $q->where('balance_remaining', '<=', 0)
+                  ->whereBetween('updated_at', [$som, $eom]);
+            })
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
-        $myIssued = (float) $issuedBookings->sum(fn (Booking $b) => $b->total_margin);
+        $myIssued = (float) $issuedBookings->sum($netMargin);
 
-        // ── PENDING: total outstanding balance ──
-        $myPending = (float) \App\Models\BookingPayment::whereHas('booking', fn ($q) => $q->where('user_id', $userId))
-            ->where('balance_remaining', '>', 0)
-            ->sum('balance_remaining');
+        // ── PENDING: net margin from issued bookings still awaiting full payment
+        //    (the opposite of Issued — moves into Issued once the balance clears) ──
+        $pendingBookings = Booking::where('user_id', $userId)
+            ->whereIn('booking_status', $issuedStatuses)
+            ->whereHas('payment', fn ($q) => $q->where('balance_remaining', '>', 0))
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->get();
+        $myPending = (float) $pendingBookings->sum($netMargin);
 
         // ── Current month calendar ──
         $calendarDays = Booking::where('user_id', $userId)
@@ -199,8 +214,9 @@ class DashboardController extends Controller
             ],
         ];
 
-        // ── Recent bookings ──
+        // ── Recent bookings (this month only) ──
         $myRecentBookings = Booking::where('user_id', $userId)
+            ->whereBetween('created_at', [$som, $eom])
             ->orderByDesc('created_at')->take(10)
             ->with(['flightDetail', 'payment'])
             ->get();
