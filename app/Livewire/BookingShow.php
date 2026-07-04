@@ -2320,6 +2320,16 @@ class BookingShow extends Component
                         }
                     }
                 }
+            } elseif (in_array($b->booking_status, ['confirmed', 'issuance_queue', 'ticket_in_process'])) {
+                // Core form is locked past pending, but e-ticket numbers stay editable
+                // until the booking is actually issued — persist just that field.
+                foreach ($this->passengers as $p) {
+                    if (!empty($p['id'])) {
+                        BookingPassenger::where('id', $p['id'])->update([
+                            'e_ticket_number' => $p['e_ticket_number'] ?: null,
+                        ]);
+                    }
+                }
             }
 
             // Log pricing changes

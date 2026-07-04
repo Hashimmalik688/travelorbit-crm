@@ -34,6 +34,8 @@
 .ad-money.fresh::after  { background:linear-gradient(90deg,#332E9E,#6366F1) }
 .ad-money.issued::after { background:linear-gradient(90deg,#16A34A,#4ADE80) }
 .ad-money.pending::after{ background:linear-gradient(90deg,#D97706,#FBBF24) }
+.ad-money.alltime::after{ background:linear-gradient(90deg,#64748B,#94A3B8) }
+.ad-money { height:100%;display:flex;flex-direction:column; }
 
 /* Count chips - Glassmorphism */
 .ad-chip { border-radius:16px;padding:18px 22px;background:linear-gradient(135deg,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0.75) 100%);border:1px solid rgba(255,255,255,0.5);display:flex;align-items:center;gap:16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(51,46,158,0.06) }
@@ -59,18 +61,12 @@
 
 .ad-brow { display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:#fff;border:1px solid rgba(51,46,158,.07);margin-bottom:8px;transition:all .15s }
 .ad-brow:hover { background:#F8FAFF;border-color:rgba(51,46,158,.14);transform:translateX(2px) }
-.ad-tab { padding:5px 14px;border-radius:20px;font-size:.72rem;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:transparent;color:#64748B }
-.ad-tab.on { background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;box-shadow:0 3px 10px rgba(51,46,158,.25) }
 
 @media (max-width: 767.98px) {
   .ad-money { padding:16px 18px; }
   .ad-money .d-flex { margin-bottom:8px; }
   .ad-chip { padding:14px 16px; gap:12px; }
   .ad-brow { gap:8px; padding:8px 10px; }
-  .ad-tab { font-size:.64rem; padding:4px 10px; }
-}
-@media (max-width: 575.98px) {
-  .ad-tab { font-size:.6rem; padding:3px 8px; }
 }
 </style>
 
@@ -99,23 +95,23 @@
   </div>
 </div>
 
-{{-- ══ MONEY STATS: Fresh | Issued | Pending ══ --}}
+{{-- ══ MONEY STATS: Fresh | Issued | Pending | All-Time Pending ══ --}}
 <div class="row g-3 mb-4 ad-up d2">
   @php
     $moneyStats = [
-      ['key'=>'fresh',  'label'=>'Fresh',   'sub'=>'Margin not yet issued',       'val'=>$myFresh,   'icon'=>'ph ph-trend-up',      'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)','hint'=>'Margin (sale price minus cost) for non-issued bookings created this month'],
-      ['key'=>'issued', 'label'=>'Issued',  'sub'=>'Margin issued & fully paid',   'val'=>$myIssued,  'icon'=>'ph ph-check-circle',  'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)','hint'=>'Margin for issued bookings whose balance was fully paid this month'],
-      ['key'=>'pending','label'=>'Pending', 'sub'=>'Margin awaiting full payment', 'val'=>$myPending, 'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)','hint'=>'Margin for issued bookings still on a payment plan or awaiting payment'],
+      ['key'=>'fresh',   'label'=>'Fresh',            'sub'=>'Margin not yet issued',       'val'=>$myFresh,          'icon'=>'ph ph-trend-up',       'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)'],
+      ['key'=>'issued',  'label'=>'Issued',           'sub'=>'Margin issued & fully paid',   'val'=>$myIssued,         'icon'=>'ph ph-check-circle',   'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)'],
+      ['key'=>'pending', 'label'=>'Pending',          'sub'=>'Margin awaiting full payment', 'val'=>$myPending,        'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)'],
+      ['key'=>'alltime', 'label'=>'All-Time Pending', 'sub'=>'Awaiting payment, all time',   'val'=>$myPendingAllTime, 'icon'=>'ph ph-hourglass',      'ic'=>'#64748B','ibg'=>'rgba(100,116,139,.10)'],
     ];
   @endphp
   @foreach ($moneyStats as $ms)
-    <div class="col-md-4">
+    <div class="col-md-3">
       <div class="ad-money {{ $ms['key'] }}">
         <div class="d-flex align-items-start justify-content-between mb-3">
           <div style="width:42px;height:42px;border-radius:12px;background:{{ $ms['ibg'] }};display:flex;align-items:center;justify-content:center;">
             <i class="{{ $ms['icon'] }}" style="font-size:1.15rem;color:{{ $ms['ic'] }};"></i>
           </div>
-          <span style="font-size:.62rem;color:#94A3B8;text-align:right;max-width:100px;line-height:1.3;">{{ $ms['hint'] }}</span>
         </div>
         <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:4px;">{{ $ms['label'] }}</div>
         <div class="ad-count" data-target="{{ $ms['val'] }}" style="font-size:1.75rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1;">
@@ -162,42 +158,35 @@
   <div class="col-lg-8 ad-up d3">
     <div style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);">
       <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-bottom:1px solid rgba(51,46,158,.06);">
-        <h6 class="fw-bold mb-0" style="font-size:.87rem;color:#0F172A;">Recent Bookings</h6>
-        <div class="d-flex gap-1 p-1" style="background:#F1F5F9;border-radius:24px;" id="ad-tabs">
-          <button class="ad-tab on"  data-filter="all"       onclick="adFilter('all',this)">All</button>
-          <button class="ad-tab"     data-filter="confirmed" onclick="adFilter('confirmed',this)">Confirmed</button>
-          <button class="ad-tab"     data-filter="pending"   onclick="adFilter('pending',this)">Pending</button>
-          <button class="ad-tab"     data-filter="cancelled" onclick="adFilter('cancelled',this)">Cancelled</button>
-        </div>
+        <h6 class="fw-bold mb-0" style="font-size:.87rem;color:#0F172A;">Pending Bookings</h6>
       </div>
       <div class="px-4 py-3" id="ad-booking-list">
         @forelse ($myRecentBookings as $bk)
           @php
-            $sc = ['confirmed'=>'#16A34A','pending'=>'#D97706','cancelled'=>'#DC2626'][$bk->booking_status] ?? '#94A3B8';
-            $sb = ['confirmed'=>'rgba(22,163,74,.10)','pending'=>'rgba(217,119,6,.10)','cancelled'=>'rgba(220,38,38,.10)'][$bk->booking_status] ?? 'rgba(148,163,184,.10)';
             $ti = ['flight'=>'ph-airplane','hotel'=>'ph-buildings','holiday'=>'ph-island','umrah'=>'ph-mosque','visa'=>'ph-identification-card','transfers'=>'ph-van','excursion'=>'ph-binoculars'][$bk->booking_type ?? ''] ?? 'ph-ticket';
+            $rowMargin = (float) $bk->total_margin - (float) ($bk->payment->cc_charges ?? 0);
           @endphp
-          <div class="ad-brow" data-status="{{ $bk->booking_status }}">
+          <div class="ad-brow">
             <div style="width:34px;height:34px;border-radius:9px;background:rgba(51,46,158,.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <i class="ph {{ $ti }}" style="font-size:.95rem;color:#332E9E;"></i>
             </div>
             <div class="flex-grow-1 min-width-0">
               <div class="d-flex align-items-center gap-2">
                 <span class="fw-semibold" style="font-size:.79rem;color:#1E293B;">{{ $bk->booking_number }}</span>
-                <span style="font-size:.6rem;background:{{ $sb }};color:{{ $sc }};padding:1px 8px;border-radius:20px;font-weight:700;text-transform:capitalize;">{{ $bk->booking_status }}</span>
+                <span style="font-size:.6rem;background:rgba(217,119,6,.10);color:#D97706;padding:1px 8px;border-radius:20px;font-weight:700;text-transform:capitalize;">{{ str_replace('_', ' ', $bk->booking_status) }}</span>
               </div>
               <div style="font-size:.7rem;color:#64748B;margin-top:1px;">{{ $bk->booker_first_name }} {{ $bk->booker_last_name }}@if($bk->booking_type) · {{ ucfirst($bk->booking_type) }}@endif</div>
             </div>
             <div class="text-end flex-shrink-0">
-              <div style="font-size:.69rem;color:#94A3B8;">{{ $bk->created_at->format('d M') }}</div>
-              <div style="font-size:.67rem;color:#64748B;">{{ $bk->created_at->format('H:i') }}</div>
+              <div style="font-size:.79rem;color:#D97706;font-weight:700;">£{{ number_format($rowMargin, 2) }}</div>
+              <div style="font-size:.67rem;color:#94A3B8;">{{ $bk->created_at->format('d M Y') }}</div>
             </div>
             <a href="{{ route('bookings.show', $bk->id) }}" style="color:#332E9E;opacity:.35;font-size:.84rem;flex-shrink:0;margin-left:4px;"><i class="ph ph-arrow-right"></i></a>
           </div>
         @empty
           <div class="text-center py-5" style="color:#C4C9D4;">
             <i class="ph ph-calendar-blank" style="font-size:2.2rem;display:block;margin-bottom:8px;opacity:.4;"></i>
-            <div style="font-size:.76rem;">No bookings yet.</div>
+            <div style="font-size:.76rem;">No pending bookings.</div>
           </div>
         @endforelse
       </div>
@@ -326,10 +315,5 @@ document.querySelectorAll('[data-target]').forEach(el => {
   const isGbp = el.closest('.ad-money') !== null;
   el.setAttribute('data-prefix', isGbp ? '£' : '');
 });
-function adFilter(s,btn){
-  document.querySelectorAll('.ad-tab').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  document.querySelectorAll('.ad-brow').forEach(r=>r.style.display=(s==='all'||r.dataset.status===s)?'':'none');
-}
 </script>
 @endsection

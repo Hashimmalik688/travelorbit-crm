@@ -1,13 +1,16 @@
-@props(['modelName', 'placeholder' => '', 'optgroup' => false, 'options' => [], 'live' => false, 'searchable' => false])
+@props(['modelName', 'placeholder' => '', 'optgroup' => false, 'options' => [], 'live' => false, 'searchable' => false, 'disabled' => false])
 <div x-data="initSelect('{{ $modelName }}', {{ json_encode($options) }}, '{{ $placeholder }}', false, {{ $searchable ? 'true' : 'false' }})"
   x-on:click.outside="close()"
+  @if(!$disabled)
   x-on:keydown.escape="close()"
   x-on:keydown.down.prevent="navigate('ArrowDown')"
   x-on:keydown.up.prevent="navigate('ArrowUp')"
   x-on:keydown.enter.prevent="selectHighlighted()"
+  @endif
   class="to-custom-select-sm"
+  @if($disabled) style="opacity:.45;pointer-events:none;" @endif
 >
-  <select x-ref="native" wire:model{{ $live ? '.live' : '' }}="{{ $modelName }}" class="d-none" style="display:none !important;position:absolute;opacity:0;pointer-events:none;">
+  <select x-ref="native" wire:model{{ $live ? '.live' : '' }}="{{ $modelName }}" class="d-none" style="display:none !important;position:absolute;opacity:0;pointer-events:none;" @disabled($disabled)>
     <option value="">{{ $placeholder }}</option>
     @if($optgroup)
       @foreach($options as $group)
@@ -22,7 +25,7 @@
       @endforeach
     @endif
   </select>
-  <button type="button" x-on:click="toggle()"
+  <button type="button" x-on:click="{{ $disabled ? '' : 'toggle()' }}" @disabled($disabled)
     class="to-select-trigger-sm"
     :class="{ 'to-select-trigger-sm--open': open, 'to-select-trigger-sm--placeholder': !label }"
   >

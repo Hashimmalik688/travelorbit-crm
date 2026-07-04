@@ -69,12 +69,8 @@
   // ── Booking type: manager/admin only, regardless of status ──
   $canEditBookingType = in_array($role, ['admin', 'manager']);
 
-  // ── E-ticket number: always editable once booking is live, locks on cancelled ──
-  // Available: pending, ticket_in_process, issued*, even while issuance is in progress
-  $canEditEticket = $isPrivileged || in_array($status, [
-      'pending', 'confirmed', 'ticket_in_process',
-      'issued', 'issued_payment_awaiting', 'issued_payment_plan',
-  ]);
+  // ── E-ticket number: editable up to and including ticket_in_process, locks once issued ──
+  $canEditEticket = $isPrivileged || in_array($status, ['pending', 'confirmed', 'issuance_queue', 'ticket_in_process']);
 
   // ── Payment section (structure + request charge button) ──
   // Always editable for agents when awaiting payment charge approval
@@ -118,22 +114,6 @@
   $canRequestChargeButton = $viewerOnly || $canEditPayment;
 
   $canEditBooking = $canEditCore && Auth::user()->can('update', $booking);
-
-  // ── Lock reason for banner (only shown to non-privileged roles) ──
-  $lockReason = null;
-  if (!$isPrivileged) {
-      $lockReason = match($status) {
-          'payment_charge_request'  => ['icon'=>'ph-credit-card',        'color'=>'#D83F87','title'=>'Awaiting Payment Approval',   'body'=>'A payment charge request is pending. The form is locked until the accounts manager approves it. Payment structure remains editable.'],
-          'issuance_queue'          => ['icon'=>'ph-ticket',              'color'=>'#B45309','title'=>'In Issuance Queue',            'body'=>'This booking is in the issuance queue. The form is locked — you can still edit e-ticket numbers once processing begins.'],
-          'ticket_in_process'       => ['icon'=>'ph-airplane-takeoff',   'color'=>'#0369A1','title'=>'Ticket In Process',            'body'=>'The issuance team is processing this ticket. Most fields are locked — e-ticket numbers remain editable.'],
-          'issued'                  => ['icon'=>'ph-check-fat',           'color'=>'#047857','title'=>'Ticket Issued',               'body'=>'This booking has been fully issued. The form is locked — contact a manager to make changes.'],
-          'issued_payment_awaiting' => ['icon'=>'ph-hourglass',           'color'=>'#C2410C','title'=>'Issued — Payment Awaiting',   'body'=>'Ticket issued. Payment is still outstanding. Payment structure and e-ticket remain editable.'],
-          'issued_payment_plan'     => ['icon'=>'ph-calendar-check',      'color'=>'#0E7490','title'=>'Issued — Payment Plan',       'body'=>'Ticket issued on a payment plan. Payment structure and e-ticket remain editable.'],
-          'cancelled'               => ['icon'=>'ph-x-circle',            'color'=>'#DC2626','title'=>'Booking Cancelled',           'body'=>'This booking has been cancelled and is fully locked.'],
-          'refund_queue'            => ['icon'=>'ph-arrows-counter-clockwise','color'=>'#B91C1C','title'=>'Refund In Progress',      'body'=>'A refund request is being processed. The form is locked.'],
-          default                   => null,
-      };
-  }
 @endphp
 
 @php
@@ -244,20 +224,6 @@
 <div class="row g-3">
   <div class="col-lg-8" style="position:relative;z-index:2;">
 
-    {{-- LOCKED NOTICE --}}
-    @if($isLocked && !$isPrivileged && !$viewerOnly)
-      <div class="d-flex align-items-center gap-2 mb-3 px-3 py-2" style="background:rgba(180,83,9,.07);border:1.5px solid rgba(180,83,9,.2);border-radius:10px;">
-        <i class="ph ph-lock-simple-open" style="color:#B45309;font-size:1rem;flex-shrink:0;"></i>
-        <div>
-          <div style="font-size:.72rem;font-weight:700;color:#B45309;">Form Locked</div>
-          <div style="font-size:.65rem;color:#64748B;">This booking is locked for your role at its current status.
-            @if($canEditEticket) E-ticket numbers remain editable.@endif
-            @if($canEditPayment) Payment section remains editable.@endif
-          </div>
-        </div>
-      </div>
-    @endif
-
     {{-- LEAD & CALLER --}}
     <div class="bv-section" x-data="{ sectionEditing: false }">
       <div class="bv-section-hdr">
@@ -338,9 +304,6 @@
                         @if(!$isLocked || $canEditEticket)<button type="button" @click="open = !open" class="bv-edit-pencil"><i class="ph ph-pencil-simple"></i></button>@endif
                       </div>
                       <div x-show="open" x-cloak class="mt-2 p-3" style="background:#F8FAFF;border-radius:10px;border:1px solid rgba(51,46,158,.08);">
-                        @if($isLocked && $canEditEticket)
-                          <div style="font-size:.62rem;color:#D97706;background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.2);border-radius:6px;padding:4px 8px;margin-bottom:8px;display:flex;align-items:center;gap:5px;"><i class="ph ph-lock-simple"></i> Only e-ticket number is editable in this status.</div>
-                        @endif
                         <div class="row g-2">
                           @php $titleOpts = [['value'=>'','label'=>'-'],['value'=>'Mr.','label'=>'Mr.'],['value'=>'Ms.','label'=>'Ms.'],['value'=>'Mrs.','label'=>'Mrs.'],['value'=>'Mstr','label'=>'Mstr'],['value'=>'Miss','label'=>'Miss'],['value'=>'Dr.','label'=>'Dr.']]; @endphp
                           <div class="col-md-3"><label class="bv-label">Title</label><x-styled-select-sm :modelName="'passengers.'.$i.'.title'" :options="$titleOpts" placeholder="-" :disabled="$isLocked" /></div>
@@ -351,8 +314,8 @@
                           <div class="col-md-2"><label class="bv-label">Contact</label><input type="tel" wire:model="passengers.{{ $i }}.contact_number" class="bv-input-inline" style="font-size:.72rem;{{ $isLocked ? 'opacity:.45;pointer-events:none;' : '' }}" oninput="this.value=this.value.replace(/[^0-9+]/g,'')"></div>
                           <div class="col-md-4"><label class="bv-label">E-Ticket</label><input type="text" wire:model="passengers.{{ $i }}.e_ticket_number" class="bv-input-inline" style="font-size:.72rem;{{ !$canEditEticket ? 'opacity:.45;pointer-events:none;' : '' }}" placeholder="176-1234567890"></div>
                           @php $countryOpts = array_merge([['value'=>'','label'=>'-']], collect($countries)->map(fn($name,$code)=>['value'=>$code,'label'=>$name])->values()->toArray()); @endphp
-                          <div class="col-md-3"><label class="bv-label">Issuing Country</label><x-styled-select-sm :modelName="'passengers.'.$i.'.passport_issuing_country'" :options="$countryOpts" placeholder="-" :searchable="true" /></div>
-                          <div class="col-md-3"><label class="bv-label">Nationality</label><x-styled-select-sm :modelName="'passengers.'.$i.'.nationality'" :options="$countryOpts" placeholder="-" :searchable="true" /></div>
+                          <div class="col-md-3"><label class="bv-label">Issuing Country</label><x-styled-select-sm :modelName="'passengers.'.$i.'.passport_issuing_country'" :options="$countryOpts" placeholder="-" :searchable="true" :disabled="$isLocked" /></div>
+                          <div class="col-md-3"><label class="bv-label">Nationality</label><x-styled-select-sm :modelName="'passengers.'.$i.'.nationality'" :options="$countryOpts" placeholder="-" :searchable="true" :disabled="$isLocked" /></div>
                         </div>
                         <button type="button" @click="open = false" class="mt-2" style="border:none;background:rgba(51,46,158,.06);color:#332E9E;border-radius:6px;padding:3px 12px;cursor:pointer;font-size:.7rem;font-weight:600;">Done</button>
                       </div>
@@ -715,7 +678,7 @@
     <div class="bv-section">
       <div class="bv-section-hdr" style="background:linear-gradient(135deg,#332E9E,#4A45B5);border-radius:16px 16px 0 0;">
         <div class="bv-icon" style="background:rgba(255,255,255,.15);"><i class="ph ph-clock-countdown" style="color:#fff;font-size:.9rem;"></i></div>
-        <h2 style="color:#fff;">Activity Log</h2>
+        <h2 style="color:#fff;">Comments</h2>
         <span class="ms-auto" style="font-size:.64rem;color:rgba(255,255,255,.45);">{{ count($activityLog) }} event{{ count($activityLog)!==1?'s':'' }}</span>
       </div>
       <div class="bv-section-body" style="max-height:460px;overflow-y:auto;padding:14px 16px 8px;">
@@ -810,7 +773,7 @@
           @endforeach
         @endif
       </div>
-      @if(!$isLocked || $isPrivileged)
+      @if($this->canComment())
       <div class="d-flex gap-1 align-items-center px-4 py-2" style="border-top:1px solid rgba(51,46,158,.06);background:#FAFBFF;">
         <input type="text" wire:model="newComment" placeholder="Add a comment..." class="form-control form-control-sm" style="border-radius:20px;font-size:.7rem;border-color:rgba(51,46,158,.12);" wire:keydown.enter="addComment">
         <button type="button" wire:click="addComment" class="btn btn-sm flex-shrink-0" style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:.68rem;font-weight:600;">Add Comment</button>
@@ -822,25 +785,6 @@
 
   {{-- RIGHT COLUMN --}}
   <div class="col-lg-4">
-
-    @if($isLocked && !$isPrivileged && $lockReason)
-      <div class="bv-section mb-3" style="border:1.5px solid {{ $lockReason['color'] }}33;">
-        <div class="bv-section-hdr" style="background:{{ $lockReason['color'] }}12;">
-          <div class="bv-icon" style="background:{{ $lockReason['color'] }}18;"><i class="ph {{ $lockReason['icon'] }}" style="color:{{ $lockReason['color'] }};font-size:.9rem;"></i></div>
-          <h2 style="color:{{ $lockReason['color'] }};">{{ $lockReason['title'] }}</h2>
-        </div>
-        <div class="bv-section-body">
-          <div style="font-size:.68rem;color:#64748B;line-height:1.5;">{{ $lockReason['body'] }}</div>
-          @if($status === 'ticket_in_process' || in_array($status, ['issued_payment_awaiting','issued_payment_plan']))
-            <div style="font-size:.64rem;color:#16A34A;margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> Payment section and e-ticket numbers remain editable.</div>
-          @elseif($status === 'payment_charge_request')
-            <div style="font-size:.64rem;color:#16A34A;margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> Payment structure remains editable.</div>
-          @elseif($status === 'issued')
-            <div style="font-size:.64rem;color:#16A34A;margin-top:6px;display:flex;align-items:center;gap:4px;"><i class="ph ph-check-circle"></i> E-ticket numbers remain editable.</div>
-          @endif
-        </div>
-      </div>
-    @endif
 
     {{-- PAYMENT STRUCTURE --}}
     @php
