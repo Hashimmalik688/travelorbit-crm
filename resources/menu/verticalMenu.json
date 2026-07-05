@@ -8,14 +8,14 @@
       "name": "Bookings",
       "icon": "menu-icon icon-base ph ph-book-open",
       "slug": "bookings",
-      "roles": ["admin","manager"],
+      "roles": ["admin"],
       "submenu": [
         { "url": "/bookings",        "name": "All Bookings", "icon": "menu-icon icon-base ph ph-list",        "slug": "bookings.index" },
         { "url": "/bookings/create", "name": "New Booking",  "icon": "menu-icon icon-base ph ph-plus-circle", "slug": "bookings.create" }
       ]
     },
-    { "url": "/my-bookings",    "name": "My Bookings",       "icon": "menu-icon icon-base ph ph-list-checks",     "slug": "bookings.mine",    "roles": ["agent","operations"] },
-    { "url": "/bookings/create","name": "New Booking",       "icon": "menu-icon icon-base ph ph-plus-circle",     "slug": "bookings.create",  "roles": ["agent","operations"] },
+    { "url": "/my-bookings",    "name": "My Bookings",       "icon": "menu-icon icon-base ph ph-list-checks",     "slug": "bookings.mine",    "roles": ["operations"] },
+    { "url": "/bookings/create","name": "New Booking",       "icon": "menu-icon icon-base ph ph-plus-circle",     "slug": "bookings.create",  "roles": ["agent","operations","manager"] },
     { "url": "/bookings",       "name": "All Bookings",      "icon": "menu-icon icon-base ph ph-list",            "slug": "bookings.index",   "roles": ["accounts"] },
     { "url": "/customers",      "name": "Customers",         "icon": "menu-icon icon-base ph ph-users",           "slug": "customers",        "roles": ["admin","manager","operations"] },
 

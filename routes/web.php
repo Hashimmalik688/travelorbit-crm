@@ -31,13 +31,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/logout', [LoginController::class, 'logout'])->name('logout.get');
 
-    // All Bookings — admin/manager/operations only; agents must not see this
-    Route::middleware('role:admin,manager,operations')->group(function () {
+    // All Bookings — admin only
+    Route::middleware('role:admin')->group(function () {
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
     });
 
-    Route::middleware('role:admin,manager,operations,agent,accounts')->group(function () {
+    // My Bookings — not needed by agents, who only create + view their own via the dashboard
+    Route::middleware('role:admin,manager,operations,accounts')->group(function () {
         Route::get('/my-bookings', [BookingController::class, 'myBookings'])->name('bookings.mine');
+    });
+
+    Route::middleware('role:admin,manager,operations,agent,accounts')->group(function () {
         Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create');
         Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
         Route::get('/bookings/{booking}/edit', fn($booking) => redirect()->route('bookings.show', $booking));

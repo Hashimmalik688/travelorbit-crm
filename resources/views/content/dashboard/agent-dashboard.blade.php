@@ -61,12 +61,15 @@
 
 .ad-brow { display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:#fff;border:1px solid rgba(51,46,158,.07);margin-bottom:8px;transition:all .15s }
 .ad-brow:hover { background:#F8FAFF;border-color:rgba(51,46,158,.14);transform:translateX(2px) }
+.ad-tab { padding:5px 14px;border-radius:20px;font-size:.72rem;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:transparent;color:#64748B;white-space:nowrap }
+.ad-tab.on { background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;box-shadow:0 3px 10px rgba(51,46,158,.25) }
 
 @media (max-width: 767.98px) {
   .ad-money { padding:16px 18px; }
   .ad-money .d-flex { margin-bottom:8px; }
   .ad-chip { padding:14px 16px; gap:12px; }
   .ad-brow { gap:8px; padding:8px 10px; }
+  .ad-tab { font-size:.64rem; padding:4px 10px; }
 }
 </style>
 
@@ -99,10 +102,10 @@
 <div class="row g-3 mb-4 ad-up d2">
   @php
     $moneyStats = [
-      ['key'=>'fresh',   'label'=>'Fresh',            'sub'=>'Margin not yet issued',       'val'=>$myFresh,          'icon'=>'ph ph-trend-up',       'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)'],
-      ['key'=>'issued',  'label'=>'Issued',           'sub'=>'Margin issued & fully paid',   'val'=>$myIssued,         'icon'=>'ph ph-check-circle',   'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)'],
-      ['key'=>'pending', 'label'=>'Pending',          'sub'=>'Margin awaiting full payment', 'val'=>$myPending,        'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)'],
-      ['key'=>'alltime', 'label'=>'All-Time Pending', 'sub'=>'Awaiting payment, all time',   'val'=>$myPendingAllTime, 'icon'=>'ph ph-hourglass',      'ic'=>'#64748B','ibg'=>'rgba(100,116,139,.10)'],
+      ['key'=>'fresh',   'label'=>'Fresh',            'sub'=>'Not yet issued, this month',  'val'=>$myFresh,          'count'=>$myFreshCount,          'icon'=>'ph ph-trend-up',       'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)'],
+      ['key'=>'issued',  'label'=>'Issued',           'sub'=>'Margin issued & fully paid',  'val'=>$myIssued,         'count'=>$myIssuedCount,         'icon'=>'ph ph-check-circle',   'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)'],
+      ['key'=>'pending', 'label'=>'Pending',          'sub'=>'Not yet issued, this month',  'val'=>$myPending,        'count'=>$myPendingCount,        'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)'],
+      ['key'=>'alltime', 'label'=>'All-Time Pending', 'sub'=>'Not yet issued, all time',    'val'=>$myPendingAllTime, 'count'=>$myPendingAllTimeCount, 'icon'=>'ph ph-hourglass',      'ic'=>'#64748B','ibg'=>'rgba(100,116,139,.10)'],
     ];
   @endphp
   @foreach ($moneyStats as $ms)
@@ -112,6 +115,7 @@
           <div style="width:42px;height:42px;border-radius:12px;background:{{ $ms['ibg'] }};display:flex;align-items:center;justify-content:center;">
             <i class="{{ $ms['icon'] }}" style="font-size:1.15rem;color:{{ $ms['ic'] }};"></i>
           </div>
+          <span style="font-size:.62rem;font-weight:700;color:{{ $ms['ic'] }};background:{{ $ms['ibg'] }};padding:2px 9px;border-radius:20px;">{{ $ms['count'] }} booking{{ $ms['count'] !== 1 ? 's' : '' }}</span>
         </div>
         <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:4px;">{{ $ms['label'] }}</div>
         <div class="ad-count" data-target="{{ $ms['val'] }}" style="font-size:1.75rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1;">
@@ -123,34 +127,6 @@
   @endforeach
 </div>
 
-{{-- ══ COUNT CHIPS: This Month + Today ══ --}}
-<div class="row g-3 mb-4 ad-up d3">
-  <div class="col-md-3">
-    <div class="ad-chip">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(51,46,158,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="ph ph-calendar-dots" style="font-size:1.1rem;color:#332E9E;"></i>
-      </div>
-      <div>
-        <div style="font-size:.62rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">This Month</div>
-        <div class="ad-count" data-target="{{ $myTotalBookings }}" style="font-size:1.4rem;font-weight:800;color:#0F172A;letter-spacing:-.02em;line-height:1.1;">{{ $myTotalBookings }}</div>
-        <div style="font-size:.68rem;color:#64748B;">bookings in {{ now()->format('F') }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="ad-chip">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(245,158,11,.10);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="ph ph-sun-horizon" style="font-size:1.1rem;color:#D97706;"></i>
-      </div>
-      <div>
-        <div style="font-size:.62rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Today</div>
-        <div class="ad-count" data-target="{{ $myTodayBookings }}" style="font-size:1.4rem;font-weight:800;color:#0F172A;letter-spacing:-.02em;line-height:1.1;">{{ $myTodayBookings }}</div>
-        <div style="font-size:.68rem;color:#64748B;">{{ now()->format('d F') }}</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 {{-- ══ MAIN 2-COL ══ --}}
 <div class="row g-3">
 
@@ -159,34 +135,39 @@
     <div style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);">
       <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-bottom:1px solid rgba(51,46,158,.06);">
         <h6 class="fw-bold mb-0" style="font-size:.87rem;color:#0F172A;">Pending Bookings</h6>
+        <div class="d-flex gap-1 p-1" style="background:#F1F5F9;border-radius:24px;" id="ad-pending-tabs">
+          <button class="ad-tab on" data-tab="pending" onclick="adPendingTab('pending',this)">Pending ({{ $pendingTabBookings->count() }})</button>
+          <button class="ad-tab" data-tab="plan" onclick="adPendingTab('plan',this)">Payment Plan ({{ $paymentPlanTabBookings->count() }})</button>
+          <button class="ad-tab" data-tab="awaiting" onclick="adPendingTab('awaiting',this)">Payment Awaiting ({{ $paymentAwaitingTabBookings->count() }})</button>
+        </div>
       </div>
-      <div class="px-4 py-3" id="ad-booking-list">
-        @forelse ($myRecentBookings as $bk)
-          @php
-            $ti = ['flight'=>'ph-airplane','hotel'=>'ph-buildings','holiday'=>'ph-island','umrah'=>'ph-mosque','visa'=>'ph-identification-card','transfers'=>'ph-van','excursion'=>'ph-binoculars'][$bk->booking_type ?? ''] ?? 'ph-ticket';
-            $rowMargin = (float) $bk->total_margin - (float) ($bk->payment->cc_charges ?? 0);
-          @endphp
-          <div class="ad-brow">
-            <div style="width:34px;height:34px;border-radius:9px;background:rgba(51,46,158,.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="ph {{ $ti }}" style="font-size:.95rem;color:#332E9E;"></i>
-            </div>
-            <div class="flex-grow-1 min-width-0">
-              <div class="d-flex align-items-center gap-2">
-                <span class="fw-semibold" style="font-size:.79rem;color:#1E293B;">{{ $bk->booking_number }}</span>
-                <span style="font-size:.6rem;background:rgba(217,119,6,.10);color:#D97706;padding:1px 8px;border-radius:20px;font-weight:700;text-transform:capitalize;">{{ str_replace('_', ' ', $bk->booking_status) }}</span>
-              </div>
-              <div style="font-size:.7rem;color:#64748B;margin-top:1px;">{{ $bk->booker_first_name }} {{ $bk->booker_last_name }}@if($bk->booking_type) · {{ ucfirst($bk->booking_type) }}@endif</div>
-            </div>
-            <div class="text-end flex-shrink-0">
-              <div style="font-size:.79rem;color:#D97706;font-weight:700;">£{{ number_format($rowMargin, 2) }}</div>
-              <div style="font-size:.67rem;color:#94A3B8;">{{ $bk->created_at->format('d M Y') }}</div>
-            </div>
-            <a href="{{ route('bookings.show', $bk->id) }}" style="color:#332E9E;opacity:.35;font-size:.84rem;flex-shrink:0;margin-left:4px;"><i class="ph ph-arrow-right"></i></a>
-          </div>
+      <div class="px-4 py-3" id="ad-tab-pending">
+        @forelse ($pendingTabBookings as $bk)
+          @include('content.dashboard.partials._pending-booking-row')
         @empty
           <div class="text-center py-5" style="color:#C4C9D4;">
             <i class="ph ph-calendar-blank" style="font-size:2.2rem;display:block;margin-bottom:8px;opacity:.4;"></i>
             <div style="font-size:.76rem;">No pending bookings.</div>
+          </div>
+        @endforelse
+      </div>
+      <div class="px-4 py-3" id="ad-tab-plan" style="display:none;">
+        @forelse ($paymentPlanTabBookings as $bk)
+          @include('content.dashboard.partials._pending-booking-row')
+        @empty
+          <div class="text-center py-5" style="color:#C4C9D4;">
+            <i class="ph ph-calendar-blank" style="font-size:2.2rem;display:block;margin-bottom:8px;opacity:.4;"></i>
+            <div style="font-size:.76rem;">No bookings on a payment plan.</div>
+          </div>
+        @endforelse
+      </div>
+      <div class="px-4 py-3" id="ad-tab-awaiting" style="display:none;">
+        @forelse ($paymentAwaitingTabBookings as $bk)
+          @include('content.dashboard.partials._pending-booking-row')
+        @empty
+          <div class="text-center py-5" style="color:#C4C9D4;">
+            <i class="ph ph-calendar-blank" style="font-size:2.2rem;display:block;margin-bottom:8px;opacity:.4;"></i>
+            <div style="font-size:.76rem;">No bookings awaiting payment.</div>
           </div>
         @endforelse
       </div>
@@ -315,5 +296,12 @@ document.querySelectorAll('[data-target]').forEach(el => {
   const isGbp = el.closest('.ad-money') !== null;
   el.setAttribute('data-prefix', isGbp ? '£' : '');
 });
+function adPendingTab(name, btn) {
+  document.querySelectorAll('#ad-pending-tabs .ad-tab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  ['pending', 'plan', 'awaiting'].forEach(t => {
+    document.getElementById('ad-tab-' + t).style.display = (t === name) ? '' : 'none';
+  });
+}
 </script>
 @endsection

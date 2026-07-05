@@ -36,7 +36,7 @@ class NotificationBell extends Component
 
         if ($user->role === 'agent') {
             $n = Booking::where('user_id',$user->id)->where('booking_status','pending')->count();
-            if ($n > 0) $items->push(['icon'=>'ph-clock','color'=>'#332E9E','bg'=>'rgba(51,46,158,.08)','title'=>"{$n} pending booking".($n>1?'s':''),'sub'=>'Not yet confirmed','url'=>route('bookings.mine')]);
+            if ($n > 0) $items->push(['icon'=>'ph-clock','color'=>'#332E9E','bg'=>'rgba(51,46,158,.08)','title'=>"{$n} pending booking".($n>1?'s':''),'sub'=>'Not yet confirmed','url'=>route('agent.dashboard')]);
         }
 
         return view('livewire.notification-bell', ['notifications' => $items]);

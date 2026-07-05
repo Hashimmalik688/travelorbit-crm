@@ -1641,7 +1641,7 @@ class CreateBooking extends Component
 
         AuditLogger::log(Auth::user(), $booking, 'created', 'Booking created', null, $booking->toArray());
         session()->flash('success', "Booking #{$booking->booking_number} created successfully.");
-        return redirect()->route('bookings.mine');
+        return redirect()->route('bookings.show', $booking);
     }
 
     public function render(): View

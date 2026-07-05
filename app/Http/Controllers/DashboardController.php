@@ -167,6 +167,7 @@ class DashboardController extends Controller
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
         $myFresh = (float) $freshBookings->sum($netMargin);
+        $myFreshCount = $freshBookings->count();
 
         // ── ISSUED: net margin from issued bookings that are FULLY PAID, created this month ──
         $issuedBookings = Booking::where('user_id', $userId)
@@ -176,20 +177,40 @@ class DashboardController extends Controller
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
         $myIssued = (float) $issuedBookings->sum($netMargin);
+        $myIssuedCount = $issuedBookings->count();
 
-        // ── PENDING (ALL TIME): net margin from issued bookings still awaiting full payment
-        //    (the opposite of Issued — moves into Issued once the balance clears) ──
-        $pendingBookings = Booking::where('user_id', $userId)
-            ->whereIn('booking_status', $issuedStatuses)
+        // ── PENDING (THIS MONTH): same status filter as Fresh (not yet issued at all,
+        //    no balance check) — it's Fresh's number restated as "Pending" for this
+        //    card. Resets to 0 each new month. ──
+        $myPending = $myFresh;
+        $myPendingCount = $myFreshCount;
+
+        // ── PENDING (ALL TIME): the same "not yet issued at all" rule as Fresh/Pending,
+        //    just without the month restriction — never resets. Bookings that are
+        //    already issued (payment plan/awaiting/etc.) are tracked separately in the
+        //    tabs below, not rolled into this figure. ──
+        $allTimeNotYetIssuedBookings = Booking::where('user_id', $userId)
+            ->whereNotIn('booking_status', $issuedStatuses)
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->orderByDesc('created_at')
+            ->get();
+        $myPendingAllTime = (float) $allTimeNotYetIssuedBookings->sum($netMargin);
+        $myPendingAllTimeCount = $allTimeNotYetIssuedBookings->count();
+
+        // ── Issued-but-unpaid sub-statuses, all time (their own tabs below;
+        //    no longer folded into All-Time Pending) ──
+        $issuedPlanUnpaidBookings = Booking::where('user_id', $userId)
+            ->where('booking_status', 'issued_payment_plan')
             ->whereHas('payment', fn ($q) => $q->where('balance_remaining', '>', 0))
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->orderByDesc('created_at')
             ->get();
-        $myPendingAllTime = (float) $pendingBookings->sum($netMargin);
-
-        // ── PENDING (THIS MONTH): same set, restricted to bookings created this month —
-        //    resets to 0 each new month, unlike the all-time figure above ──
-        $myPending = (float) $pendingBookings->whereBetween('created_at', [$som, $eom])->sum($netMargin);
+        $issuedAwaitingUnpaidBookings = Booking::where('user_id', $userId)
+            ->where('booking_status', 'issued_payment_awaiting')
+            ->whereHas('payment', fn ($q) => $q->where('balance_remaining', '>', 0))
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->orderByDesc('created_at')
+            ->get();
 
         // ── Current month calendar ──
         $calendarDays = Booking::where('user_id', $userId)
@@ -216,8 +237,11 @@ class DashboardController extends Controller
             ],
         ];
 
-        // ── Recent bookings: pending only, all time (same set as the Pending stat) ──
-        $myRecentBookings = $pendingBookings->sortByDesc('created_at')->take(10)->values();
+        // ── Pending Bookings box tabs: all time, split by where each booking sits
+        //    relative to issuance ──
+        $pendingTabBookings         = $allTimeNotYetIssuedBookings->take(15)->values();
+        $paymentPlanTabBookings     = $issuedPlanUnpaidBookings->take(15)->values();
+        $paymentAwaitingTabBookings = $issuedAwaitingUnpaidBookings->take(15)->values();
 
         // ── All agents with today's booking count ──
         $allAgents = \App\Models\User::where('role', 'agent')
@@ -228,8 +252,10 @@ class DashboardController extends Controller
         return view('content.dashboard.agent-dashboard', compact(
             'myTotalBookings', 'myTodayBookings',
             'myFresh', 'myIssued', 'myPending', 'myPendingAllTime',
+            'myFreshCount', 'myIssuedCount', 'myPendingCount', 'myPendingAllTimeCount',
             'calendarDays', 'allMonthData',
-            'myRecentBookings', 'allAgents'
+            'pendingTabBookings', 'paymentPlanTabBookings', 'paymentAwaitingTabBookings',
+            'allAgents'
         ));
     }
 }
