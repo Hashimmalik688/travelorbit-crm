@@ -11,6 +11,7 @@ use App\Http\Controllers\Finance\RefundController;
 use App\Http\Controllers\Mis\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Settings\UserController as UserManagementController;
+use App\Http\Controllers\CallCenter\CallCenterController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login');
@@ -97,5 +98,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/settings/vendors',   [SettingsController::class, 'vendors'])->name('settings.vendors');
         Route::get('/settings/gds', [SettingsController::class, 'gds'])->name('settings.gds');
         Route::get('/settings/ip-whitelist', fn() => view('settings.ip-whitelist'))->name('settings.ip')->middleware('role:admin');
+    });
+
+    Route::middleware('role:admin')->prefix('call-center')->name('callcenter.')->group(function () {
+        Route::get('/', [CallCenterController::class, 'dashboard'])->name('dashboard');
+        Route::get('/new-call', [CallCenterController::class, 'newCall'])->name('new-call');
+        Route::get('/inquiries', [CallCenterController::class, 'inquiries'])->name('inquiries');
+        Route::get('/callbacks', [CallCenterController::class, 'callbacks'])->name('callbacks');
     });
 });
