@@ -266,6 +266,17 @@ class Booking extends Model
         return $this->hasMany(BookingPaymentHistory::class);
     }
 
+    /**
+     * Actual amount received, from the approved-payments ledger — the same
+     * source BookingShow uses for "Balance Due". NOT booking_payments.amount_paid,
+     * which is a one-time snapshot taken at creation/edit time and never kept
+     * in sync with real payments recorded afterwards.
+     */
+    public function totalReceived(): float
+    {
+        return (float) $this->paymentHistory->where('status', 'approved')->sum('amount');
+    }
+
     public function refunds(): HasMany
     {
         return $this->hasMany(Refund::class);

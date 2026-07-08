@@ -22,6 +22,10 @@
     { "menuHeader": "Issuance", "roles": ["admin","manager","issuance"] },
     { "url": "/issuance-dashboard", "name": "Issuance Queue", "icon": "menu-icon icon-base ph ph-ticket",       "slug": "issuance.dashboard","roles": ["admin","manager","issuance"] },
 
+    { "menuHeader": "Issued",   "roles": ["agent","operations"] },
+    { "url": "/my-bookings/payment-plan",     "name": "Payment Plan",     "icon": "menu-icon icon-base ph ph-calendar-check", "slug": "bookings.payment-plan",     "roles": ["agent","operations"] },
+    { "url": "/my-bookings/payment-awaiting", "name": "Payment Awaiting", "icon": "menu-icon icon-base ph ph-hourglass-medium","slug": "bookings.payment-awaiting", "roles": ["agent","operations"] },
+
     { "menuHeader": "Accounts", "roles": ["admin","manager","accounts"] },
     { "url": "/accounts-dashboard", "name": "Ready to Invoice","icon": "menu-icon icon-base ph ph-receipt",    "slug": "accounts.dashboard","roles": ["admin","manager","accounts"] },
     { "url": "/payments",          "name": "Payments",              "icon": "menu-icon icon-base ph ph-credit-card",     "slug": "payments",          "roles": ["admin","manager","accounts"] },

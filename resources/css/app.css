@@ -573,8 +573,11 @@ a:hover { color: var(--to-indigo); }
   margin: 0 0 0.15rem; letter-spacing: -0.03em;
 }
 .to-breadcrumb, .to-page-header .page-subtitle {
-  font-size: 0.80rem; color: var(--to-slate-dim); font-weight: 500;
+  font-size: 0.80rem; color: var(--to-slate-dim); font-weight: 600;
+  letter-spacing: 0.01em;
 }
+.to-breadcrumb a { color: var(--to-indigo); font-weight: 600; transition: color 0.15s ease; }
+.to-breadcrumb a:hover { color: var(--to-navy); text-decoration: underline; }
 
 /* ═══════════════════════════════════════════
    STAT CARDS

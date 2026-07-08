@@ -17,6 +17,82 @@ class DashboardController extends Controller
     public function accountsDashboardPage()  { return $this->accountsDashboard(); }
     public function issuanceDashboardPage()  { return $this->issuanceDashboard(); }
 
+    public function paymentPlanReport()
+    {
+        return $this->issuedPaymentReport(
+            'issued_payment_plan',
+            'Payment Plan',
+            'Your issued bookings still being paid off in instalments.'
+        );
+    }
+
+    public function paymentAwaitingReport()
+    {
+        return $this->issuedPaymentReport(
+            'issued_payment_awaiting',
+            'Payment Awaiting',
+            'Your issued bookings awaiting their outstanding balance.'
+        );
+    }
+
+    protected function issuedPaymentReport(string $status, string $title, string $subtitle)
+    {
+        // No balance filter — a booking stays in its payment-plan/awaiting status
+        // even once fully paid, so settled bookings stay visible here (shown
+        // with a "Settled" highlight) rather than silently disappearing.
+        $all = Booking::where('user_id', Auth::id())
+            ->where('booking_status', $status)
+            ->whereHas('payment')
+            ->with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
+            ->get();
+
+        $sorted = $this->sortByNextDueDate($all)->values();
+
+        // Totals across the whole filtered list, not just the current page —
+        // shown prominently at the top of the page, not buried in a footer.
+        // Received/remaining come from the approved-payments ledger (same as
+        // BookingShow's "Balance Due"), not booking_payments.amount_paid /
+        // balance_remaining, which are a stale creation-time snapshot.
+        $totals = [
+            'cost'      => $sorted->sum('total_cost_price'),
+            'sold'      => $sorted->sum('total_sale_price'),
+            'margin'    => $sorted->sum('total_margin'),
+            'received'  => $sorted->sum(fn (Booking $b) => $b->totalReceived()),
+            'remaining' => $sorted->sum(fn (Booking $b) => $b->total_sale_price - $b->totalReceived()),
+        ];
+
+        $perPage = 20;
+        $page = (int) request('page', 1);
+        $bookings = new \Illuminate\Pagination\LengthAwarePaginator(
+            $sorted->forPage($page, $perPage),
+            $sorted->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        return view('content.dashboard.issued-unpaid-report', compact('bookings', 'title', 'subtitle', 'totals'));
+    }
+
+    /**
+     * Sorts bookings by their next unpaid payment date, soonest (or most overdue)
+     * first. Bookings with no scheduled date, or that are actually fully paid
+     * per the real payment ledger (regardless of what the stale due_date /
+     * instalment JSON says), sort to the end.
+     */
+    protected function sortByNextDueDate($bookings)
+    {
+        return $bookings->sortBy(function (Booking $b) {
+            if ($b->total_sale_price - $b->totalReceived() <= 0) {
+                return PHP_INT_MAX;
+            }
+
+            $due = $b->payment?->nextDueDate();
+
+            return $due ? $due->timestamp : PHP_INT_MAX;
+        });
+    }
+
     public function index()
     {
         $user = Auth::user();
@@ -191,26 +267,14 @@ class DashboardController extends Controller
         //    tabs below, not rolled into this figure. ──
         $allTimeNotYetIssuedBookings = Booking::where('user_id', $userId)
             ->whereNotIn('booking_status', $issuedStatuses)
-            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
             ->orderByDesc('created_at')
             ->get();
         $myPendingAllTime = (float) $allTimeNotYetIssuedBookings->sum($netMargin);
         $myPendingAllTimeCount = $allTimeNotYetIssuedBookings->count();
 
-        // ── Issued-but-unpaid sub-statuses, all time (their own tabs below;
-        //    no longer folded into All-Time Pending) ──
-        $issuedPlanUnpaidBookings = Booking::where('user_id', $userId)
-            ->where('booking_status', 'issued_payment_plan')
-            ->whereHas('payment', fn ($q) => $q->where('balance_remaining', '>', 0))
-            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
-            ->orderByDesc('created_at')
-            ->get();
-        $issuedAwaitingUnpaidBookings = Booking::where('user_id', $userId)
-            ->where('booking_status', 'issued_payment_awaiting')
-            ->whereHas('payment', fn ($q) => $q->where('balance_remaining', '>', 0))
-            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
-            ->orderByDesc('created_at')
-            ->get();
+        // Note: issued-but-unpaid bookings (payment plan / payment awaiting) have their
+        // own dedicated report pages now — see DashboardController::issuedPaymentReport().
 
         // ── Current month calendar ──
         $calendarDays = Booking::where('user_id', $userId)
@@ -237,11 +301,9 @@ class DashboardController extends Controller
             ],
         ];
 
-        // ── Pending Bookings box tabs: all time, split by where each booking sits
-        //    relative to issuance ──
-        $pendingTabBookings         = $allTimeNotYetIssuedBookings->take(15)->values();
-        $paymentPlanTabBookings     = $issuedPlanUnpaidBookings->take(15)->values();
-        $paymentAwaitingTabBookings = $issuedAwaitingUnpaidBookings->take(15)->values();
+        // ── Pending Bookings box: all-time, not-yet-issued bookings, most
+        //    urgent payment date first ──
+        $pendingTabBookings = $this->sortByNextDueDate($allTimeNotYetIssuedBookings)->take(15)->values();
 
         // ── All agents with today's booking count ──
         $allAgents = \App\Models\User::where('role', 'agent')
@@ -254,7 +316,7 @@ class DashboardController extends Controller
             'myFresh', 'myIssued', 'myPending', 'myPendingAllTime',
             'myFreshCount', 'myIssuedCount', 'myPendingCount', 'myPendingAllTimeCount',
             'calendarDays', 'allMonthData',
-            'pendingTabBookings', 'paymentPlanTabBookings', 'paymentAwaitingTabBookings',
+            'pendingTabBookings',
             'allAgents'
         ));
     }

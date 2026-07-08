@@ -42,6 +42,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/my-bookings', [BookingController::class, 'myBookings'])->name('bookings.mine');
     });
 
+    // Issued-but-unpaid mini reports — agent's own bookings, split out of the dashboard tabs
+    Route::middleware('role:agent,operations')->group(function () {
+        Route::get('/my-bookings/payment-plan', [DashboardController::class, 'paymentPlanReport'])->name('bookings.payment-plan');
+        Route::get('/my-bookings/payment-awaiting', [DashboardController::class, 'paymentAwaitingReport'])->name('bookings.payment-awaiting');
+    });
+
     Route::middleware('role:admin,manager,operations,agent,accounts')->group(function () {
         Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create');
         Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');

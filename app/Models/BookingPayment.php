@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class BookingPayment extends Model
 {
@@ -55,5 +56,35 @@ class BookingPayment extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    /**
+     * The next date money is actually due: the earliest unpaid instalment date
+     * for bookings on a payment plan, otherwise the plain due_date. Instalment
+     * plans store their real schedule as JSON (payment_instalments), not on
+     * due_date — a booking on a plan usually has due_date = null. Once fully
+     * paid there's nothing left to be due, regardless of which path set it.
+     */
+    public function nextDueDate(): ?Carbon
+    {
+        if ((float) $this->balance_remaining <= 0) {
+            return null;
+        }
+
+        $instalments = $this->payment_instalments['instalments'] ?? null;
+
+        if ($instalments) {
+            $paidFlags = $this->payment_instalments['paid'] ?? [];
+
+            foreach ($instalments as $i => $instalment) {
+                if (empty($paidFlags[$i]) && ! empty($instalment['date'])) {
+                    return Carbon::parse($instalment['date']);
+                }
+            }
+
+            return null; // every instalment is paid
+        }
+
+        return $this->due_date;
     }
 }
