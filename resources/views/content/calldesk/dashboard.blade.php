@@ -1,6 +1,6 @@
-@extends('layouts/contentNavbarLayout')
+@extends('layouts.calldesk')
 
-@section('title', 'Call Center')
+@section('title', 'Dashboard')
 
 @section('content')
     @livewire('call-center-dashboard')

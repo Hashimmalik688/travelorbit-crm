@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Brand accent — matches the main CRM's indigo (--to-indigo) */
+    --color-brand-50: #eef2ff;
+    --color-brand-100: #e0e7ff;
+    --color-brand-200: #c7d2fe;
+    --color-brand-300: #a5b4fc;
+    --color-brand-400: #818cf8;
+    --color-brand-500: #6366f1;
+    --color-brand-600: #4f46e5;
+    --color-brand-700: #4338ca;
+    --color-brand-800: #3730a3;
+    --color-brand-900: #312e81;
+
+    /* App surfaces */
+    --color-ink: #0f172a;        /* slate-900 headings */
+    --color-muted: #64748b;      /* slate-500 secondary text */
+    --color-line: #e2e8f0;       /* slate-200 borders */
+    --color-canvas: #f8fafc;     /* slate-50 page background */
+
+    --radius-card: 0.875rem;
+}
+
+@layer base {
+    body {
+        @apply bg-canvas text-ink antialiased;
+    }
+}
+
+@layer components {
+    /* ---- Buttons ---- */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold
+               transition-colors duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40;
+    }
+    .btn-primary {
+        @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800;
+    }
+    .btn-ghost {
+        @apply bg-white text-slate-700 border border-line hover:bg-slate-50;
+    }
+    .btn-danger {
+        @apply bg-white text-rose-600 border border-rose-200 hover:bg-rose-50;
+    }
+    .btn-sm {
+        @apply px-3 py-1.5 text-xs;
+    }
+
+    /* ---- Cards ---- */
+    .card {
+        @apply bg-white border border-line rounded-[var(--radius-card)] shadow-sm;
+    }
+    .stat-card {
+        @apply bg-white border border-line rounded-[var(--radius-card)] shadow-sm p-5 flex items-start gap-4;
+    }
+
+    /* ---- Form fields ---- */
+    .field-label {
+        @apply block text-xs font-medium text-slate-500 mb-1;
+    }
+    .input, .select, .textarea {
+        @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm
+               placeholder:text-slate-400 transition
+               focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 focus:outline-none;
+    }
+    .textarea { @apply resize-y; }
+
+    /* ---- Badges ---- */
+    .badge {
+        @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize;
+    }
+    .badge-new        { @apply bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200; }
+    .badge-in_progress{ @apply bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200; }
+    .badge-quoted     { @apply bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200; }
+    .badge-converted  { @apply bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200; }
+    .badge-lost       { @apply bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200; }
+    .badge-neutral    { @apply bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200; }
+
+    /* ---- Tables ---- */
+    .table {
+        @apply w-full text-sm text-left;
+    }
+    .table thead th {
+        @apply px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 border-b border-line;
+    }
+    .table tbody td {
+        @apply px-4 py-3 border-b border-line/70 text-slate-700 align-middle;
+    }
+    .table tbody tr:last-child td { @apply border-b-0; }
+
+    /* ---- Sidebar nav ---- */
+    .nav-item {
+        @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600
+               transition-colors hover:bg-slate-100 hover:text-ink;
+    }
+    .nav-item-active {
+        @apply bg-brand-50 text-brand-700 hover:bg-brand-50 hover:text-brand-700;
+    }
+}

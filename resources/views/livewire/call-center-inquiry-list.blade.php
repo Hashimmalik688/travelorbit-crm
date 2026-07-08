@@ -1,182 +1,178 @@
 <div>
-    @php
-        $dispBadge = function ($key) {
-            return match ($key) {
-                'booked', 'booked_by_us', 'already_booked' => 'bg-label-success',
-                'wrong_number', 'booked_elsewhere' => 'bg-label-danger',
-                'no_answer' => 'bg-label-secondary',
-                'will_call_back' => 'bg-label-warning',
-                default => 'bg-label-primary',
-            };
-        };
-        $typeIcon = fn ($t) => ['flight' => 'ph-airplane-tilt', 'hotel' => 'ph-building', 'holiday' => 'ph-map-pin', 'umrah' => 'ph-moon-stars', 'visa' => 'ph-passport'][$t] ?? 'ph-tray';
-    @endphp
-
-    <div class="to-page-header">
-        <div class="to-page-header-left">
-            <h1>Inquiries</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="{{ route('callcenter.dashboard') }}">Call Center</a> &rsaquo; Inquiries
+    {{-- Toolbar --}}
+    <div class="flex flex-col gap-3 mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div class="relative flex-1 max-w-sm">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <x-call-desk.icon name="search" class="w-4 h-4" />
+                </span>
+                <input type="text" wire:model.live.debounce.300ms="search" class="input pl-9"
+                       placeholder="Search customer name or phone…">
+            </div>
+            <div class="flex flex-wrap gap-2 sm:ml-auto">
+                <select wire:model.live="filterType" class="select !w-auto">
+                    <option value="">All types</option>
+                    <option value="flight">Flight</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="holiday">Holiday</option>
+                    <option value="umrah">Umrah</option>
+                    <option value="visa">Visa</option>
+                </select>
+                <select wire:model.live="filterDisposition" class="select !w-auto">
+                    <option value="">All dispositions</option>
+                    @foreach(\App\Models\CallCenterCall::dispositions() as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                <select wire:model.live="filterMonth" class="select !w-auto">
+                    <option value="">All months</option>
+                    @for($m = 0; $m < 12; $m++)
+                        @php $d = now()->startOfMonth()->subMonths($m); @endphp
+                        <option value="{{ $d->format('Y-m') }}">{{ $d->format('M Y') }}</option>
+                    @endfor
+                </select>
             </div>
         </div>
-    </div>
-
-    {{-- Filters --}}
-    <div class="to-filter-bar">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label">Search</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="ph ph-magnifying-glass"></i></span>
-                    <input type="text" class="form-control" placeholder="Customer name or phone…" wire:model.live.debounce.300ms="search">
-                </div>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Type</label>
-                <x-styled-select modelName="filterType" placeholder="All types" :live="true" :options="[
-                    ['value' => 'flight', 'label' => 'Flight'],
-                    ['value' => 'hotel', 'label' => 'Hotel'],
-                    ['value' => 'holiday', 'label' => 'Holiday'],
-                    ['value' => 'umrah', 'label' => 'Umrah'],
-                    ['value' => 'visa', 'label' => 'Visa'],
-                ]" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Disposition</label>
-                <x-styled-select modelName="filterDisposition" placeholder="All dispositions" :live="true" :options="collect(\App\Models\CallCenterCall::dispositions())->map(fn($label, $key) => ['value' => $key, 'label' => $label])->values()->all()" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">From</label>
-                <input type="date" class="form-control" wire:model.live="filterDateFrom">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">To</label>
-                <input type="date" class="form-control" wire:model.live="filterDateTo">
-            </div>
-            @if($filterDateFrom || $filterDateTo || $filterType || $filterDisposition || $search)
-                <div class="col-md-12">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="clearDates">
-                        <i class="ph ph-x me-1"></i> Clear filters
-                    </button>
-                </div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-muted whitespace-nowrap">Date range:</span>
+            <input type="date" wire:model.live="filterDateFrom" class="input !w-auto text-sm" title="From date">
+            <span class="text-xs text-muted">to</span>
+            <input type="date" wire:model.live="filterDateTo" class="input !w-auto text-sm" title="To date">
+            @if($filterDateFrom || $filterDateTo || $filterMonth)
+                <button wire:click="clearDates" class="text-xs text-brand-600 hover:text-brand-800 font-medium whitespace-nowrap">Clear dates</button>
             @endif
         </div>
     </div>
 
     {{-- Table --}}
-    <div class="card animate-in">
-        <div class="table-responsive">
-            <table class="table table-hover">
+    <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Customer</th>
                         <th>Type</th>
-                        <th>Agent</th>
+                        @if($isManager)<th>Agent</th>@endif
                         <th>Pax</th>
                         <th>Disposition</th>
                         <th>Created</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($inquiries as $inq)
-                        <tr wire:key="inq-{{ $inq->id }}" wire:click="open({{ $inq->id }})" style="cursor:pointer;">
+                    @forelse($inquiries as $inq)
+                        <tr wire:key="inq-{{ $inq->id }}" wire:click="open({{ $inq->id }})"
+                            class="cursor-pointer hover:bg-slate-50 transition-colors">
                             <td>
-                                <div class="fw-semibold">{{ $inq->customer->name }}</div>
-                                <div class="text-muted small">{{ $inq->customer->phone }}</div>
+                                <div class="font-medium text-ink">{{ $inq->customer->name }}</div>
+                                <div class="text-xs text-muted">{{ $inq->customer->phone }}</div>
                             </td>
-                            <td class="text-capitalize">
-                                <i class="ph {{ $typeIcon($inq->type) }} text-muted me-1"></i>{{ $inq->type }}
+                            <td>
+                                <span class="inline-flex items-center gap-1.5 text-slate-600 capitalize">
+                                    <x-call-desk.icon name="{{ ['flight'=>'plane','hotel'=>'building','holiday'=>'map-pin','umrah'=>'calendar','visa'=>'inbox'][$inq->type] ?? 'inbox' }}" class="w-4 h-4 text-slate-400" />
+                                    {{ $inq->type }}
+                                </span>
                             </td>
-                            <td>{{ $inq->user?->name ?? '—' }}</td>
+                            @if($isManager)<td>{{ $inq->user?->name ?? '—' }}</td>@endif
                             <td>{{ $inq->totalPax() }}</td>
                             <td>
                                 @if($inq->last_disposition)
-                                    <span class="badge {{ $dispBadge($inq->last_disposition) }}">{{ \App\Models\CallCenterCall::dispositions()[$inq->last_disposition] ?? $inq->last_disposition }}</span>
+                                    @php
+                                        $dispLabel = \App\Models\CallCenterCall::dispositions()[$inq->last_disposition] ?? $inq->last_disposition;
+                                        $dispColor = match($inq->last_disposition) {
+                                            'booked', 'booked_by_us', 'already_booked' => 'badge-converted',
+                                            'wrong_number', 'booked_elsewhere' => 'badge-lost',
+                                            'no_answer' => 'badge-new',
+                                            default => 'badge-in_progress',
+                                        };
+                                    @endphp
+                                    <span class="badge {{ $dispColor }}">{{ $dispLabel }}</span>
                                 @else
-                                    <span class="badge bg-label-info">New</span>
+                                    <span class="badge badge-new">New</span>
                                 @endif
                             </td>
-                            <td class="text-muted text-nowrap">{{ $inq->created_at->format('d M, g:i A') }}</td>
+                            <td class="text-muted whitespace-nowrap">{{ $inq->created_at->format('d M, g:i A') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6">
-                                <div class="to-empty">
-                                    <div class="to-empty-icon"><i class="ph ph-tray"></i></div>
-                                    <h5>No inquiries match your filters</h5>
-                                    <p>Try adjusting your search or filters.</p>
+                            <td colspan="{{ $isManager ? 6 : 5 }}" class="text-center py-12">
+                                <div class="mx-auto w-12 h-12 grid place-items-center rounded-full bg-slate-50 text-slate-300 mb-3">
+                                    <x-call-desk.icon name="inbox" class="w-6 h-6" />
                                 </div>
+                                <p class="text-sm text-muted">No inquiries match your filters.</p>
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="card-footer">
-            {{ $inquiries->links() }}
-        </div>
     </div>
 
-    {{-- Detail modal --}}
+    <div class="mt-4">{{ $inquiries->links() }}</div>
+
+    {{-- Detail drawer --}}
     @if($selected)
-        <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);" wire:click="close" wire:key="drawer-{{ $selected->id }}">
-            <div style="background:#fff;border-radius:18px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 32px 96px rgba(0,0,0,.35);overflow:hidden;" wire:click.stop="">
-                <div style="padding:18px 24px;background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-                    <div class="d-flex align-items-center gap-2">
-                        <h5 class="fw-bold mb-0" style="font-size:.95rem;">Inquiry #{{ $selected->id }}</h5>
+        <div class="fixed inset-0 z-40" wire:key="drawer-{{ $selected->id }}">
+            <div class="absolute inset-0 bg-slate-900/40" wire:click="close"></div>
+
+            <aside class="absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl flex flex-col">
+                <div class="h-16 flex items-center justify-between px-5 border-b border-line shrink-0">
+                    <div class="flex items-center gap-2">
                         @if($selected->last_disposition)
-                            <span class="badge bg-white text-dark">{{ \App\Models\CallCenterCall::dispositions()[$selected->last_disposition] ?? $selected->last_disposition }}</span>
+                            @php
+                                $dColor = match($selected->last_disposition) {
+                                    'booked', 'booked_by_us', 'already_booked' => 'badge-converted',
+                                    'wrong_number', 'booked_elsewhere' => 'badge-lost',
+                                    'no_answer' => 'badge-new',
+                                    default => 'badge-in_progress',
+                                };
+                            @endphp
+                            <span class="badge {{ $dColor }}">{{ \App\Models\CallCenterCall::dispositions()[$selected->last_disposition] ?? $selected->last_disposition }}</span>
                         @else
-                            <span class="badge bg-white text-dark">New</span>
+                            <span class="badge badge-new">New</span>
                         @endif
+                        <h3 class="font-semibold text-ink">Inquiry #{{ $selected->id }}</h3>
                     </div>
-                    <button type="button" wire:click="close" style="background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;">✕</button>
+                    <button wire:click="close" class="grid place-items-center w-8 h-8 rounded-lg text-slate-400 hover:text-ink hover:bg-slate-100">
+                        <x-call-desk.icon name="close" class="w-5 h-5" />
+                    </button>
                 </div>
 
-                <div style="overflow-y:auto;padding:22px 24px;">
+                <div class="flex-1 overflow-y-auto p-5 space-y-6">
                     {{-- Customer --}}
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="avatar avatar-md">
-                            <span class="avatar-initial rounded-circle bg-label-primary">{{ strtoupper(substr($selected->customer->name, 0, 1)) }}</span>
-                        </div>
-                        <div>
-                            <div class="fw-semibold">{{ $selected->customer->name }}</div>
-                            <div class="text-muted small">{{ $selected->customer->phone }}{{ $selected->customer->city ? ' · '.$selected->customer->city : '' }}</div>
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <span class="grid place-items-center w-11 h-11 rounded-full bg-brand-100 text-brand-700 font-semibold">
+                                {{ strtoupper(substr($selected->customer->name, 0, 1)) }}
+                            </span>
+                            <div>
+                                <div class="font-semibold text-ink">{{ $selected->customer->name }}</div>
+                                <div class="text-sm text-muted">{{ $selected->customer->phone }}{{ $selected->customer->city ? ' · '.$selected->customer->city : '' }}</div>
+                            </div>
                         </div>
                     </div>
 
                     {{-- Summary --}}
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <div class="border rounded px-3 py-2">
-                                <div class="text-muted small">Type</div>
-                                <div class="fw-medium text-capitalize">{{ $selected->type }}</div>
-                            </div>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="rounded-lg bg-slate-50 border border-line px-3 py-2">
+                            <div class="text-xs text-muted">Type</div>
+                            <div class="font-medium text-ink capitalize">{{ $selected->type }}</div>
                         </div>
-                        <div class="col-6">
-                            <div class="border rounded px-3 py-2">
-                                <div class="text-muted small">Passengers</div>
-                                <div class="fw-medium">{{ $selected->totalPax() }} ({{ $selected->adults }}A · {{ $selected->children }}C · {{ $selected->infants }}I)</div>
-                            </div>
+                        <div class="rounded-lg bg-slate-50 border border-line px-3 py-2">
+                            <div class="text-xs text-muted">Passengers</div>
+                            <div class="font-medium text-ink">{{ $selected->totalPax() }} ({{ $selected->adults }}A · {{ $selected->children }}C · {{ $selected->infants }}I)</div>
                         </div>
-                        <div class="col-6">
-                            <div class="border rounded px-3 py-2">
-                                <div class="text-muted small">Source</div>
-                                <div class="fw-medium">{{ \App\Models\CallCenterInquiry::sources()[$selected->source] ?? $selected->source }}</div>
-                            </div>
+                        <div class="rounded-lg bg-slate-50 border border-line px-3 py-2">
+                            <div class="text-xs text-muted">Source</div>
+                            <div class="font-medium text-ink">{{ \App\Models\CallCenterInquiry::sources()[$selected->source] ?? $selected->source }}</div>
                         </div>
-                        <div class="col-6">
-                            <div class="border rounded px-3 py-2">
-                                <div class="text-muted small">Agent</div>
-                                <div class="fw-medium">{{ $selected->user?->name ?? '—' }}</div>
-                            </div>
+                        <div class="rounded-lg bg-slate-50 border border-line px-3 py-2">
+                            <div class="text-xs text-muted">Agent</div>
+                            <div class="font-medium text-ink">{{ $selected->user?->name ?? '—' }}</div>
                         </div>
                         @if($selected->mis_number)
-                            <div class="col-12">
-                                <div class="border rounded px-3 py-2 bg-label-success">
-                                    <div class="small">MIS #</div>
-                                    <div class="fw-medium">{{ $selected->mis_number }}</div>
-                                </div>
+                            <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 col-span-2">
+                                <div class="text-xs text-emerald-600">MIS #</div>
+                                <div class="font-medium text-emerald-800">{{ $selected->mis_number }}</div>
                             </div>
                         @endif
                     </div>
@@ -184,131 +180,138 @@
                     {{-- Trip details --}}
                     @php $fields = \App\Models\CallCenterInquiry::detailFieldsFor($selected->type); @endphp
                     @if(count($fields))
-                        <div class="mb-3">
-                            <h6 class="text-uppercase text-muted mb-2" style="font-size:.68rem;letter-spacing:.06em;">Trip details</h6>
-                            <div class="border rounded overflow-hidden">
+                        <div>
+                            <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Trip details</h4>
+                            <dl class="divide-y divide-line/70 rounded-lg border border-line overflow-hidden">
                                 @foreach($fields as [$key, $label, $t])
-                                    <div class="d-flex justify-content-between px-3 py-2 small {{ !$loop->last ? 'border-bottom' : '' }}">
-                                        <span class="text-muted">{{ $label }}</span>
-                                        <span class="fw-medium">{{ \App\Models\CallCenterInquiry::detailValueLabel($key, $selected->detail($key)) }}</span>
+                                    <div class="flex justify-between gap-4 px-3 py-2 text-sm">
+                                        <dt class="text-muted">{{ $label }}</dt>
+                                        <dd class="font-medium text-ink text-right">{{ \App\Models\CallCenterInquiry::detailValueLabel($key, $selected->detail($key)) }}</dd>
                                     </div>
                                 @endforeach
-                            </div>
+                            </dl>
                         </div>
                     @endif
 
                     {{-- Call history --}}
-                    <div class="mb-3">
-                        <h6 class="text-uppercase text-muted mb-2" style="font-size:.68rem;letter-spacing:.06em;">Call history</h6>
+                    <div>
+                        <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Call history</h4>
                         @if($selected->calls->isEmpty())
-                            <p class="text-muted small mb-0">No calls logged.</p>
+                            <p class="text-sm text-muted">No calls logged.</p>
                         @else
-                            <ul class="list-group list-group-flush border rounded">
+                            <ol class="relative border-l border-line ml-1.5 space-y-4">
                                 @foreach($selected->calls as $call)
-                                    <li class="list-group-item">
-                                        <div class="d-flex align-items-center justify-content-between gap-2">
-                                            <span class="fw-medium small">
+                                    <li class="ml-4">
+                                        <span class="absolute -left-[7px] mt-1 w-3 h-3 rounded-full {{ $call->disposition ? 'bg-brand-500' : 'bg-amber-400' }} ring-4 ring-white"></span>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-sm font-medium text-ink">
                                                 {{ $call->disposition ? (\App\Models\CallCenterCall::dispositions()[$call->disposition] ?? $call->disposition) : 'In progress' }}
                                             </span>
                                             @if(! $call->disposition)
-                                                <span class="badge bg-label-warning">open</span>
+                                                <span class="badge badge-quoted">open</span>
                                             @endif
                                         </div>
                                         @if($call->caller_comment)
-                                            <p class="small mb-0 mt-1"><span class="text-muted">Caller:</span> {{ $call->caller_comment }}</p>
+                                            <p class="text-sm text-slate-600 mt-1"><span class="font-medium text-slate-500">Caller:</span> {{ $call->caller_comment }}</p>
                                         @endif
                                         @if($call->agent_comment)
-                                            <p class="small mb-0 mt-1"><span class="text-muted">Agent:</span> {{ $call->agent_comment }}</p>
+                                            <p class="text-sm text-slate-600 mt-0.5"><span class="font-medium text-slate-500">Agent:</span> {{ $call->agent_comment }}</p>
                                         @endif
-                                        <div class="text-muted small mt-1">
+                                        <div class="text-xs text-muted mt-1">
                                             {{ $call->called_at?->format('d M Y, g:i A') }}{{ $call->user ? ' · '.$call->user->name : '' }}
                                         </div>
                                     </li>
                                 @endforeach
-                            </ul>
+                            </ol>
                         @endif
                     </div>
 
                     {{-- Scheduled callbacks --}}
                     @if($selected->followups->isNotEmpty())
-                        <div class="mb-3">
-                            <h6 class="text-uppercase text-muted mb-2" style="font-size:.68rem;letter-spacing:.06em;">Scheduled callbacks</h6>
-                            @foreach($selected->followups as $f)
-                                <div class="d-flex align-items-center gap-2 small border rounded px-3 py-2 mb-1">
-                                    <i class="ph {{ $f->status === 'done' ? 'ph-check-circle text-success' : 'ph-clock text-warning' }}"></i>
-                                    <span>{{ $f->due_at->format('d M, g:i A') }}</span>
-                                    <span class="badge {{ $f->status === 'done' ? 'bg-label-success' : 'bg-label-warning' }} ms-auto">{{ $f->status }}</span>
-                                </div>
-                            @endforeach
+                        <div>
+                            <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Scheduled callbacks</h4>
+                            <ul class="space-y-2">
+                                @foreach($selected->followups as $f)
+                                    <li class="flex items-center gap-2 text-sm rounded-lg border border-line px-3 py-2">
+                                        <x-call-desk.icon name="{{ $f->status === 'done' ? 'check-circle' : 'clock' }}" class="w-4 h-4 {{ $f->status === 'done' ? 'text-emerald-500' : 'text-amber-500' }}" />
+                                        <span class="text-ink">{{ $f->due_at->format('d M, g:i A') }}</span>
+                                        <span class="badge {{ $f->status === 'done' ? 'badge-converted' : 'badge-quoted' }} ml-auto">{{ $f->status }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
                         </div>
                     @endif
 
                     {{-- Follow-up action --}}
                     @if($followUpCallId && $followUpInquiryId === $selected->id)
-                        <div class="border rounded p-3 bg-label-primary">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <h6 class="mb-0">Log follow-up call</h6>
-                                <button type="button" class="btn btn-sm btn-link" wire:click="cancelFollowUp">Cancel</button>
+                        <div class="rounded-lg border-2 border-brand-200 bg-brand-50/50 p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-semibold text-brand-800">Log follow-up call</h4>
+                                <button wire:click="cancelFollowUp" class="text-xs text-slate-500 hover:text-slate-700">Cancel</button>
                             </div>
 
-                            <div class="mb-2">
-                                <label class="form-label">Disposition</label>
-                                <select wire:model.live="fuDisposition" class="form-select">
+                            <div>
+                                <label class="field-label">Disposition</label>
+                                <select wire:model.live="fuDisposition" class="select">
                                     <option value="">Select disposition…</option>
                                     @foreach(\App\Models\CallCenterCall::dispositions() as $key => $label)
                                         <option value="{{ $key }}">{{ $label }}</option>
                                     @endforeach
                                 </select>
-                                @error('fuDisposition') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                @error('fuDisposition') <div class="text-rose-600 text-xs mt-1">{{ $message }}</div> @enderror
                             </div>
 
-                            <div class="row g-2 mb-2">
-                                <div class="col-6">
-                                    <label class="form-label">Caller Comment</label>
-                                    <textarea wire:model="fuCallerComment" class="form-control" rows="2" placeholder="What the caller said…"></textarea>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label">Agent Comments</label>
-                                    <textarea wire:model="fuAgentComment" class="form-control" rows="2" placeholder="Your notes / next steps…"></textarea>
-                                </div>
+                            <div>
+                                <label class="field-label">Caller Comment</label>
+                                <textarea wire:model="fuCallerComment" class="textarea" rows="2" placeholder="What the caller said…"></textarea>
+                            </div>
+                            <div>
+                                <label class="field-label">Agent Comments</label>
+                                <textarea wire:model="fuAgentComment" class="textarea" rows="2" placeholder="Your notes / next steps…"></textarea>
                             </div>
 
                             @if(\App\Models\CallCenterCall::isBookedDisposition($fuDisposition))
-                                <div class="mb-2">
-                                    <label class="form-label">MIS #</label>
-                                    <input type="text" wire:model="fuMisNumber" class="form-control" placeholder="Booking software reference">
-                                    @error('fuMisNumber') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                <div>
+                                    <label class="field-label">MIS #</label>
+                                    <input type="text" wire:model="fuMisNumber" class="input" placeholder="Booking software reference">
+                                    @error('fuMisNumber') <div class="text-rose-600 text-xs mt-1">{{ $message }}</div> @enderror
                                 </div>
                             @endif
 
-                            <div class="border rounded p-2 mb-2 bg-white">
-                                <div class="form-check">
-                                    <input type="checkbox" wire:model.live="fuScheduleCallback" class="form-check-input" id="fuScheduleCallback">
-                                    <label class="form-check-label" for="fuScheduleCallback">Schedule a callback</label>
-                                </div>
+                            {{-- Schedule Callback --}}
+                            <div class="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" wire:model.live="fuScheduleCallback" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                    <div>
+                                        <span class="text-sm font-medium text-ink">Schedule a callback</span>
+                                        <p class="text-xs text-muted">Set a reminder to call back</p>
+                                    </div>
+                                </label>
                                 @if($fuScheduleCallback)
                                     <div class="mt-2">
-                                        <label class="form-label">Callback date &amp; time</label>
-                                        <input type="datetime-local" wire:model="fuCallbackAt" class="form-control">
-                                        @error('fuCallbackAt') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        <label class="field-label">Callback date &amp; time</label>
+                                        <input type="datetime-local" wire:model="fuCallbackAt" class="input">
+                                        @error('fuCallbackAt') <div class="text-rose-600 text-xs mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 @endif
                             </div>
 
-                            <div class="d-flex justify-content-end">
-                                <button type="button" class="btn btn-primary btn-sm" wire:click="saveFollowUp" wire:loading.attr="disabled">
+                            <div class="flex justify-end pt-1">
+                                <button wire:click="saveFollowUp" wire:loading.attr="disabled" class="btn btn-primary btn-sm">
                                     <span wire:loading.remove wire:target="saveFollowUp">Save call</span>
                                     <span wire:loading wire:target="saveFollowUp">Saving…</span>
                                 </button>
                             </div>
                         </div>
                     @else
-                        <button type="button" class="btn btn-primary w-100" wire:click="startFollowUp({{ $selected->id }})">
-                            <i class="ph ph-phone-call me-1"></i> Follow Up
-                        </button>
+                        <div class="pt-2">
+                            <button wire:click="startFollowUp({{ $selected->id }})" class="btn btn-primary w-full">
+                                <x-call-desk.icon name="phone" class="w-4 h-4" /> Follow Up
+                            </button>
+                        </div>
                     @endif
                 </div>
-            </div>
+            </aside>
         </div>
     @endif
 </div>

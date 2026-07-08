@@ -70,6 +70,9 @@ class CallCenterInquiryList extends Component
 
     public function open($id)
     {
+        $inquiry = CallCenterInquiry::findOrFail($id);
+        abort_unless(Auth::user()->isManager() || $inquiry->user_id === Auth::id(), 403);
+
         $this->selectedId = $id;
         $this->resetFollowUp();
     }
@@ -82,6 +85,9 @@ class CallCenterInquiryList extends Component
 
     public function startFollowUp($inquiryId)
     {
+        $inquiry = CallCenterInquiry::findOrFail($inquiryId);
+        abort_unless(Auth::user()->isManager() || $inquiry->user_id === Auth::id(), 403);
+
         $call = CallCenterCall::create([
             'inquiry_id' => $inquiryId,
             'user_id' => Auth::id(),
@@ -112,15 +118,17 @@ class CallCenterInquiryList extends Component
 
         $this->validate($rules);
 
-        DB::transaction(function () {
-            $call = CallCenterCall::findOrFail($this->followUpCallId);
+        $call = CallCenterCall::findOrFail($this->followUpCallId);
+        abort_unless(Auth::user()->isManager() || $call->user_id === Auth::id(), 403);
+
+        DB::transaction(function () use ($call) {
             $call->update([
                 'disposition' => $this->fuDisposition,
                 'caller_comment' => $this->fuCallerComment,
                 'agent_comment' => $this->fuAgentComment,
             ]);
 
-            $inquiry = CallCenterInquiry::findOrFail($this->followUpInquiryId);
+            $inquiry = $call->inquiry;
             $inquiry->update([
                 'status' => CallCenterCall::statusFor($this->fuDisposition),
                 'last_disposition' => $this->fuDisposition,
@@ -145,7 +153,10 @@ class CallCenterInquiryList extends Component
     public function cancelFollowUp()
     {
         if ($this->followUpCallId) {
-            CallCenterCall::where('id', $this->followUpCallId)->whereNull('disposition')->delete();
+            CallCenterCall::where('id', $this->followUpCallId)
+                ->whereNull('disposition')
+                ->when(! Auth::user()->isManager(), fn ($q) => $q->where('user_id', Auth::id()))
+                ->delete();
         }
         $this->resetFollowUp();
     }
@@ -164,7 +175,12 @@ class CallCenterInquiryList extends Component
 
     public function render()
     {
-        $query = CallCenterInquiry::with(['customer', 'user'])->latest();
+        $user = Auth::user();
+        $isManager = $user->isManager();
+
+        $query = CallCenterInquiry::with(['customer', 'user'])
+            ->when(! $isManager, fn ($q) => $q->where('user_id', $user->id))
+            ->latest();
 
         if ($this->search !== '') {
             $term = trim($this->search);
@@ -194,6 +210,7 @@ class CallCenterInquiryList extends Component
         $selected = null;
         if ($this->selectedId) {
             $selected = CallCenterInquiry::with(['customer', 'user', 'calls.user', 'followups'])
+                ->when(! $isManager, fn ($q) => $q->where('user_id', $user->id))
                 ->whereKey($this->selectedId)
                 ->first();
         }
@@ -201,6 +218,7 @@ class CallCenterInquiryList extends Component
         return view('livewire.call-center-inquiry-list', [
             'inquiries' => $query->paginate(15),
             'selected' => $selected,
+            'isManager' => $isManager,
         ]);
     }
 }

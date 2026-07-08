@@ -31,20 +31,6 @@
     { "menuHeader": "Reports",  "roles": ["admin","manager"] },
     { "url": "/reports",        "name": "Reports Hub",       "icon": "menu-icon icon-base ph ph-chart-bar",       "slug": "reports",          "roles": ["admin","manager"] },
 
-    { "menuHeader": "Call Center", "roles": ["admin"] },
-    {
-      "name": "Call Center",
-      "icon": "menu-icon icon-base ph ph-phone-call",
-      "slug": "callcenter",
-      "roles": ["admin"],
-      "submenu": [
-        { "url": "/call-center",              "name": "Dashboard",  "icon": "menu-icon icon-base ph ph-squares-four", "slug": "callcenter.dashboard" },
-        { "url": "/call-center/new-call",      "name": "New Call",   "icon": "menu-icon icon-base ph ph-phone-plus",   "slug": "callcenter.new-call" },
-        { "url": "/call-center/inquiries",     "name": "Inquiries",  "icon": "menu-icon icon-base ph ph-tray",         "slug": "callcenter.inquiries" },
-        { "url": "/call-center/callbacks",     "name": "Callbacks",  "icon": "menu-icon icon-base ph ph-clock",        "slug": "callcenter.callbacks" }
-      ]
-    },
-
     { "menuHeader": "System",   "roles": ["admin"] },
     { "url": "/settings",       "name": "Settings Hub",      "icon": "menu-icon icon-base ph ph-gear",            "slug": "settings",         "roles": ["admin"] }
   ]

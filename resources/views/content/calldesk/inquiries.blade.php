@@ -1,4 +1,4 @@
-@extends('layouts/contentNavbarLayout')
+@extends('layouts.calldesk')
 
 @section('title', 'Inquiries')
 

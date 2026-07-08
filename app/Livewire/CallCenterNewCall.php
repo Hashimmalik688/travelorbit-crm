@@ -49,7 +49,7 @@ class CallCenterNewCall extends Component
 
     public function searchPhone()
     {
-        $customer = CallCenterCustomer::findByPhone(trim($this->phoneSearch));
+        $customer = CallCenterCustomer::findByPhone(trim($this->phoneSearch), Auth::user());
 
         if ($customer) {
             $this->matchedCustomerId = $customer->id;
@@ -117,8 +117,14 @@ class CallCenterNewCall extends Component
 
     public function addCall()
     {
+        $user = Auth::user();
+        $existingInquiry = null;
+        $matchedCustomer = null;
+
         if ($this->mode === 'existing') {
             $this->validate(['selectedInquiryId' => 'required|exists:callcenter_inquiries,id']);
+            $existingInquiry = CallCenterInquiry::findOrFail($this->selectedInquiryId);
+            abort_unless($user->isManager() || $existingInquiry->user_id === $user->id, 403);
         } else {
             $this->validate([
                 'custName' => 'required|string|max:255',
@@ -129,17 +135,21 @@ class CallCenterNewCall extends Component
                 'children' => 'nullable|integer|min:0',
                 'infants' => 'nullable|integer|min:0',
             ]);
+
+            if ($this->matchedCustomerId) {
+                $matchedCustomer = CallCenterCustomer::findOrFail($this->matchedCustomerId);
+                abort_unless($user->isManager() || $matchedCustomer->user_id === $user->id, 403);
+            }
         }
 
-        $userId = Auth::id();
+        $userId = $user->id;
 
-        DB::transaction(function () use ($userId) {
+        DB::transaction(function () use ($userId, $existingInquiry, $matchedCustomer) {
             if ($this->mode === 'existing') {
-                $inquiry = CallCenterInquiry::findOrFail($this->selectedInquiryId);
+                $inquiry = $existingInquiry;
             } else {
-                $customer = $this->matchedCustomerId
-                    ? CallCenterCustomer::find($this->matchedCustomerId)
-                    : CallCenterCustomer::create([
+                $customer = $matchedCustomer ?? CallCenterCustomer::create([
+                        'user_id' => $userId,
                         'name' => $this->custName,
                         'phone' => $this->custPhone,
                         'city' => $this->custCity,
@@ -189,17 +199,20 @@ class CallCenterNewCall extends Component
 
         $this->validate($rules);
 
-        $userId = Auth::id();
+        $user = Auth::user();
+        $userId = $user->id;
 
-        DB::transaction(function () use ($userId) {
-            $call = CallCenterCall::findOrFail($this->activeCallId);
+        $call = CallCenterCall::findOrFail($this->activeCallId);
+        abort_unless($user->isManager() || $call->user_id === $userId, 403);
+
+        DB::transaction(function () use ($userId, $call) {
             $call->update([
                 'disposition' => $this->disposition,
                 'caller_comment' => $this->callerComment,
                 'agent_comment' => $this->agentComment,
             ]);
 
-            $inquiry = CallCenterInquiry::findOrFail($this->activeInquiryId);
+            $inquiry = $call->inquiry;
             $inquiry->update([
                 'status' => CallCenterCall::statusFor($this->disposition),
                 'last_disposition' => $this->disposition,

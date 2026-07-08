@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Booking;
 use App\Models\BookingPayment;
+use App\Models\CallCenterFollowup;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -38,6 +39,11 @@ class NotificationBell extends Component
             $n = Booking::where('user_id',$user->id)->where('booking_status','pending')->count();
             if ($n > 0) $items->push(['icon'=>'ph-clock','color'=>'#332E9E','bg'=>'rgba(51,46,158,.08)','title'=>"{$n} pending booking".($n>1?'s':''),'sub'=>'Not yet confirmed','url'=>route('agent.dashboard')]);
         }
+
+        $n = CallCenterFollowup::where('status','pending')->where('due_at','<',now())
+            ->when(! $user->isManager(), fn ($q) => $q->where('user_id', $user->id))
+            ->count();
+        if ($n > 0) $items->push(['icon'=>'ph-phone-x','color'=>'#DC2626','bg'=>'rgba(220,38,38,.08)','title'=>"{$n} overdue callback".($n>1?'s':''),'sub'=>'Call Desk','url'=>route('calldesk.callbacks')]);
 
         return view('livewire.notification-bell', ['notifications' => $items]);
     }

@@ -1,6 +1,10 @@
 @php
     use Illuminate\Support\Facades\Auth;
     $isMobile = false; // set dynamically in controller if needed
+
+    $callDeskPendingCallbacks = \App\Models\CallCenterFollowup::where('status', 'pending')
+        ->when(! Auth::user()->isManager(), fn ($q) => $q->where('user_id', Auth::id()))
+        ->count();
 @endphp
 
 {{-- Mobile toggle only --}}
@@ -22,6 +26,16 @@
 
     {{-- Right: Utility icons --}}
     <div class="to-navbar-actions d-flex align-items-center gap-2">
+        {{-- Call Desk — opens the call center in a new tab --}}
+        <a href="{{ route('calldesk.dashboard') }}" target="_blank" rel="noopener" class="to-nav-btn" title="Call Desk">
+            <i class="ph ph-headset"></i>
+            @if($callDeskPendingCallbacks > 0)
+                <span class="to-nav-badge" style="min-width:16px;height:16px;border-radius:8px;font-size:.58rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;top:3px;right:3px;">
+                    {{ $callDeskPendingCallbacks > 9 ? '9+' : $callDeskPendingCallbacks }}
+                </span>
+            @endif
+        </a>
+
         {{-- Notification bell --}}
         @livewire('notification-bell')
 

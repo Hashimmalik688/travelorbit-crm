@@ -7,11 +7,37 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE booking_documents MODIFY COLUMN document_type ENUM('e_ticket','hotel_voucher','passport','visa','itinerary','invoice','other') NOT NULL DEFAULT 'other'");
+        DB::statement("ALTER TABLE booking_documents DROP CONSTRAINT IF EXISTS booking_documents_document_type_check");
+
+        DB::statement("
+            ALTER TABLE booking_documents ADD CONSTRAINT booking_documents_document_type_check
+            CHECK (document_type IN (
+                'e_ticket',
+                'hotel_voucher',
+                'passport',
+                'visa',
+                'itinerary',
+                'invoice',
+                'other'
+            ))
+        ");
+
+        DB::statement("ALTER TABLE booking_documents ALTER COLUMN document_type SET DEFAULT 'other'");
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE booking_documents MODIFY COLUMN document_type ENUM('passport','cnic','other') NOT NULL DEFAULT 'other'");
+        DB::statement("ALTER TABLE booking_documents DROP CONSTRAINT IF EXISTS booking_documents_document_type_check");
+
+        DB::statement("
+            ALTER TABLE booking_documents ADD CONSTRAINT booking_documents_document_type_check
+            CHECK (document_type IN (
+                'passport',
+                'cnic',
+                'other'
+            ))
+        ");
+
+        DB::statement("ALTER TABLE booking_documents ALTER COLUMN document_type SET DEFAULT 'other'");
     }
 };

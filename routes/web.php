@@ -100,10 +100,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/settings/ip-whitelist', fn() => view('settings.ip-whitelist'))->name('settings.ip')->middleware('role:admin');
     });
 
-    Route::middleware('role:admin')->prefix('call-center')->name('callcenter.')->group(function () {
+    // Call Desk — every authenticated user; managers/admins see all agents' data,
+    // everyone else is scoped to their own (enforced in the Livewire components).
+    Route::prefix('call-desk')->name('calldesk.')->group(function () {
         Route::get('/', [CallCenterController::class, 'dashboard'])->name('dashboard');
         Route::get('/new-call', [CallCenterController::class, 'newCall'])->name('new-call');
         Route::get('/inquiries', [CallCenterController::class, 'inquiries'])->name('inquiries');
         Route::get('/callbacks', [CallCenterController::class, 'callbacks'])->name('callbacks');
     });
+
+    // Legacy admin-only Call Center URLs, kept as redirects to the new Call Desk.
+    Route::redirect('/call-center', '/call-desk', 301);
+    Route::redirect('/call-center/new-call', '/call-desk/new-call', 301);
+    Route::redirect('/call-center/inquiries', '/call-desk/inquiries', 301);
+    Route::redirect('/call-center/callbacks', '/call-desk/callbacks', 301);
 });
