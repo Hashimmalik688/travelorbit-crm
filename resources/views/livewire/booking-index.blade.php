@@ -145,7 +145,7 @@
                                     <a href="{{ route('bookings.show', $booking->id) }}" class="btn btn-sm btn-icon btn-outline-primary" title="View / Edit">
                                         <i class="ph ph-eye"></i>
                                     </a>
-                                    @if(in_array(Auth::user()->role, ['admin','manager']))
+                                    @if(Auth::user()->hasPermission('bookings.delete'))
                                     <form method="POST" action="{{ route('bookings.destroy', $booking->id) }}" style="display:inline;"
                                         onsubmit="return confirm('Delete Booking #{{ $booking->booking_number }}? This cannot be undone.')">
                                         @csrf

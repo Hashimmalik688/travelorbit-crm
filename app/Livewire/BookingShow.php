@@ -738,7 +738,7 @@ class BookingShow extends Component
 
     public function getIsViewerOnlyProperty(): bool
     {
-        return Auth::id() !== $this->booking->user_id && !in_array(Auth::user()->role, ['admin', 'manager']);
+        return Auth::id() !== $this->booking->user_id && !Auth::user()->hasPermission('bookings.edit_any');
     }
 
     private function abortIfViewer(): void
@@ -942,7 +942,7 @@ class BookingShow extends Component
 
     public function togglePaymentReviewed(): void
     {
-        if (!in_array(Auth::user()->role, ['admin', 'manager', 'accounts'])) return;
+        if (!Auth::user()->hasPermission('accounts.access')) return;
         $this->paymentReviewed = !$this->paymentReviewed;
         $this->booking->update(['payment_reviewed' => $this->paymentReviewed]);
     }
@@ -1738,7 +1738,7 @@ class BookingShow extends Component
     // ── SAVE ───────────────────────────────────────────────────────────
     public function save()
     {
-        if ($this->isViewerOnly && !in_array(Auth::user()->role, ['admin', 'manager'])) {
+        if ($this->isViewerOnly && !Auth::user()->hasPermission('bookings.edit_any')) {
             session()->flash('error', 'You do not have permission to modify this booking.');
             return;
         }
@@ -1777,7 +1777,7 @@ class BookingShow extends Component
             $oldExcursion = $b->excursion_data;
             $oldTransfers = $b->transfers()->get()->toArray();
 
-            if (!$this->isLocked || in_array(Auth::user()->role, ['admin', 'manager'])) {
+            if (!$this->isLocked || Auth::user()->hasPermission('bookings.edit_any')) {
 
             // Activity JSON — build on in-memory entries (already includes all field-edit entries flushed live)
             $saveUser = Auth::user();
@@ -2103,7 +2103,7 @@ class BookingShow extends Component
     public function autoSave()
     {
         // Silently skip if viewer or no passengers
-        if ($this->isViewerOnly && !in_array(Auth::user()->role, ['admin', 'manager'])) {
+        if ($this->isViewerOnly && !Auth::user()->hasPermission('bookings.edit_any')) {
             return;
         }
         if (empty($this->passengers)) {
@@ -2120,7 +2120,7 @@ class BookingShow extends Component
             $oldExcursion = $b->excursion_data;
             $oldTransfers = $b->transfers()->get()->toArray();
 
-            if (!$this->isLocked || in_array(Auth::user()->role, ['admin', 'manager'])) {
+            if (!$this->isLocked || Auth::user()->hasPermission('bookings.edit_any')) {
                 $b->update([
                     'booking_type' => $this->booking_type,
                     'passenger_count' => count($this->passengers),

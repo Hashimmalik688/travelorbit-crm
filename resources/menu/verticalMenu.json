@@ -3,40 +3,29 @@
     { "url": "/",               "name": "Operations Centre", "icon": "menu-icon icon-base ph ph-squares-four",    "slug": "dashboard",        "roles": ["admin","manager"] },
     { "url": "/my-dashboard",   "name": "Agent Dashboard",   "icon": "menu-icon icon-base ph ph-layout",          "slug": "my.dashboard",     "roles": ["agent","operations"] },
     { "url": "/my-dashboard",   "name": "Accounts Hub",      "icon": "menu-icon icon-base ph ph-bank",            "slug": "my.dashboard",     "roles": ["accounts"] },
-    { "menuHeader": "Bookings", "roles": ["admin","manager","operations","agent","accounts"] },
-    {
-      "name": "Bookings",
-      "icon": "menu-icon icon-base ph ph-book-open",
-      "slug": "bookings",
-      "roles": ["admin"],
-      "submenu": [
-        { "url": "/bookings",        "name": "All Bookings", "icon": "menu-icon icon-base ph ph-list",        "slug": "bookings.index" },
-        { "url": "/bookings/create", "name": "New Booking",  "icon": "menu-icon icon-base ph ph-plus-circle", "slug": "bookings.create" }
-      ]
-    },
-    { "url": "/my-bookings",    "name": "My Bookings",       "icon": "menu-icon icon-base ph ph-list-checks",     "slug": "bookings.mine",    "roles": ["operations"] },
-    { "url": "/bookings/create","name": "New Booking",       "icon": "menu-icon icon-base ph ph-plus-circle",     "slug": "bookings.create",  "roles": ["agent","operations","manager"] },
-    { "url": "/bookings",       "name": "All Bookings",      "icon": "menu-icon icon-base ph ph-list",            "slug": "bookings.index",   "roles": ["accounts"] },
-    { "url": "/customers",      "name": "Customers",         "icon": "menu-icon icon-base ph ph-users",           "slug": "customers",        "roles": ["admin","manager","operations"] },
 
-    { "menuHeader": "Issuance", "roles": ["admin","manager","issuance"] },
-    { "url": "/issuance-dashboard", "name": "Issuance Queue", "icon": "menu-icon icon-base ph ph-ticket",       "slug": "issuance.dashboard","roles": ["admin","manager","issuance"] },
+    { "menuHeader": "Bookings", "permissions": ["bookings.view_all","bookings.create","bookings.view_mine","customers.view"] },
+    { "url": "/bookings",        "name": "All Bookings",     "icon": "menu-icon icon-base ph ph-list",            "slug": "bookings.index",   "permissions": ["bookings.view_all"] },
+    { "url": "/bookings/create", "name": "New Booking",      "icon": "menu-icon icon-base ph ph-plus-circle",     "slug": "bookings.create",  "permissions": ["bookings.create"] },
+    { "url": "/my-bookings",     "name": "My Bookings",      "icon": "menu-icon icon-base ph ph-list-checks",     "slug": "bookings.mine",    "permissions": ["bookings.view_mine"] },
+    { "url": "/customers",       "name": "Customers",        "icon": "menu-icon icon-base ph ph-users",           "slug": "customers",        "permissions": ["customers.view"] },
+
+    { "menuHeader": "Issuance", "permissions": ["issuance.access"] },
+    { "url": "/issuance-dashboard", "name": "Issuance Queue", "icon": "menu-icon icon-base ph ph-ticket",         "slug": "issuance.dashboard","permissions": ["issuance.access"] },
 
     { "menuHeader": "Issued",   "roles": ["agent","operations"] },
     { "url": "/my-bookings/payment-plan",     "name": "Payment Plan",     "icon": "menu-icon icon-base ph ph-calendar-check", "slug": "bookings.payment-plan",     "roles": ["agent","operations"] },
     { "url": "/my-bookings/payment-awaiting", "name": "Payment Awaiting", "icon": "menu-icon icon-base ph ph-hourglass-medium","slug": "bookings.payment-awaiting", "roles": ["agent","operations"] },
 
-    { "menuHeader": "Accounts", "roles": ["admin","manager","accounts"] },
-    { "url": "/accounts-dashboard", "name": "Ready to Invoice","icon": "menu-icon icon-base ph ph-receipt",    "slug": "accounts.dashboard","roles": ["admin","manager","accounts"] },
-    { "url": "/payments",          "name": "Payments",              "icon": "menu-icon icon-base ph ph-credit-card",     "slug": "payments",          "roles": ["admin","manager","accounts"] },
-    { "url": "/payment-charges",  "name": "Charge Requests",      "icon": "menu-icon icon-base ph ph-queue",          "slug": "payment-charges",   "roles": ["admin","manager","accounts"] },
-    { "url": "/refunds",          "name": "Refunds",               "icon": "menu-icon icon-base ph ph-arrow-u-up-left", "slug": "refunds",          "roles": ["admin","manager","accounts"] },
+    { "menuHeader": "Accounts", "permissions": ["accounts.access"] },
+    { "url": "/accounts-dashboard", "name": "Ready to Invoice","icon": "menu-icon icon-base ph ph-receipt",       "slug": "accounts.dashboard","permissions": ["accounts.access"] },
+    { "url": "/payments",          "name": "Payments",              "icon": "menu-icon icon-base ph ph-credit-card",     "slug": "payments",          "permissions": ["accounts.access"] },
+    { "url": "/payment-charges",  "name": "Charge Requests",      "icon": "menu-icon icon-base ph ph-queue",          "slug": "payment-charges",   "permissions": ["accounts.access"] },
+    { "url": "/refunds",          "name": "Refunds",               "icon": "menu-icon icon-base ph ph-arrow-u-up-left", "slug": "refunds",          "permissions": ["accounts.access"] },
 
-    { "menuHeader": "Reports",  "roles": ["admin","manager"] },
-    { "url": "/reports",        "name": "Reports Hub",       "icon": "menu-icon icon-base ph ph-chart-bar",       "slug": "reports",          "roles": ["admin","manager"] },
-
-    { "menuHeader": "Reports",  "roles": ["agent","operations"] },
-    { "url": "/reports/performance", "name": "My Performance", "icon": "menu-icon icon-base ph ph-trend-up",      "slug": "reports.performance", "roles": ["agent","operations"] },
+    { "menuHeader": "Reports",  "permissions": ["reports.view","reports.performance"] },
+    { "url": "/reports",        "name": "Reports Hub",       "icon": "menu-icon icon-base ph ph-chart-bar",       "slug": "reports",          "permissions": ["reports.view"] },
+    { "url": "/reports/performance", "name": "Performance",  "icon": "menu-icon icon-base ph ph-trend-up",        "slug": "reports.performance", "permissions": ["reports.performance"] },
 
     { "menuHeader": "System",   "roles": ["admin"] },
     { "url": "/settings",       "name": "Settings Hub",      "icon": "menu-icon icon-base ph ph-gear",            "slug": "settings",         "roles": ["admin"] }

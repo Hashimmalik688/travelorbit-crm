@@ -50,7 +50,7 @@ class RefundIndex extends Component
     public function changeStatus($refundId, $newStatus): void
     {
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'manager'])) {
+        if (!$user->hasPermission('refunds.manage')) {
             return;
         }
 

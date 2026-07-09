@@ -14,7 +14,7 @@
     use Illuminate\Support\Facades\Auth;
 
     $agent = Auth::user();
-    $isManager = $agent->isManager();
+    $isManager = $agent->canViewAllData();
 
     $pendingCallbacks = \App\Models\CallCenterFollowup::where('status', 'pending')
         ->when(! $isManager, fn ($q) => $q->where('user_id', $agent->id))

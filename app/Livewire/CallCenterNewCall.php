@@ -124,7 +124,7 @@ class CallCenterNewCall extends Component
         if ($this->mode === 'existing') {
             $this->validate(['selectedInquiryId' => 'required|exists:callcenter_inquiries,id']);
             $existingInquiry = CallCenterInquiry::findOrFail($this->selectedInquiryId);
-            abort_unless($user->isManager() || $existingInquiry->user_id === $user->id, 403);
+            abort_unless($user->canViewAllData() || $existingInquiry->user_id === $user->id, 403);
         } else {
             $this->validate([
                 'custName' => 'required|string|max:255',
@@ -138,7 +138,7 @@ class CallCenterNewCall extends Component
 
             if ($this->matchedCustomerId) {
                 $matchedCustomer = CallCenterCustomer::findOrFail($this->matchedCustomerId);
-                abort_unless($user->isManager() || $matchedCustomer->user_id === $user->id, 403);
+                abort_unless($user->canViewAllData() || $matchedCustomer->user_id === $user->id, 403);
             }
         }
 
@@ -203,7 +203,7 @@ class CallCenterNewCall extends Component
         $userId = $user->id;
 
         $call = CallCenterCall::findOrFail($this->activeCallId);
-        abort_unless($user->isManager() || $call->user_id === $userId, 403);
+        abort_unless($user->canViewAllData() || $call->user_id === $userId, 403);
 
         DB::transaction(function () use ($userId, $call) {
             $call->update([

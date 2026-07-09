@@ -30,7 +30,7 @@ class CallCenterCustomer extends Model
     public static function findByPhone(string $phone, ?User $scopeTo = null): ?self
     {
         return static::where('phone', $phone)
-            ->when($scopeTo && ! $scopeTo->isManager(), fn ($q) => $q->where('user_id', $scopeTo->id))
+            ->when($scopeTo && ! $scopeTo->canViewAllData(), fn ($q) => $q->where('user_id', $scopeTo->id))
             ->first();
     }
 }

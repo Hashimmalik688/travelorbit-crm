@@ -14,8 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
     // ── Named middleware aliases ─────────────────────────────────────
     $middleware->alias([
-        'role'     => \App\Http\Middleware\CheckRole::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'role'       => \App\Http\Middleware\CheckRole::class,
+        'permission' => \App\Http\Middleware\CheckPermission::class,
+        'throttle'   => \Illuminate\Routing\Middleware\ThrottleRequests::class,
     ]);
 
     // ── Global web middleware stack ──────────────────────────────────

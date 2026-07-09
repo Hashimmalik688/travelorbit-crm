@@ -30,16 +30,56 @@ class User extends Authenticatable
         'operations' => 'Operations',
     ];
 
-    // ── Role permission helpers ──────────────────────────────────────
-    public function isAdmin(): bool   { return in_array($this->role, ['admin', 'manager']); }
-    public function isAgent(): bool   { return $this->role === self::ROLE_AGENT; }
+    // ── Position badge helpers (role is now cosmetic) ────────────────
+    public function isAdmin(): bool    { return $this->role === self::ROLE_ADMIN; }
+    public function isManager(): bool  { return $this->role === self::ROLE_MANAGER; }
+    public function isAgent(): bool    { return $this->role === self::ROLE_AGENT; }
     public function isAccounts(): bool { return $this->role === self::ROLE_ACCOUNTS; }
     public function isIssuance(): bool { return $this->role === self::ROLE_ISSUANCE; }
-    public function isManager(): bool  { return in_array($this->role, ['admin', 'manager']); }
 
+    // ── Permission checks ────────────────────────────────────────────
+    /** Admin is a hard-wired super-user; everyone else is governed by the checkboxes. */
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->role === self::ROLE_ADMIN) return true;
+        return in_array($permission, $this->permissions ?? [], true);
+    }
+
+    public function hasAnyPermission(array $permissions): bool
+    {
+        if ($this->role === self::ROLE_ADMIN) return true;
+        return count(array_intersect($permissions, $this->permissions ?? [])) > 0;
+    }
+
+    /** Every permission key this user effectively holds (admin => everything). */
+    public function allowedPermissions(): array
+    {
+        if ($this->role === self::ROLE_ADMIN) {
+            return array_keys(config('permissions.permissions'));
+        }
+        return $this->permissions ?? [];
+    }
+
+    /** Whether the user sees all agents' data rather than only their own. */
+    public function canViewAllData(): bool
+    {
+        return $this->hasPermission('data.view_all');
+    }
+
+    /** Default permission set for a role — pre-fills the checkbox matrix / backfill. */
+    public static function presetPermissions(string $role): array
+    {
+        $preset = config("permissions.presets.$role", []);
+        if ($preset === ['*']) {
+            return array_keys(config('permissions.permissions'));
+        }
+        return $preset;
+    }
+
+    // ── Booking capability helpers (thin wrappers over permissions) ──
     public function canCreateBooking(): bool
     {
-        return in_array($this->role, ['agent', 'admin', 'manager', 'operations']);
+        return $this->hasPermission('bookings.create');
     }
 
     public function canEditBooking(Booking $booking): bool
@@ -50,30 +90,30 @@ class User extends Authenticatable
 
     public function canQueueForIssuance(Booking $booking): bool
     {
-        return in_array($this->role, ['agent', 'admin', 'manager', 'operations'])
+        return $this->hasPermission('bookings.queue_issuance')
             && $booking->canQueueForIssuance();
     }
 
     public function canManageIssuanceQueue(Booking $booking): bool
     {
-        return in_array($this->role, ['issuance', 'admin', 'manager'])
+        return $this->hasPermission('issuance.manage')
             && in_array($booking->booking_status, [Booking::STATUS_ISSUANCE_QUEUE, Booking::STATUS_TICKET_IN_PROCESS]);
     }
 
     public function canChargePayment(): bool
     {
-        return in_array($this->role, ['accounts', 'admin', 'manager']);
+        return $this->hasPermission('payments.charge');
     }
 
     public function canInvoice(Booking $booking): bool
     {
-        return in_array($this->role, ['accounts', 'admin', 'manager'])
+        return $this->hasPermission('payments.invoice')
             && $booking->canInvoice();
     }
 
     public function canIssue(Booking $booking): bool
     {
-        return in_array($this->role, ['accounts', 'admin', 'manager'])
+        return $this->hasPermission('payments.issue')
             && $booking->canIssue();
     }
 
@@ -105,6 +145,7 @@ class User extends Authenticatable
         'password',
         'password_plaintext',
         'role',
+        'permissions',
         'is_active',
         'status',
         'profile_photo_path',
@@ -135,6 +176,7 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'permissions' => 'array',
         ];
     }
 

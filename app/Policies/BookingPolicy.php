@@ -7,10 +7,11 @@ use App\Models\User;
 
 class BookingPolicy
 {
-    // Admin/Manager bypass
+    // Admin is the only hard-wired super-user; everyone else (incl. manager)
+    // is governed by the permission checks in each method below.
     public function before(User $user, string $ability): ?bool
     {
-        if (in_array($user->role, ['admin', 'manager'])) return true;
+        if ($user->role === 'admin') return true;
         return null;
     }
 
@@ -49,7 +50,7 @@ class BookingPolicy
 
     public function markTicketInProcess(User $user, Booking $booking): bool
     {
-        return in_array($user->role, ['issuance', 'admin', 'manager'])
+        return $user->hasPermission('issuance.manage')
             && $booking->canMarkTicketInProcess();
     }
 
@@ -70,12 +71,12 @@ class BookingPolicy
 
     public function declinePayment(User $user, Booking $booking): bool
     {
-        return in_array($user->role, ['accounts', 'admin', 'manager']);
+        return $user->hasPermission('payments.charge');
     }
 
     public function restoreToPending(User $user, Booking $booking): bool
     {
-        return in_array($user->role, ['issuance', 'admin', 'manager'])
+        return $user->hasPermission('issuance.manage')
             && $booking->canRestoreToPending();
     }
 }

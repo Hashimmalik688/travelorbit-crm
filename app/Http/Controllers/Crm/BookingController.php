@@ -38,9 +38,9 @@ class BookingController extends Controller
 
     public function destroy(Booking $booking)
     {
-        // Only admin and manager can delete bookings
-        if (!in_array(Auth::user()->role, ['admin', 'manager'])) {
-            abort(403, 'Only admins and managers can delete bookings.');
+        // Gated by the bookings.delete permission (admin + manager by default)
+        if (!Auth::user()->hasPermission('bookings.delete')) {
+            abort(403, 'You do not have permission to delete bookings.');
         }
 
         $num = $booking->booking_number;

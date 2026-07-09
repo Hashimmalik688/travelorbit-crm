@@ -23,7 +23,7 @@ class AgentPerformance extends Component
     public function mount(): void
     {
         $user = Auth::user();
-        $this->canViewAll = in_array($user->role, ['admin', 'manager', 'accounts']);
+        $this->canViewAll = $user->canViewAllData();
         $this->month = now()->format('Y-m');
 
         // Self-only roles (agent, operations) are locked to their own data.

@@ -14,7 +14,7 @@ class CallCenterDashboard extends Component
     public function render()
     {
         $agent = Auth::user();
-        $isManager = $agent->isManager();
+        $isManager = $agent->canViewAllData();
 
         // Personal reminder, not a team overview — the modal tells the viewer
         // "you need to call these people back", which is only ever true for

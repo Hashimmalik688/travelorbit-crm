@@ -71,7 +71,7 @@ class CallCenterInquiryList extends Component
     public function open($id)
     {
         $inquiry = CallCenterInquiry::findOrFail($id);
-        abort_unless(Auth::user()->isManager() || $inquiry->user_id === Auth::id(), 403);
+        abort_unless(Auth::user()->canViewAllData() || $inquiry->user_id === Auth::id(), 403);
 
         $this->selectedId = $id;
         $this->resetFollowUp();
@@ -86,7 +86,7 @@ class CallCenterInquiryList extends Component
     public function startFollowUp($inquiryId)
     {
         $inquiry = CallCenterInquiry::findOrFail($inquiryId);
-        abort_unless(Auth::user()->isManager() || $inquiry->user_id === Auth::id(), 403);
+        abort_unless(Auth::user()->canViewAllData() || $inquiry->user_id === Auth::id(), 403);
 
         $call = CallCenterCall::create([
             'inquiry_id' => $inquiryId,
@@ -119,7 +119,7 @@ class CallCenterInquiryList extends Component
         $this->validate($rules);
 
         $call = CallCenterCall::findOrFail($this->followUpCallId);
-        abort_unless(Auth::user()->isManager() || $call->user_id === Auth::id(), 403);
+        abort_unless(Auth::user()->canViewAllData() || $call->user_id === Auth::id(), 403);
 
         DB::transaction(function () use ($call) {
             $call->update([
@@ -155,7 +155,7 @@ class CallCenterInquiryList extends Component
         if ($this->followUpCallId) {
             CallCenterCall::where('id', $this->followUpCallId)
                 ->whereNull('disposition')
-                ->when(! Auth::user()->isManager(), fn ($q) => $q->where('user_id', Auth::id()))
+                ->when(! Auth::user()->canViewAllData(), fn ($q) => $q->where('user_id', Auth::id()))
                 ->delete();
         }
         $this->resetFollowUp();
@@ -176,7 +176,7 @@ class CallCenterInquiryList extends Component
     public function render()
     {
         $user = Auth::user();
-        $isManager = $user->isManager();
+        $isManager = $user->canViewAllData();
 
         $query = CallCenterInquiry::with(['customer', 'user'])
             ->when(! $isManager, fn ($q) => $q->where('user_id', $user->id))

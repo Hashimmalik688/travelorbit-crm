@@ -78,6 +78,9 @@
           @error('role')<div class="text-danger mt-1" style="font-size:.72rem;">{{ $message }}</div>@enderror
         </div>
 
+        {{-- Permissions --}}
+        @include('settings.users._permissions', ['currentPermissions' => old('permissions', $user->permissions ?? [])])
+
         {{-- Status --}}
         <div class="mb-3">
           <label class="form-label fw-semibold" style="font-size:.72rem;color:#5A6080;">Status</label>

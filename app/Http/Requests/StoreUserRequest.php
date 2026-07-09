@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends FormRequest
 {
@@ -15,6 +16,8 @@ class StoreUserRequest extends FormRequest
             'email'     => ['required', 'email', 'max:255', 'unique:users'],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
             'role'      => ['required', 'in:agent,accounts,issuance,manager,admin,operations'],
+            'permissions'   => ['nullable', 'array'],
+            'permissions.*' => [Rule::in(array_keys(config('permissions.permissions')))],
             'phone'     => ['nullable', 'string', 'max:20'],
             'is_active' => ['nullable', 'boolean'],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],

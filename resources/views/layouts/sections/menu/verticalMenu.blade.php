@@ -23,10 +23,19 @@ $bottomSlugs  = [];
   <ul class="menu-inner sb-nav">
     @foreach ($menuData[0]->menu as $menu)
       @php
+        // Items may gate by `permissions` (any-of, via hasAnyPermission) or by
+        // `roles` (badge-based, for the role-specific dashboards & agent reports).
+        $menuPerms = isset($menu->permissions) ? (array)$menu->permissions : null;
         $menuRoles = isset($menu->roles) ? (array)$menu->roles : null;
-        $hasRole = !$menuRoles || in_array($userRole, $menuRoles);
+        if ($menuPerms !== null) {
+            $isVisible = $user && $user->hasAnyPermission($menuPerms);
+        } elseif ($menuRoles !== null) {
+            $isVisible = in_array($userRole, $menuRoles);
+        } else {
+            $isVisible = true;
+        }
       @endphp
-      @continue(!$hasRole)
+      @continue(!$isVisible)
       @continue(isset($menu->menuHeader))
       @continue(isset($menu->slug) && in_array($menu->slug, $bottomSlugs))
 

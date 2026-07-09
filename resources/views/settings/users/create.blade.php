@@ -65,6 +65,9 @@
           @error('role')<div class="text-danger mt-1" style="font-size:.72rem;">{{ $message }}</div>@enderror
         </div>
 
+        {{-- Permissions --}}
+        @include('settings.users._permissions', ['currentPermissions' => old('permissions', [])])
+
         {{-- Password --}}
         <div class="row g-3 mb-4">
           <div class="col-md-6">
@@ -95,16 +98,12 @@
 
   <div class="col-lg-5">
     <div style="background:rgba(51,46,158,.03);border-radius:16px;border:1px solid rgba(51,46,158,.08);padding:22px;">
-      <h6 class="fw-bold mb-3" style="font-size:.82rem;color:#0F172A;">Role Permissions Guide</h6>
-      @php $guide = ['Agent'=>['Create bookings','Add passengers, PNR, hotel','Edit until issuance queue'],'Accounts Manager'=>['Charge & decline payments','Invoice Ticket-in-Process bookings','View all bookings'],'Issuance Manager'=>['Manage issuance queue','Mark tickets in process','Restore bookings to pending'],'Manager'=>['Everything (except user management)','View all reports and dashboards'],'Admin / CEO'=>['Everything + user management','View all stats across all agents','Full system control'],'Operations'=>['Create and support bookings','Same as agent level']]; @endphp
-      @foreach ($guide as $role => $perms)
-        <div class="mb-3">
-          <div class="fw-semibold" style="font-size:.73rem;color:#374151;">{{ $role }}</div>
-          <ul class="mb-0 ps-3" style="font-size:.68rem;color:#64748B;">
-            @foreach ($perms as $p)<li>{{ $p }}</li>@endforeach
-          </ul>
-        </div>
-      @endforeach
+      <h6 class="fw-bold mb-3" style="font-size:.82rem;color:#0F172A;">How access works</h6>
+      <div style="font-size:.72rem;color:#64748B;line-height:1.6;">
+        <p class="mb-2"><strong style="color:#374151;">Role</strong> is just a position badge. What the user can actually see and do is controlled by the <strong style="color:#374151;">permission checkboxes</strong>.</p>
+        <p class="mb-2">Picking a role pre-ticks a sensible set of permissions — a starting point you can freely tick or untick.</p>
+        <p class="mb-0"><strong style="color:#B91C1C;">Admin</strong> always has full access and manages users, so its permissions are set automatically.</p>
+      </div>
     </div>
   </div>
 </div>

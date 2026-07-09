@@ -16,6 +16,8 @@ class UpdateUserRequest extends FormRequest
             'email'     => ['required', 'email', 'max:255', Rule::unique('users')->ignore($this->route('user'))],
             'password'  => ['nullable', 'string', 'min:8', 'confirmed'],
             'role'      => ['required', 'in:agent,accounts,issuance,manager,admin,operations'],
+            'permissions'   => ['nullable', 'array'],
+            'permissions.*' => [Rule::in(array_keys(config('permissions.permissions')))],
             'phone'     => ['nullable', 'string', 'max:20'],
             'status'    => ['nullable', 'in:active,inactive,suspended'],
             'is_active' => ['nullable', 'boolean'],

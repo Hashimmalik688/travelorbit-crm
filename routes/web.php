@@ -27,67 +27,64 @@ Route::middleware(['auth'])->group(function () {
             default              => redirect()->route('agent.dashboard'),
         };
     })->name('my.dashboard');
-    Route::get('/accounts-dashboard', [DashboardController::class, 'accountsDashboardPage'])->name('accounts.dashboard')->middleware('role:accounts,admin,manager');
-    Route::get('/issuance-dashboard', [DashboardController::class, 'issuanceDashboardPage'])->name('issuance.dashboard')->middleware('role:issuance,admin,manager');
+    Route::get('/accounts-dashboard', [DashboardController::class, 'accountsDashboardPage'])->name('accounts.dashboard')->middleware('permission:accounts.access');
+    Route::get('/issuance-dashboard', [DashboardController::class, 'issuanceDashboardPage'])->name('issuance.dashboard')->middleware('permission:issuance.access');
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/logout', [LoginController::class, 'logout'])->name('logout.get');
 
-    // All Bookings — admin only
-    Route::middleware('role:admin')->group(function () {
+    // All Bookings — company-wide list
+    Route::middleware('permission:bookings.view_all')->group(function () {
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
     });
 
-    // My Bookings — not needed by agents, who only create + view their own via the dashboard
-    Route::middleware('role:admin,manager,operations,accounts')->group(function () {
+    // My Bookings list
+    Route::middleware('permission:bookings.view_mine')->group(function () {
         Route::get('/my-bookings', [BookingController::class, 'myBookings'])->name('bookings.mine');
     });
 
-    // Issued-but-unpaid mini reports — agent's own bookings, split out of the dashboard tabs
-    Route::middleware('role:agent,operations')->group(function () {
+    // Issued-but-unpaid mini reports — the user's own bookings, split out of the dashboard tabs
+    Route::middleware('permission:bookings.create')->group(function () {
         Route::get('/my-bookings/payment-plan', [DashboardController::class, 'paymentPlanReport'])->name('bookings.payment-plan');
         Route::get('/my-bookings/payment-awaiting', [DashboardController::class, 'paymentAwaitingReport'])->name('bookings.payment-awaiting');
     });
 
-    Route::middleware('role:admin,manager,operations,agent,accounts')->group(function () {
-        Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create');
-        Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
-        Route::get('/bookings/{booking}/edit', fn($booking) => redirect()->route('bookings.show', $booking));
-        Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
+    // Booking create / edit / workflow — each action gated by its own permission.
+    // "create" must be registered before the /bookings/{booking} wildcard below.
+    Route::get('/bookings/create', [BookingController::class, 'create'])->name('bookings.create')->middleware('permission:bookings.create');
+    Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store')->middleware('permission:bookings.create');
+    Route::get('/bookings/{booking}/edit', fn($booking) => redirect()->route('bookings.show', $booking));
+    Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy')->middleware('permission:bookings.delete');
 
-        Route::post('/bookings/{booking}/queue-issuance', [BookingWorkflowController::class, 'queueForIssuance'])->name('bookings.queue-issuance');
-        Route::post('/bookings/{booking}/invoice',        [BookingWorkflowController::class, 'invoice'])->name('bookings.invoice');
-    });
+    Route::post('/bookings/{booking}/queue-issuance', [BookingWorkflowController::class, 'queueForIssuance'])->name('bookings.queue-issuance')->middleware('permission:bookings.queue_issuance');
+    Route::post('/bookings/{booking}/invoice',        [BookingWorkflowController::class, 'invoice'])->name('bookings.invoice')->middleware('permission:payments.invoice');
 
-    // Booking show + issuance workflow — also accessible by issuance role
-    Route::middleware('role:issuance,admin,manager,operations,agent,accounts')->group(function () {
-        Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+    // Booking show — any authenticated user; the issuance/payment workflow POSTs below
+    // are additionally authorised per-action by BookingPolicy in the controller.
+    Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+    Route::post('/bookings/{booking}/remove-issuance',   [BookingWorkflowController::class, 'removeFromIssuanceQueue'])->name('bookings.remove-issuance')->middleware('permission:issuance.manage');
+    Route::post('/bookings/{booking}/ticket-in-process', [BookingWorkflowController::class, 'markTicketInProcess'])->name('bookings.ticket-in-process')->middleware('permission:issuance.manage');
+    Route::post('/bookings/{booking}/restore-pending',   [BookingWorkflowController::class, 'restoreToPending'])->name('bookings.restore-pending')->middleware('permission:issuance.manage');
+    Route::post('/bookings/{booking}/issue',             [BookingWorkflowController::class, 'issue'])->name('bookings.issue')->middleware('permission:payments.issue');
 
-        Route::post('/bookings/{booking}/remove-issuance',   [BookingWorkflowController::class, 'removeFromIssuanceQueue'])->name('bookings.remove-issuance');
-        Route::post('/bookings/{booking}/ticket-in-process', [BookingWorkflowController::class, 'markTicketInProcess'])->name('bookings.ticket-in-process');
-        Route::post('/bookings/{booking}/restore-pending',   [BookingWorkflowController::class, 'restoreToPending'])->name('bookings.restore-pending');
-        Route::post('/bookings/{booking}/issue',             [BookingWorkflowController::class, 'issue'])->name('bookings.issue');
-    });
-
-    Route::middleware('role:admin,manager,operations,agent,accounts')->group(function () {
+    Route::middleware('permission:customers.view')->group(function () {
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers');
         Route::get('/customers/{phone}', [CustomerController::class, 'show'])->name('customers.show');
     });
 
-    Route::middleware('role:admin,manager,accounts')->group(function () {
+    Route::middleware('permission:accounts.access')->group(function () {
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments');
         Route::get('/refunds', [RefundController::class, 'index'])->name('refunds');
         Route::get('/payment-charges', fn() => view('content.finance.payment-charge-requests'))->name('payment-charges');
     });
 
-    Route::middleware('role:admin,manager,accounts')->group(function () {
+    Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports',             fn() => view('content.reports.index'))->name('reports');
         Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');
     });
 
-    // Agent Performance — managers/admin/accounts see all agents and any month;
-    // agents/operations see only their own data for the current or previous month
-    // (scoping is enforced inside the AgentPerformance Livewire component).
-    Route::middleware('role:admin,manager,accounts,agent,operations')->group(function () {
+    // Agent Performance — users with data.view_all see everyone; others are scoped to
+    // their own data inside the AgentPerformance Livewire component.
+    Route::middleware('permission:reports.performance')->group(function () {
         Route::get('/reports/performance', [ReportController::class, 'performance'])->name('reports.performance');
     });
 

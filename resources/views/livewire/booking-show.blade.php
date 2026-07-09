@@ -58,7 +58,7 @@
   $role       = Auth::user()->role;
   $status     = $booking->booking_status === 'invoiced' ? 'issued' : $booking->booking_status;
   $btype      = $booking->booking_type ?? 'flight';
-  $isPrivileged = in_array($role, ['admin', 'manager']);
+  $isPrivileged = Auth::user()->hasPermission('bookings.edit_any');
   $isAdmin    = $role === 'admin';
 
   // ── Core form lock (booking info, passengers, flight, hotel sections) ──
@@ -208,7 +208,7 @@
     <div style="width:1px;height:28px;background:rgba(51,46,158,.1);margin:0 2px;"></div>
 
     <a href="{{ route('bookings.index') }}" class="bv-action" style="background:transparent;border-color:rgba(51,46,158,.2);color:#374151;"><i class="ph ph-arrow-left"></i> Back</a>
-    @if($canEditBooking || ($isLocked && in_array(Auth::user()->role, ['admin','manager','accounts'])))
+    @if($canEditBooking || ($isLocked && Auth::user()->hasPermission('accounts.access')))
       <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:9px;font-size:.68rem;font-weight:600;">
         <span x-show="saving" style="display:inline-flex;align-items:center;gap:4px;color:#64748B;"><i class="ph ph-circle-notch spinning"></i> Saving...</span>
         <span x-show="saved && !saving" style="display:inline-flex;align-items:center;gap:4px;color:#16A34A;"><i class="ph ph-check-circle"></i> Saved</span>

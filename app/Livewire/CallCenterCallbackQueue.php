@@ -13,7 +13,7 @@ class CallCenterCallbackQueue extends Component
         $user = Auth::user();
 
         $followup = CallCenterFollowup::where('id', $followupId)
-            ->when(! $user->isManager(), fn ($q) => $q->where('user_id', $user->id))
+            ->when(! $user->canViewAllData(), fn ($q) => $q->where('user_id', $user->id))
             ->first();
 
         if ($followup) {
@@ -25,7 +25,7 @@ class CallCenterCallbackQueue extends Component
     public function render()
     {
         $user = Auth::user();
-        $isManager = $user->isManager();
+        $isManager = $user->canViewAllData();
 
         $followups = CallCenterFollowup::with(['inquiry.customer', 'user'])
             ->where('status', 'pending')

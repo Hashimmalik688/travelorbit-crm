@@ -32,6 +32,7 @@ class UserController extends Controller
             'password'           => $request->password,
             'password_plaintext' => $request->password,
             'role'               => $request->role,
+            'permissions'        => $this->resolvePermissions($request),
             'is_active'          => $request->boolean('is_active', true),
             'status'             => 'active',
         ];
@@ -73,12 +74,13 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user)
     {
-        $old = ['role' => $user->role, 'status' => $user->status];
+        $old = ['role' => $user->role, 'status' => $user->status, 'permissions' => $user->permissions];
 
         $attributes = [
             'name'   => $request->name,
             'email'  => strtolower($request->email),
             'role'   => $request->role,
+            'permissions' => $this->resolvePermissions($request),
             'status' => $request->input('status', 'active'),
             'is_active' => $request->input('status', 'active') === 'active',
         ];
@@ -114,11 +116,27 @@ class UserController extends Controller
             model:       'User',
             model_id:    $user->id,
             description: "Updated user {$user->email}",
-            changes:     ['before' => $old, 'after' => ['role' => $user->role, 'status' => $user->status]],
+            changes:     ['before' => $old, 'after' => ['role' => $user->role, 'status' => $user->status, 'permissions' => $user->permissions]],
         );
 
         return redirect()->route('settings.users.index')
             ->with('success', "User {$user->name} updated.");
+    }
+
+    /**
+     * Resolve the permission keys to persist. Admins get every key (they are a
+     * hard-wired super-user regardless); everyone else keeps only posted keys
+     * that exist in the registry.
+     */
+    private function resolvePermissions(Request $request): array
+    {
+        $valid = array_keys(config('permissions.permissions'));
+
+        if ($request->input('role') === 'admin') {
+            return $valid;
+        }
+
+        return array_values(array_intersect((array) $request->input('permissions', []), $valid));
     }
 
     public function destroy(User $user)

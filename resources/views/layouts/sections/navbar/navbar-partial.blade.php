@@ -3,7 +3,7 @@
     $isMobile = false; // set dynamically in controller if needed
 
     $callDeskPendingCallbacks = \App\Models\CallCenterFollowup::where('status', 'pending')
-        ->when(! Auth::user()->isManager(), fn ($q) => $q->where('user_id', Auth::id()))
+        ->when(! Auth::user()->canViewAllData(), fn ($q) => $q->where('user_id', Auth::id()))
         ->count();
 @endphp
 
