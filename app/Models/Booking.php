@@ -118,9 +118,9 @@ class Booking extends Model
 
     public function statusBadgeHtml(): string
     {
-        $colors = self::STATUS_COLORS[$this->booking_status] ?? ['bg' => 'rgba(148,163,184,0.12)', 'color' => '#64748B'];
+        $colors = self::STATUS_COLORS[$this->booking_status] ?? ['badge_bg' => 'rgba(148,163,184,0.12)', 'badge_color' => '#64748B'];
         $label  = $this->statusLabel();
-        return "<span style=\"background:{$colors['bg']};color:{$colors['color']};padding:2px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;\">{$label}</span>";
+        return "<span style=\"background:{$colors['badge_bg']};color:{$colors['badge_color']};padding:2px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;\">{$label}</span>";
     }
 
     // ── Workflow transitions ──────────────────────────────────────────
