@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -25,7 +26,7 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request)
     {
-        $user = User::create([
+        $data = [
             'name'               => $request->name,
             'email'              => strtolower($request->email),
             'password'           => $request->password,
@@ -33,7 +34,13 @@ class UserController extends Controller
             'role'               => $request->role,
             'is_active'          => $request->boolean('is_active', true),
             'status'             => 'active',
-        ]);
+        ];
+
+        if ($request->hasFile('profile_photo')) {
+            $data['profile_photo_path'] = $request->file('profile_photo')->store('avatars', 'public');
+        }
+
+        $user = User::create($data);
 
         AuditLog::logAction(
             action:      'user_created',
@@ -68,13 +75,26 @@ class UserController extends Controller
     {
         $old = ['role' => $user->role, 'status' => $user->status];
 
-        $user->update([
+        $attributes = [
             'name'   => $request->name,
             'email'  => strtolower($request->email),
             'role'   => $request->role,
             'status' => $request->input('status', 'active'),
             'is_active' => $request->input('status', 'active') === 'active',
-        ]);
+        ];
+
+        // Profile photo: replace with a new upload, or remove the current one.
+        if ($request->hasFile('profile_photo')) {
+            if ($user->profile_photo_path) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+            $attributes['profile_photo_path'] = $request->file('profile_photo')->store('avatars', 'public');
+        } elseif ($request->boolean('remove_photo') && $user->profile_photo_path) {
+            Storage::disk('public')->delete($user->profile_photo_path);
+            $attributes['profile_photo_path'] = null;
+        }
+
+        $user->update($attributes);
 
         if ($request->filled('password')) {
             $user->update([

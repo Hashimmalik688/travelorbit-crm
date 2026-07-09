@@ -10,8 +10,22 @@
 <div class="row g-3">
   <div class="col-lg-7">
     <div style="background:#fff;border-radius:18px;border:1px solid rgba(51,46,158,.08);padding:28px;box-shadow:0 2px 14px rgba(51,46,158,.05);">
-      <form method="POST" action="{{ route('settings.users.store') }}">
+      <form method="POST" action="{{ route('settings.users.store') }}" enctype="multipart/form-data">
         @csrf
+
+        {{-- Profile Photo --}}
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <div id="avatar-preview" style="width:64px;height:64px;border-radius:16px;background:rgba(51,46,158,.06);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+            <i class="ph ph-user" style="font-size:1.7rem;color:#332E9E;"></i>
+          </div>
+          <div class="flex-grow-1">
+            <label class="form-label fw-semibold" style="font-size:.72rem;color:#5A6080;">Profile Photo</label>
+            <input type="file" name="profile_photo" accept="image/*" onchange="previewAvatar(this)"
+              class="form-control form-control-sm @error('profile_photo') is-invalid @enderror" style="border-radius:10px;">
+            @error('profile_photo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div class="text-muted" style="font-size:.65rem;margin-top:3px;">JPG, PNG or WebP · max 2 MB</div>
+          </div>
+        </div>
 
         {{-- Name + Email --}}
         <div class="row g-3 mb-3">
@@ -96,6 +110,16 @@
 </div>
 
 <script>
+function previewAvatar(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('avatar-preview').innerHTML =
+        '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
 document.querySelectorAll('.role-radio').forEach(r => {
   r.addEventListener('change', function() {
     document.querySelectorAll('.role-card').forEach(c => {

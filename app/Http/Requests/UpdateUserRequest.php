@@ -19,6 +19,8 @@ class UpdateUserRequest extends FormRequest
             'phone'     => ['nullable', 'string', 'max:20'],
             'status'    => ['nullable', 'in:active,inactive,suspended'],
             'is_active' => ['nullable', 'boolean'],
+            'profile_photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'remove_photo'  => ['nullable', 'boolean'],
         ];
     }
 
@@ -31,6 +33,9 @@ class UpdateUserRequest extends FormRequest
             'password.min'   => 'Password must be at least 8 characters.',
             'role.required'  => 'Please select a role.',
             'role.in'        => 'Invalid role selected.',
+            'profile_photo.image' => 'The profile photo must be an image.',
+            'profile_photo.mimes' => 'The photo must be a JPG, PNG or WebP file.',
+            'profile_photo.max'   => 'The profile photo may not be larger than 2 MB.',
         ];
     }
 }

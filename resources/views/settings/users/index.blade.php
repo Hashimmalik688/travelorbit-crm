@@ -75,9 +75,14 @@ $statusColors = [
           onmouseenter="this.style.background='#F8FAFF'" onmouseleave="this.style.background=''">
           <td class="px-4 py-3" style="border-color:rgba(51,46,158,.05);">
             <div class="d-flex align-items-center gap-3">
-              <div style="width:38px;height:38px;border-radius:50%;background:{{ $rc['bg'] }};color:{{ $rc['c'] }};display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;">
-                {{ $initials }}
-              </div>
+              @if ($u->profile_photo_path)
+                <img src="{{ asset('storage/'.$u->profile_photo_path) }}" alt="{{ $u->name }}"
+                  style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+              @else
+                <div style="width:38px;height:38px;border-radius:50%;background:{{ $rc['bg'] }};color:{{ $rc['c'] }};display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;">
+                  {{ $initials }}
+                </div>
+              @endif
               <div>
                 <div class="fw-semibold" style="color:#1E293B;">{{ $u->name }}</div>
                 <div style="font-size:.7rem;color:#94A3B8;">{{ $u->email }}</div>

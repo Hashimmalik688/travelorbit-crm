@@ -17,6 +17,7 @@ class StoreUserRequest extends FormRequest
             'role'      => ['required', 'in:agent,accounts,issuance,manager,admin,operations'],
             'phone'     => ['nullable', 'string', 'max:20'],
             'is_active' => ['nullable', 'boolean'],
+            'profile_photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
         ];
     }
 
@@ -31,6 +32,9 @@ class StoreUserRequest extends FormRequest
             'password.confirmed' => 'Password confirmation does not match.',
             'role.required'      => 'Please select a role.',
             'role.in'            => 'Invalid role selected.',
+            'profile_photo.image' => 'The profile photo must be an image.',
+            'profile_photo.mimes' => 'The photo must be a JPG, PNG or WebP file.',
+            'profile_photo.max'   => 'The profile photo may not be larger than 2 MB.',
         ];
     }
 }
