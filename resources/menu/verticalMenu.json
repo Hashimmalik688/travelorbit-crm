@@ -35,6 +35,9 @@
     { "menuHeader": "Reports",  "roles": ["admin","manager"] },
     { "url": "/reports",        "name": "Reports Hub",       "icon": "menu-icon icon-base ph ph-chart-bar",       "slug": "reports",          "roles": ["admin","manager"] },
 
+    { "menuHeader": "Reports",  "roles": ["agent","operations"] },
+    { "url": "/reports/performance", "name": "My Performance", "icon": "menu-icon icon-base ph ph-trend-up",      "slug": "reports.performance", "roles": ["agent","operations"] },
+
     { "menuHeader": "System",   "roles": ["admin"] },
     { "url": "/settings",       "name": "Settings Hub",      "icon": "menu-icon icon-base ph ph-gear",            "slug": "settings",         "roles": ["admin"] }
   ]

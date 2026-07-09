@@ -82,6 +82,12 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:admin,manager,accounts')->group(function () {
         Route::get('/reports',             fn() => view('content.reports.index'))->name('reports');
         Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');
+    });
+
+    // Agent Performance — managers/admin/accounts see all agents and any month;
+    // agents/operations see only their own data for the current or previous month
+    // (scoping is enforced inside the AgentPerformance Livewire component).
+    Route::middleware('role:admin,manager,accounts,agent,operations')->group(function () {
         Route::get('/reports/performance', [ReportController::class, 'performance'])->name('reports.performance');
     });
 
