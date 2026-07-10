@@ -267,6 +267,10 @@ class BookingEdit extends Component
     // ── Activity log helpers (same as CreateBooking) ─────────────────
     private function logActivity(string $action, string $detail = '', string $type = 'info'): void
     {
+        // God-mode admins (CEO) operate untracked — no activity log entry at all.
+        if (Auth::user()?->isGodMode()) {
+            return;
+        }
         $this->activity_log_entries[] = [
             'agent'     => Auth::user()->name ?? 'System',
             'timestamp' => now()->format('d M Y, g:i A'),

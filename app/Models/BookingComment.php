@@ -19,6 +19,12 @@ class BookingComment extends Model
         'is_mandatory',
     ];
 
+    protected static function booted(): void
+    {
+        // God-mode admins (CEO) operate untracked — their actions leave no comment.
+        static::creating(fn () => User::actingAsGodMode() ? false : null);
+    }
+
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);

@@ -23,6 +23,12 @@ class AuditLog extends Model
         'created_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        // God-mode admins (CEO) operate untracked — never write an audit entry for them.
+        static::creating(fn () => User::actingAsGodMode() ? false : null);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

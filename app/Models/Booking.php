@@ -224,6 +224,16 @@ class Booking extends Model
                 $booking->booking_number = $lastNumber ? $lastNumber + 1 : 1;
             }
         });
+
+        // God-mode admins (CEO) operate untracked — never persist activity_log
+        // changes they make. The booking's own data still saves; only the trail
+        // is suppressed. Reverting to the stored value keeps the attribute clean
+        // (not dirty) so it is left out of the write entirely.
+        static::saving(function (Booking $booking) {
+            if (User::actingAsGodMode() && $booking->isDirty('activity_log')) {
+                $booking->activity_log = $booking->getOriginal('activity_log');
+            }
+        });
     }
 
     public function customer(): BelongsTo

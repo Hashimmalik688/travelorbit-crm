@@ -24,7 +24,7 @@ return new class extends Migration
                 'customers.view', 'reports.performance',
             ],
             'accounts' => [
-                'bookings.create', 'bookings.view_mine', 'customers.view',
+                'bookings.view_mine', 'customers.view',
                 'accounts.access', 'payments.charge', 'payments.invoice',
                 'payments.issue', 'reports.view', 'reports.performance', 'data.view_all',
             ],

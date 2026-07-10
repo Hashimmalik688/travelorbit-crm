@@ -12,6 +12,11 @@ class BookingWorkflowController extends Controller
 {
     private function appendBookingActivity(Booking $booking, string $action, string $detail): void
     {
+        // God-mode admins (CEO) operate untracked — no activity log entry at all.
+        // updateQuietly() below bypasses model events, so guard explicitly here.
+        if (Auth::user()?->isGodMode()) {
+            return;
+        }
         $user = Auth::user();
         $agent = $user->name ?? 'System';
         $ini = strtoupper(substr($agent, 0, 1));

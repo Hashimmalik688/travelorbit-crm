@@ -37,6 +37,17 @@ class User extends Authenticatable
     public function isAccounts(): bool { return $this->role === self::ROLE_ACCOUNTS; }
     public function isIssuance(): bool { return $this->role === self::ROLE_ISSUANCE; }
 
+    // ── God mode ─────────────────────────────────────────────────────
+    // The top-level 'admin' (CEO) operates untracked: their actions are
+    // never written to any activity/audit trail.
+    public function isGodMode(): bool { return $this->role === self::ROLE_ADMIN; }
+
+    /** True when the currently authenticated actor is a god-mode admin. */
+    public static function actingAsGodMode(): bool
+    {
+        return auth()->check() && auth()->user()->isGodMode();
+    }
+
     // ── Permission checks ────────────────────────────────────────────
     /** Admin is a hard-wired super-user; everyone else is governed by the checkboxes. */
     public function hasPermission(string $permission): bool

@@ -162,7 +162,6 @@ return [
             'reports.performance',
         ],
         'accounts' => [
-            'bookings.create',
             'bookings.view_mine',
             'customers.view',
             'accounts.access',

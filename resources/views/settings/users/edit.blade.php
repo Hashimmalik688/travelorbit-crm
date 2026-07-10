@@ -13,11 +13,11 @@
   </div>
 @endif
 
+<form method="POST" action="{{ route('settings.users.update', $user) }}" enctype="multipart/form-data">
+  @csrf @method('PUT')
 <div class="row g-3">
   <div class="col-lg-7">
     <div style="background:#fff;border-radius:18px;border:1px solid rgba(51,46,158,.08);padding:28px;box-shadow:0 2px 14px rgba(51,46,158,.05);">
-      <form method="POST" action="{{ route('settings.users.update', $user) }}" enctype="multipart/form-data">
-        @csrf @method('PUT')
 
         {{-- Profile Photo --}}
         <div class="d-flex align-items-center gap-3 mb-4">
@@ -78,9 +78,6 @@
           @error('role')<div class="text-danger mt-1" style="font-size:.72rem;">{{ $message }}</div>@enderror
         </div>
 
-        {{-- Permissions --}}
-        @include('settings.users._permissions', ['currentPermissions' => old('permissions', $user->permissions ?? [])])
-
         {{-- Status --}}
         <div class="mb-3">
           <label class="form-label fw-semibold" style="font-size:.72rem;color:#5A6080;">Status</label>
@@ -126,12 +123,12 @@
           <a href="{{ route('settings.users.index') }}" class="btn fw-semibold"
             style="background:rgba(51,46,158,.07);color:#332E9E;border:none;border-radius:11px;padding:9px 18px;font-size:.82rem;">Cancel</a>
         </div>
-      </form>
     </div>
   </div>
 
   <div class="col-lg-5">
-    <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
+    {{-- Account Info --}}
+    <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;margin-bottom:16px;">
       <div class="px-4 py-3" style="border-bottom:1px solid rgba(51,46,158,.06);">
         <div class="fw-bold" style="font-size:.82rem;color:#0F172A;">Account Info</div>
       </div>
@@ -152,8 +149,14 @@
         @endif
       </div>
     </div>
+
+    {{-- Permissions --}}
+    <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);padding:22px;box-shadow:0 2px 14px rgba(51,46,158,.05);">
+      @include('settings.users._permissions', ['currentPermissions' => old('permissions', $user->permissions ?? [])])
+    </div>
   </div>
 </div>
+</form>
 
 <script>
 function previewAvatar(input) {

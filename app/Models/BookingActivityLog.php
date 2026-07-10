@@ -24,6 +24,12 @@ class BookingActivityLog extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // God-mode admins (CEO) operate untracked — their actions leave no activity row.
+        static::creating(fn () => User::actingAsGodMode() ? false : null);
+    }
+
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);

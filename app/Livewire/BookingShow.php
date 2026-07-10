@@ -1233,6 +1233,10 @@ class BookingShow extends Component
 
     private function logActivity(string $action, string $detail = '', string $type = 'info', bool $bypassViewerCheck = false): void
     {
+        // God-mode admins (CEO) operate untracked — no activity log entry at all.
+        if (Auth::user()?->isGodMode()) {
+            return;
+        }
         if (!$bypassViewerCheck) {
             $this->abortIfViewer();
         }
