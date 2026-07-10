@@ -1225,6 +1225,20 @@ a:hover { color: var(--to-indigo); }
   .layout-page {
     padding-inline-start: 0 !important;
   }
+
+  /* Sidebar off-canvas backdrop — the template ships a harsh solid-black
+     0.5 overlay (.layout-overlay). On this light, glassmorphism UI that reads
+     as an ugly black slab, so soften it to a frosted, on-brand navy dim.
+     Scoped to mobile only — modal backdrops (outside this query) are untouched.
+     Sits above the page content (z-index 1089) but below the menu (1090). */
+  .layout-overlay {
+    background: rgba(11, 17, 33, 0.4) !important;
+    opacity: 1 !important;
+    z-index: 1089 !important;
+    backdrop-filter: blur(3px) !important;
+    -webkit-backdrop-filter: blur(3px) !important;
+    transition: opacity 0.3s ease !important;
+  }
 }
 
 /* ═══════════════════════════════════════════

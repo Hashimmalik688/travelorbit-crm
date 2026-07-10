@@ -133,12 +133,26 @@ class DashboardController extends Controller
 
         $totalRevenue = $totalSale - $totalCost;
 
-        $outstandingPayments = BookingPayment::where('balance_remaining', '>', 0)->sum('balance_remaining');
+        // Outstanding balance must come from the approved-payments ledger (the same
+        // source as BookingShow's "Balance Due"), NOT booking_payments.balance_remaining,
+        // which is a stale creation-time snapshot that is never updated as payments
+        // are recorded — that snapshot inflates the figure by every payment taken
+        // since the booking was created. We pre-filter on the snapshot only to bound
+        // the set of candidate bookings (it is a superset of anything still owing),
+        // then compute the real remaining per booking.
+        $outstandingBookings = Booking::whereHas('payment', fn ($q) => $q->where('balance_remaining', '>', 0))
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
+            ->get();
 
-        $overduePaymentsCount = BookingPayment::where('balance_remaining', '>', 0)
-            ->whereNotNull('due_date')
-            ->where('due_date', '<', now())
-            ->count();
+        $outstandingPayments = (float) $outstandingBookings->sum(
+            fn (Booking $b) => max(0, $b->total_sale_price - $b->totalReceived())
+        );
+
+        $overduePaymentsCount = $outstandingBookings->filter(
+            fn (Booking $b) => ($b->total_sale_price - $b->totalReceived()) > 0
+                && $b->payment?->due_date
+                && $b->payment->due_date->isPast()
+        )->count();
 
         $bookingsByStatus = Booking::select('booking_status', DB::raw('count(*) as total'))
             ->groupBy('booking_status')
@@ -168,15 +182,24 @@ class DashboardController extends Controller
 
         $cancelledCount = $bookingsByStatus['cancelled'] ?? 0;
 
-        $allAgents = \App\Models\User::whereIn('role', ['agent', 'operations', 'manager', 'admin'])->withCount([
+        // Leaderboard: only roles that actually create bookings — admin is excluded
+        // (admins manage the system, they don't book).
+        $allAgents = \App\Models\User::whereIn('role', ['agent', 'operations', 'manager'])->withCount([
             'bookings as month_bookings' => fn($q) => $q->whereBetween('created_at', [$startOfMonth, $endOfMonth])
         ])->get();
+
+        // Agents Today: same section shown on the agent dashboard — every agent with
+        // their booking count for today, so managers/admins can see who's active.
+        $agentsToday = \App\Models\User::where('role', 'agent')
+            ->withCount(['bookings' => fn ($q) => $q->whereDate('created_at', today())])
+            ->orderBy('name')
+            ->get();
 
         return view('content.dashboard.dashboard', compact(
             'totalBookings', 'totalRevenue', 'outstandingPayments',
             'overduePaymentsCount', 'pendingCount', 'confirmedCount',
             'issuedCount', 'issuanceQueue', 'ticketInProcess', 'invoicedCount',
-            'cancelledCount', 'topAgents', 'last7DaysBookings', 'allAgents'
+            'cancelledCount', 'topAgents', 'last7DaysBookings', 'allAgents', 'agentsToday'
         ));
     }
 

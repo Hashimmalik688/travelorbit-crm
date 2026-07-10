@@ -49,10 +49,6 @@
       <h2 style="color:#fff;font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin:0 0 6px;">{{ $greet }}, {{ explode(' ', $user->name)[0] }} 👋</h2>
       <p style="color:rgba(255,255,255,.55);font-size:.82rem;margin:0;">Operations Centre <span style="opacity:.5;">·</span> Full system overview</p>
     </div>
-    <a href="{{ route('bookings.create') }}" class="btn fw-bold d-flex align-items-center gap-2 flex-shrink-0"
-      style="background:linear-gradient(135deg,rgba(255,255,255,0.2) 0%,rgba(255,255,255,0.1) 100%);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:12px;padding:10px 22px;font-size:.8rem;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.15);transition:all .2s;">
-      <i class="ph ph-plus-circle"></i> New Booking
-    </a>
   </div>
 </div>
 
@@ -187,6 +183,13 @@
   </div>
 
 </div>
+
+{{-- ══ AGENTS TODAY ══ --}}
+@if ($agentsToday->isNotEmpty())
+  <div class="oc-up d5 mt-4">
+    @include('content.dashboard.partials._agents-today', ['agents' => $agentsToday])
+  </div>
+@endif
 
 @endsection
 
