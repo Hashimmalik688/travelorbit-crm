@@ -151,7 +151,6 @@ return [
         'agent' => [
             'bookings.create',
             'bookings.queue_issuance',
-            'customers.view',
             'reports.performance',
         ],
         'operations' => [
