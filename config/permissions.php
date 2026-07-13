@@ -46,12 +46,6 @@ return [
             'icon'        => 'ph ph-list',
             'description' => 'See the company-wide "All Bookings" list.',
         ],
-        'bookings.view_mine' => [
-            'label'       => 'View my bookings list',
-            'group'       => 'Bookings',
-            'icon'        => 'ph ph-list-checks',
-            'description' => 'See the "My Bookings" list page.',
-        ],
         'bookings.delete' => [
             'label'       => 'Delete bookings',
             'group'       => 'Bookings',
@@ -156,12 +150,10 @@ return [
         'operations' => [
             'bookings.create',
             'bookings.queue_issuance',
-            'bookings.view_mine',
             'customers.view',
             'reports.performance',
         ],
         'accounts' => [
-            'bookings.view_mine',
             'customers.view',
             'accounts.access',
             'payments.charge',
@@ -178,7 +170,7 @@ return [
         // Manager had full access EXCEPT the admin-only "All Bookings" page,
         // so its preset is everything but `bookings.view_all`.
         'manager' => [
-            'bookings.create', 'bookings.queue_issuance', 'bookings.view_mine',
+            'bookings.create', 'bookings.queue_issuance',
             'bookings.delete', 'bookings.edit_any', 'customers.view',
             'issuance.access', 'issuance.manage', 'accounts.access',
             'payments.charge', 'payments.invoice', 'payments.issue',

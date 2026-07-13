@@ -4,10 +4,9 @@
     { "url": "/my-dashboard",   "name": "Agent Dashboard",   "icon": "menu-icon icon-base ph ph-layout",          "slug": "my.dashboard",     "roles": ["agent","operations"] },
     { "url": "/my-dashboard",   "name": "Accounts Hub",      "icon": "menu-icon icon-base ph ph-bank",            "slug": "my.dashboard",     "roles": ["accounts"] },
 
-    { "menuHeader": "Bookings", "permissions": ["bookings.view_all","bookings.create","bookings.view_mine","customers.view"] },
+    { "menuHeader": "Bookings", "permissions": ["bookings.view_all","bookings.create","customers.view"] },
     { "url": "/bookings",        "name": "All Bookings",     "icon": "menu-icon icon-base ph ph-list",            "slug": "bookings.index",   "permissions": ["bookings.view_all"] },
     { "url": "/bookings/create", "name": "New Booking",      "icon": "menu-icon icon-base ph ph-plus-circle",     "slug": "bookings.create",  "permissions": ["bookings.create"] },
-    { "url": "/my-bookings",     "name": "My Bookings",      "icon": "menu-icon icon-base ph ph-list-checks",     "slug": "bookings.mine",    "permissions": ["bookings.view_mine"] },
     { "url": "/customers",       "name": "Customers",        "icon": "menu-icon icon-base ph ph-users",           "slug": "customers",        "permissions": ["customers.view"] },
 
     { "menuHeader": "Issuance", "permissions": ["issuance.access"] },

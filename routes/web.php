@@ -37,11 +37,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
     });
 
-    // My Bookings list
-    Route::middleware('permission:bookings.view_mine')->group(function () {
-        Route::get('/my-bookings', [BookingController::class, 'myBookings'])->name('bookings.mine');
-    });
-
     // Issued-but-unpaid mini reports — the user's own bookings, split out of the dashboard tabs
     Route::middleware('permission:bookings.create')->group(function () {
         Route::get('/my-bookings/payment-plan', [DashboardController::class, 'paymentPlanReport'])->name('bookings.payment-plan');
