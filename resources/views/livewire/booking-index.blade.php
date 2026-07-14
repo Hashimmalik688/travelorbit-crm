@@ -3,17 +3,6 @@
     <div class="to-page-header">
         <div class="to-page-header-left">
             <h1>{{ $context === 'mine' ? 'My Bookings' : 'All Bookings' }}</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> ›
-                @if($context === 'mine')
-                  @can('viewAny', \App\Models\Booking::class)
-                    <a href="{{ route('bookings.index') }}">Bookings</a> ›
-                  @endcan
-                  My Bookings
-                @else
-                  Bookings
-                @endif
-            </div>
         </div>
         <div class="to-page-header-right">
             @can('create', \App\Models\Booking::class)

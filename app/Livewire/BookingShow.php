@@ -12,9 +12,11 @@ use App\Models\BookingHotel;
 use App\Models\BookingHotelRoom;
 use App\Models\BookingPassenger;
 use App\Models\BookingPayment;
+use App\Models\BookingMarginShare;
 use App\Models\BookingPaymentHistory;
 use App\Models\BookingTransfer;
 use App\Models\Refund;
+use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -159,11 +161,18 @@ class BookingShow extends Component
     public ?int $reasonEditIndex = null;
     public string $reasonEditText = '';
 
+    // Margin sharing
+    public bool $shareMarginOpen = false;
+    public $shareUserId = '';
+    public $shareAmount = '';
+    public $shareNote = '';
+
     public function mount(Booking $booking)
     {
         $this->booking = $booking->load([
             'passengers', 'payment', 'paymentHistory', 'documents',
             'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
+            'marginShares.sharedWith', 'marginShares.sharedBy',
             'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
         ]);
         $this->bookingStatus = $booking->booking_status;
@@ -1155,12 +1164,77 @@ class BookingShow extends Component
         session()->flash('success', 'Payment record deleted.');
     }
 
+    // ── Margin sharing ─────────────────────────────────────────────────
+    /** Other users this booking's margin can be shared with. */
+    public function getShareCandidateUsersProperty()
+    {
+        return User::where('id', '!=', Auth::id())->orderBy('name')->get();
+    }
+
+    public function openShareMargin(): void
+    {
+        abort_unless(Auth::user()->hasPermission('bookings.share_margin'), 403);
+
+        $this->shareUserId = '';
+        $this->shareAmount = '';
+        $this->shareNote = '';
+        $this->resetErrorBag();
+        $this->shareMarginOpen = true;
+    }
+
+    public function saveMarginShare(): void
+    {
+        abort_unless(Auth::user()->hasPermission('bookings.share_margin'), 403);
+
+        $this->validate([
+            'shareUserId' => 'required|exists:users,id',
+            'shareAmount' => 'required|numeric|min:0.01',
+            'shareNote'   => 'nullable|string|max:255',
+        ]);
+
+        $recipient = User::find($this->shareUserId);
+
+        BookingMarginShare::create([
+            'booking_id'          => $this->booking->id,
+            'shared_with_user_id' => $this->shareUserId,
+            'shared_by_user_id'   => Auth::id(),
+            'amount'              => $this->shareAmount,
+            'note'                => $this->shareNote ?: null,
+        ]);
+
+        AuditLogger::log(Auth::user(), $this->booking, 'margin_shared', "Shared £" . number_format((float) $this->shareAmount, 2) . " margin with {$recipient?->name}");
+        $this->logActivity('Margin Shared', '£' . number_format((float) $this->shareAmount, 2) . " shared with {$recipient?->name}", 'update', bypassViewerCheck: true);
+
+        $this->booking->load('marginShares.sharedWith', 'marginShares.sharedBy');
+        $this->shareMarginOpen = false;
+        session()->flash('success', 'Margin share recorded.');
+    }
+
+    public function removeMarginShare(int $shareId): void
+    {
+        abort_unless(Auth::user()->hasPermission('bookings.share_margin'), 403);
+
+        $share = BookingMarginShare::where('booking_id', $this->booking->id)->find($shareId);
+        if (!$share) return;
+
+        $amount = $share->amount;
+        $recipientName = $share->sharedWith?->name;
+        $share->delete();
+
+        AuditLogger::log(Auth::user(), $this->booking, 'margin_share_removed', "Removed £" . number_format((float) $amount, 2) . " margin share with {$recipientName}");
+        $this->logActivity('Margin Share Removed', '£' . number_format((float) $amount, 2) . " share with {$recipientName} removed", 'update', bypassViewerCheck: true);
+
+        $this->booking->load('marginShares.sharedWith', 'marginShares.sharedBy');
+        session()->flash('success', 'Margin share removed.');
+    }
+
     private function refreshBooking(): void
     {
         $this->booking->refresh();
         $this->booking->load([
             'passengers', 'payment', 'paymentHistory', 'documents',
             'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
+            'marginShares.sharedWith', 'marginShares.sharedBy',
             'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
         ]);
         $this->activityLog = $this->buildActivityLog($this->booking);
@@ -2096,7 +2170,7 @@ class BookingShow extends Component
         $this->newDocumentTypes = [];
         $this->mandatory_comment = '';
         $this->booking->refresh();
-        $this->booking->load(['passengers', 'payment', 'paymentHistory', 'documents', 'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas', 'comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
+        $this->booking->load(['passengers', 'payment', 'paymentHistory', 'documents', 'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas', 'marginShares.sharedWith', 'marginShares.sharedBy', 'comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
         $this->loadBookingData();
         $this->activityLogDirty = false; // activity_log was already written inside the transaction
         $this->activityLog = $this->buildActivityLog($this->booking);

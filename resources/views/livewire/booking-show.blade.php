@@ -1097,6 +1097,29 @@
               <div style="font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $bal <= 0 ? '#15803D' : '#DC2626' }};margin-bottom:2px;">{{ $bal <= 0 ? 'Fully Settled' : 'Balance Due' }}</div>
               <div style="font-size:1.1rem;font-weight:800;color:{{ $bal <= 0 ? '#16A34A' : '#DC2626' }};line-height:1;letter-spacing:-.01em;">&pound;{{ number_format($bal <= 0 ? 0 : $bal, 2) }}</div>
             </div>
+
+            {{-- Margin sharing --}}
+            @if(Auth::user()->hasPermission('bookings.share_margin'))
+              <div style="margin-top:10px;">
+                @if($booking->marginShares->isNotEmpty())
+                  @foreach($booking->marginShares as $share)
+                    <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1" style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);">
+                      <i class="ph ph-share-network" style="color:#332E9E;font-size:.8rem;flex-shrink:0;"></i>
+                      <div class="flex-grow-1">
+                        <span class="fw-semibold" style="font-size:.7rem;color:#1E293B;">&pound;{{ number_format($share->amount, 2) }} shared with {{ $share->sharedWith?->name }}</span>
+                        @if($share->note)
+                          <span class="d-block" style="font-size:.6rem;color:#64748B;">{{ $share->note }}</span>
+                        @endif
+                      </div>
+                      <button type="button" wire:click="removeMarginShare({{ $share->id }})" onclick="return confirm('Remove this margin share?')" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:5px;padding:1px 7px;font-size:.6rem;cursor:pointer;flex-shrink:0;">✕</button>
+                    </div>
+                  @endforeach
+                @endif
+                <button type="button" wire:click="openShareMargin" class="w-100" style="background:rgba(51,46,158,.06);color:#332E9E;border:1px solid rgba(51,46,158,.15);border-radius:10px;padding:8px;font-size:.68rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                  <i class="ph ph-share-network"></i> Share Margin
+                </button>
+              </div>
+            @endif
           </div>
         </div>
 
@@ -1104,6 +1127,9 @@
         <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;">Payment History</span>
+            @if($booking->paymentHistory?->isNotEmpty())
+              <span style="font-size:.68rem;font-weight:800;color:#16A34A;">Received &pound;{{ number_format($this->totalPaid, 2) }}</span>
+            @endif
           </div>
           @if($booking->paymentHistory?->isNotEmpty())
             @php $paymentNum = 0; @endphp
@@ -1393,6 +1419,44 @@
         <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
           <button type="button" wire:click="$set('showRefundModal',false)" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#64748B;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:600;cursor:pointer;">Cancel</button>
           <button type="button" wire:click="submitRefund" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Submit Refund Request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+@endif
+
+{{-- SHARE MARGIN MODAL --}}
+@if($shareMarginOpen)
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#332E9E,#4A45B5);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
+        <h5 class="fw-bold mb-0" style="font-size:.9rem;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-share-network" style="font-size:1rem;"></i> Share Margin</h5>
+        <button type="button" wire:click="$set('shareMarginOpen',false)" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;">✕</button>
+      </div>
+      <div class="p-4">
+        <div class="mb-3">
+          <label class="bv-label">Share With <span style="color:#DC2626;">*</span></label>
+          <select wire:model="shareUserId" class="bv-select-inline" style="width:100%;font-size:.78rem;">
+            <option value="">Select a user…</option>
+            @foreach($this->shareCandidateUsers as $u)
+              <option value="{{ $u->id }}">{{ $u->name }}</option>
+            @endforeach
+          </select>
+          @error('shareUserId') <div style="font-size:.68rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="mb-3">
+          <label class="bv-label">Amount (£) <span style="color:#DC2626;">*</span></label>
+          <input type="number" wire:model="shareAmount" class="bv-input-inline" style="width:100%;font-size:.78rem;" placeholder="0.00" min="0.01" step="0.01">
+          @error('shareAmount') <div style="font-size:.68rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="mb-3">
+          <label class="bv-label">Note (optional)</label>
+          <textarea wire:model="shareNote" rows="2" class="bv-input-inline" style="width:100%;font-size:.78rem;" placeholder="Why is this margin being shared?"></textarea>
+          @error('shareNote') <div style="font-size:.68rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
+          <button type="button" wire:click="$set('shareMarginOpen',false)" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#64748B;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:600;cursor:pointer;">Cancel</button>
+          <button type="button" wire:click="saveMarginShare" style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:10px;padding:8px 22px;font-size:.73rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(51,46,158,.25);">Save Share</button>
         </div>
       </div>
     </div>

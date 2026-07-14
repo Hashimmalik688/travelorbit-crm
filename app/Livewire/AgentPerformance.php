@@ -6,7 +6,6 @@ use App\Models\Booking;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class AgentPerformance extends Component
@@ -82,95 +81,90 @@ class AgentPerformance extends Component
             ->get();
     }
 
-    /** Aggregate booking totals for a given agent (or all when $agentId is empty). */
-    private function statsFor($agentId, string $from, string $to)
+    /**
+     * Performance only counts bookings issued as full payment. "Invoiced" is
+     * included because a booking can only be invoiced after it was issued as
+     * full payment (see Booking::canInvoice / BookingPolicy) — it's the same
+     * fully-settled sale, just further along in accounts' pipeline. Payment
+     * plan / payment awaiting (still owed) are excluded on purpose.
+     */
+    private function soldStatuses(): array
     {
-        return DB::table('booking_flight_details')
-            ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
-            ->leftJoin('booking_flight_costs', 'booking_flight_costs.booking_id', '=', 'bookings.id')
-            ->when($agentId, fn ($q) => $q->where('bookings.user_id', $agentId))
-            ->whereDate('bookings.created_at', '>=', $from)
-            ->whereDate('bookings.created_at', '<=', $to)
-            ->selectRaw('COUNT(DISTINCT bookings.id) as total_bookings')
-            ->selectRaw('SUM(booking_flight_details.selling_price) as total_revenue')
-            ->selectRaw('SUM(booking_flight_details.selling_price - COALESCE(booking_flight_costs.cost * booking_flight_costs.quantity, 0)) as total_margin')
-            ->first();
-    }
-
-    private function shape($totals): array
-    {
-        $bookings = (int) ($totals->total_bookings ?? 0);
-        $margin   = (float) ($totals->total_margin ?? 0);
-
         return [
-            'totalBookings' => $bookings,
-            'totalRevenue'  => (float) ($totals->total_revenue ?? 0),
-            'totalMargin'   => $margin,
-            'avgMargin'     => $bookings > 0 ? $margin / $bookings : 0,
+            Booking::STATUS_ISSUED,
+            Booking::STATUS_INVOICED,
         ];
     }
 
-    /** Summary totals for the current scope (selected agent or all agents). */
-    public function getSummaryProperty(): array
+    /** Booking-level rows for the current scope (selected agent or all agents). */
+    private function rows()
     {
         [$from, $to] = $this->dateRange();
+        $agentId = $this->effectiveAgentId();
 
-        return $this->shape($this->statsFor($this->effectiveAgentId(), $from, $to));
-    }
+        return Booking::query()
+            ->when($agentId, fn ($q) => $q->where('user_id', $agentId))
+            ->whereIn('booking_status', $this->soldStatuses())
+            // last_issue_date is stamped when a booking is actually issued —
+            // the true "sold" date, unlike created_at which is when the
+            // booking record was first opened (often well before or after).
+            ->whereDate('last_issue_date', '>=', $from)
+            ->whereDate('last_issue_date', '<=', $to)
+            ->with(['flightDetail', 'passengers', 'payment', 'paymentHistory', 'user'])
+            ->orderByDesc('last_issue_date')
+            ->get()
+            ->map(function (Booking $b) {
+                $sold = (float) $b->total_sale_price;
+                $cost = (float) $b->total_cost_price;
+                $cc   = (float) ($b->payment?->cc_charges ?? 0);
+                $fd   = $b->flightDetail;
 
-    /** Per-agent leaderboard — only used when no single agent is in scope. */
-    public function getLeaderboardProperty()
-    {
-        [$from, $to] = $this->dateRange();
+                // booking_payments.amount_paid isn't reliably kept in sync —
+                // totalReceived() (the approved payment-history ledger, same
+                // source the booking page itself uses) is the trustworthy figure.
+                $paid = $b->totalReceived();
 
-        return $this->agentUsers()->map(function ($agent) use ($from, $to) {
-            return array_merge([
-                'id'    => $agent->id,
-                'name'  => $agent->name,
-                'role'  => $agent->role,
-                'photo' => $agent->profile_photo_path,
-            ], $this->shape($this->statsFor($agent->id, $from, $to)));
-        })->sortByDesc('totalBookings')->values();
-    }
+                // The real customer identity is the booker fields on the booking
+                // itself (same fields the Customers page groups by) — customer_id
+                // is a legacy relation that points at a single unused placeholder row.
+                $customerName = trim(($b->booker_first_name ?? '') . ' ' . ($b->booker_last_name ?? ''));
 
-    /** The single user whose detail we're showing, or null when viewing all agents. */
-    public function getSingleAgentProperty(): ?User
-    {
-        $id = $this->effectiveAgentId();
-
-        return $id ? User::find($id) : null;
-    }
-
-    /** Detailed booking list for the single agent in scope. */
-    public function getBookingsProperty()
-    {
-        $id = $this->effectiveAgentId();
-
-        if (! $id) {
-            return collect();
-        }
-
-        [$from, $to] = $this->dateRange();
-
-        return Booking::where('user_id', $id)
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to)
-            ->with(['flightDetail', 'passengers'])
-            ->orderByDesc('created_at')
-            ->get();
+                return [
+                    'booking'    => $b,
+                    'date'       => $b->last_issue_date,
+                    'route'      => ($fd && $fd->departure_airport && $fd->arrival_airport)
+                        ? $fd->departure_airport . ' → ' . $fd->arrival_airport
+                        : null,
+                    'customer'   => $customerName !== '' ? $customerName : '—',
+                    'agent'      => $b->user?->name ?: '—',
+                    'cost'       => $cost,
+                    'sold'       => $sold,
+                    'marginCc'   => $sold - $cost - $cc,   // margin after credit-card charges
+                    'marginNoCc' => $sold - $cost,         // gross margin, CC charges ignored
+                    'paid'       => $paid,
+                    'balance'    => max(0.0, $sold - $paid),
+                ];
+            });
     }
 
     public function render()
     {
-        $single = $this->singleAgent;
+        $rows = $this->rows();
 
         return view('livewire.agent-performance', [
-            'summary'     => $this->summary,
-            'singleAgent' => $single,
-            'leaderboard' => $single ? collect() : $this->leaderboard,
-            'bookings'    => $single ? $this->bookings : collect(),
-            'agentUsers'  => $this->canViewAll ? $this->agentUsers() : collect(),
-            'monthLabel'  => Carbon::createFromFormat('Y-m', $this->effectiveMonth())->format('F Y'),
+            'rows'       => $rows,
+            'totals'     => [
+                'count'      => $rows->count(),
+                'cost'       => (float) $rows->sum('cost'),
+                'sold'       => (float) $rows->sum('sold'),
+                'marginCc'   => (float) $rows->sum('marginCc'),
+                'marginNoCc' => (float) $rows->sum('marginNoCc'),
+                'paid'       => (float) $rows->sum('paid'),
+                'balance'    => (float) $rows->sum('balance'),
+            ],
+            'showAgent'  => $this->canViewAll && empty($this->effectiveAgentId()),
+            'agentUsers' => $this->canViewAll ? $this->agentUsers() : collect(),
+            'monthLabel' => Carbon::createFromFormat('Y-m', $this->effectiveMonth())->format('F Y'),
         ]);
     }
 }

@@ -7,9 +7,6 @@
     <div class="to-page-header">
         <div class="to-page-header-left">
             <h1>Performance Reports</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="#">MIS</a> &rsaquo; Performance
-            </div>
         </div>
     </div>
 

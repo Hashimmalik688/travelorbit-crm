@@ -58,6 +58,12 @@ return [
             'icon'        => 'ph ph-lock-key-open',
             'description' => "Edit bookings that aren't yours, and edit past workflow locks (supervisor override).",
         ],
+        'bookings.share_margin' => [
+            'label'       => 'Share booking margin',
+            'group'       => 'Bookings',
+            'icon'        => 'ph ph-share-network',
+            'description' => 'Share part of a booking\'s margin with another user.',
+        ],
 
         // ── Customers ─────────────────────────────────────────────
         'customers.view' => [
@@ -171,7 +177,7 @@ return [
         // so its preset is everything but `bookings.view_all`.
         'manager' => [
             'bookings.create', 'bookings.queue_issuance',
-            'bookings.delete', 'bookings.edit_any', 'customers.view',
+            'bookings.delete', 'bookings.edit_any', 'bookings.share_margin', 'customers.view',
             'issuance.access', 'issuance.manage', 'accounts.access',
             'payments.charge', 'payments.invoice', 'payments.issue',
             'reports.view', 'reports.performance', 'refunds.manage', 'data.view_all',

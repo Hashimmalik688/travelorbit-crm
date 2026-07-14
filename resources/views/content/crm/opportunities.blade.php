@@ -7,9 +7,6 @@
     <div class="to-page-header">
         <div class="to-page-header-left">
             <h1>Opportunities</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="#">CRM</a> &rsaquo; Opportunities
-            </div>
         </div>
         <div class="to-page-header-right">
             <button class="btn btn-orange btn-sm">

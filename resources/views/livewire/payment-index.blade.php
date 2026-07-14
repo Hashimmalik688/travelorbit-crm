@@ -2,9 +2,6 @@
     <div class="to-page-header">
         <div class="to-page-header-left">
             <h1>Payment Schedule</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="#">Finance</a> &rsaquo; Payments
-            </div>
         </div>
     </div>
 

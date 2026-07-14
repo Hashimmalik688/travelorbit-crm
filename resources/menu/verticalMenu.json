@@ -24,7 +24,7 @@
 
     { "menuHeader": "Reports",  "permissions": ["reports.view","reports.performance"] },
     { "url": "/reports",        "name": "Reports Hub",       "icon": "menu-icon icon-base ph ph-chart-bar",       "slug": "reports",          "permissions": ["reports.view"] },
-    { "url": "/reports/performance", "name": "Performance",  "icon": "menu-icon icon-base ph ph-trend-up",        "slug": "reports.performance", "permissions": ["reports.performance"] },
+    { "url": "/reports/performance", "name": "My Performance", "icon": "menu-icon icon-base ph ph-trend-up",     "slug": "reports.performance", "permissions": ["reports.performance"], "excludePermissions": ["reports.view"] },
 
     { "menuHeader": "System",   "roles": ["admin"] },
     { "url": "/settings",       "name": "Settings Hub",      "icon": "menu-icon icon-base ph ph-gear",            "slug": "settings",         "roles": ["admin"] }

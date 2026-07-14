@@ -287,6 +287,11 @@ class Booking extends Model
         return (float) $this->paymentHistory->where('status', 'approved')->sum('amount');
     }
 
+    public function marginShares(): HasMany
+    {
+        return $this->hasMany(BookingMarginShare::class);
+    }
+
     public function refunds(): HasMany
     {
         return $this->hasMany(Refund::class);

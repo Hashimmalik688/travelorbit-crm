@@ -25,10 +25,16 @@ $bottomSlugs  = [];
       @php
         // Items may gate by `permissions` (any-of, via hasAnyPermission) or by
         // `roles` (badge-based, for the role-specific dashboards & agent reports).
+        // `excludePermissions` hides an item when the user already holds a
+        // broader permission that gives them another way to reach the same
+        // page (e.g. "My Performance" is only needed for users who lack
+        // reports.view and so can't reach it via the Reports Hub instead).
         $menuPerms = isset($menu->permissions) ? (array)$menu->permissions : null;
+        $menuExcl  = isset($menu->excludePermissions) ? (array)$menu->excludePermissions : null;
         $menuRoles = isset($menu->roles) ? (array)$menu->roles : null;
         if ($menuPerms !== null) {
-            $isVisible = $user && $user->hasAnyPermission($menuPerms);
+            $isVisible = $user && $user->hasAnyPermission($menuPerms)
+                && (!$menuExcl || !$user->hasAnyPermission($menuExcl));
         } elseif ($menuRoles !== null) {
             $isVisible = in_array($userRole, $menuRoles);
         } else {

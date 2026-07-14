@@ -2,9 +2,6 @@
     <div class="to-page-header">
         <div class="to-page-header-left">
             <h1>Sales Report</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="#">Reports</a> &rsaquo; Sales
-            </div>
         </div>
         <div class="to-page-header-right">
             <button class="btn btn-outline-primary btn-sm" wire:click="exportCsv">

@@ -7,9 +7,6 @@
     <div class="to-page-header">
         <div class="to-page-header-left">
             <h1>All Customers</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> &rsaquo; <a href="#">CRM</a> &rsaquo; Customers
-            </div>
         </div>
     </div>
 

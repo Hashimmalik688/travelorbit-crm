@@ -2,17 +2,11 @@
 @section('title', $title)
 
 @section('content')
+<div class="to-issued-report">
 <div class="to-page-header">
     <div class="to-page-header-left">
-        <div class="to-breadcrumb">
-            <a href="{{ route('my.dashboard') }}"><i class="ph ph-house"></i> Dashboard</a>
-            <i class="ph ph-caret-right" style="font-size:.65rem;opacity:.5;margin:0 .35rem;"></i>
-            <span>Issued</span>
-            <i class="ph ph-caret-right" style="font-size:.65rem;opacity:.5;margin:0 .35rem;"></i>
-            <span style="color:var(--to-navy);">{{ $title }}</span>
-        </div>
         <h1 class="mt-1">{{ $title }}</h1>
-        <p class="text-muted mb-0" style="font-size:.82rem;">{{ $subtitle }}</p>
+        <p class="mb-0" style="font-size:.82rem;color:#334155;">{{ $subtitle }}</p>
     </div>
 </div>
 
@@ -51,4 +45,11 @@
         </div>
     @endif
 </div>
+</div>
+
+<style>
+/* Darker, more legible text for this report — the shared bookings-table
+   partial's .text-muted is too light against this page's white cards. */
+.to-issued-report .text-muted { color: #334155 !important; }
+</style>
 @endsection

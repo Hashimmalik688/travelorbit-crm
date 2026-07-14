@@ -3,9 +3,6 @@
     <div class="to-page-header">
         <div class="to-page-header-left">
             <h1>Payment Charge Requests</h1>
-            <div class="to-breadcrumb">
-                <a href="{{ route('dashboard') }}">Dashboard</a> › Payment Charge Requests
-            </div>
         </div>
         <div class="to-page-header-right">
             <span class="badge" style="background:rgba(216,63,135,.12);color:#D83F87;font-size:.72rem;font-weight:700;padding:6px 14px;border-radius:20px;">
