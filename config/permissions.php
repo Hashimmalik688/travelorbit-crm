@@ -151,11 +151,13 @@ return [
         'agent' => [
             'bookings.create',
             'bookings.queue_issuance',
+            'bookings.share_margin',
             'reports.performance',
         ],
         'operations' => [
             'bookings.create',
             'bookings.queue_issuance',
+            'bookings.share_margin',
             'customers.view',
             'reports.performance',
         ],
