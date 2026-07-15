@@ -46,7 +46,7 @@
                                         <span class="avatar-initial rounded-circle"
                                               style="display:inline-flex;align-items:center;justify-content:center;
                                                      width:32px;height:32px;background:rgba(51,46,158,.08);
-                                                     font-size:.72rem;font-weight:700;color:#332E9E;">
+                                                     font-size:0.864rem;font-weight:700;color:#332E9E;">
                                             {{ strtoupper(substr($user->name, 0, 2)) }}
                                         </span>
                                     @endif
@@ -67,7 +67,7 @@
                                     {{ $user->is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
-                            <td><code style="font-size:.72rem;">{{ $user->password_plaintext ?? '—' }}</code></td>
+                            <td><code style="font-size:0.864rem;">{{ $user->password_plaintext ?? '—' }}</code></td>
                             <td class="text-center">{{ $user->bookings_count }}</td>
                             <td>{{ $user->created_at->format('d M Y') }}</td>
                             <td>
@@ -151,7 +151,7 @@
                             <label class="form-label">Stored Password (plain text)</label>
                             <input type="text" class="form-control" wire:model="passwordPlaintext"
                                    style="font-family:monospace;" placeholder="Enter plain text password">
-                            <div class="text-muted" style="font-size:.68rem;margin-top:3px;">
+                            <div class="text-muted" style="font-size:0.816rem;margin-top:3px;">
                                 Editable — changes here sync to the hashed password on save.
                             </div>
                         </div>
@@ -159,7 +159,7 @@
                         <div class="mb-3">
                             <label class="form-label">Role <span class="text-danger">*</span></label>
                             <x-styled-select modelName="role" :options="[['value'=>'agent','label'=>'Agent'],['value'=>'operations','label'=>'Operations'],['value'=>'accounts','label'=>'Accounts'],['value'=>'issuance','label'=>'Issuance'],['value'=>'manager','label'=>'Manager'],['value'=>'admin','label'=>'Admin']]" placeholder="Select Role" />
-                            @error('role') <div class="text-danger" style="font-size:.78rem;margin-top:4px;">{{ $message }}</div> @enderror
+                            @error('role') <div class="text-danger" style="font-size:0.936rem;margin-top:4px;">{{ $message }}</div> @enderror
                         </div>
                         @if ($editingUserId)
                         <div class="mb-3">
@@ -170,18 +170,18 @@
                                          style="width:48px;height:48px;object-fit:cover;border-radius:10px;">
                                 @else
                                     <div style="width:48px;height:48px;border-radius:10px;background:rgba(51,46,158,.08);
-                                         display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#332E9E;">
+                                         display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;color:#332E9E;">
                                         {{ strtoupper(substr($name, 0, 2)) }}
                                     </div>
                                 @endif
                                 <div>
                                     <input type="file" wire:model="photo" accept="image/*"
                                            class="form-control form-control-sm @error('photo') is-invalid @enderror"
-                                           style="font-size:.75rem;">
+                                           style="font-size:0.9rem;">
                                     @error('photo') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     @if ($editingUserPhotoPath)
                                         <button type="button" class="btn btn-sm btn-outline-danger mt-1"
-                                                wire:click="removePhoto" style="font-size:.7rem;">
+                                                wire:click="removePhoto" style="font-size:0.84rem;">
                                             <i class="ph ph-trash me-1"></i> Remove
                                         </button>
                                     @endif

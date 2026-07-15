@@ -160,7 +160,7 @@
                         <div class="mb-3">
                             <label class="form-label">Payment Mode <span class="text-danger">*</span></label>
                             <x-styled-select modelName="paymentMode" :options="[['value'=>'','label'=>'Select Payment Mode'],['value'=>'cash','label'=>'Cash'],['value'=>'bank_transfer','label'=>'Bank Transfer'],['value'=>'stripe','label'=>'Stripe'],['value'=>'klarna','label'=>'Klarna'],['value'=>'card','label'=>'Card']]" placeholder="Select Payment Mode" />
-                            @error('paymentMode') <div class="text-danger" style="font-size:.78rem;margin-top:4px;">{{ $message }}</div> @enderror
+                            @error('paymentMode') <div class="text-danger" style="font-size:0.936rem;margin-top:4px;">{{ $message }}</div> @enderror
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Paid Date <span class="text-danger">*</span></label>

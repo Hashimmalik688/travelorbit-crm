@@ -6,7 +6,7 @@
 <div class="to-page-header">
     <div class="to-page-header-left">
         <h1 class="mt-1">{{ $title }}</h1>
-        <p class="mb-0" style="font-size:.82rem;color:#334155;">{{ $subtitle }}</p>
+        <p class="mb-0" style="font-size:0.984rem;color:#334155;">{{ $subtitle }}</p>
     </div>
 </div>
 
@@ -26,7 +26,7 @@
             <div class="to-stat {{ $tile['accent'] }}">
                 <div class="to-stat-body">
                     <div class="to-stat-label">{{ $tile['label'] }}</div>
-                    <div class="to-stat-value" style="font-size:1.5rem;">£{{ number_format($tile['val'], 2) }}</div>
+                    <div class="to-stat-value" style="font-size:1.8rem;">£{{ number_format($tile['val'], 2) }}</div>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
 
 <div class="card">
     <div class="px-4 pt-4 pb-2 d-flex align-items-center justify-content-between">
-        <h6 class="fw-bold mb-0" style="font-size:.87rem;">Bookings</h6>
+        <h6 class="fw-bold mb-0" style="font-size:1.044rem;">Bookings</h6>
         <span class="badge bg-label-warning">{{ $bookings->total() }} booking{{ $bookings->total() !== 1 ? 's' : '' }}</span>
     </div>
     @include('content.dashboard.partials._bookings-table', ['bookings' => $bookings, 'showFooter' => false])

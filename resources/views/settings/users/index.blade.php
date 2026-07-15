@@ -21,21 +21,21 @@ $statusColors = [
 <div class="d-flex align-items-center justify-content-between mb-4">
   <div>
     <h4 class="fw-bold mb-0" style="color:#0F172A;letter-spacing:-.02em;">User Management</h4>
-    <div class="text-muted" style="font-size:.78rem;">{{ $users->count() }} users in the system</div>
+    <div class="text-muted" style="font-size:0.936rem;">{{ $users->count() }} users in the system</div>
   </div>
   <a href="{{ route('settings.users.create') }}" class="btn fw-semibold d-flex align-items-center gap-2"
-    style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:12px;padding:9px 20px;font-size:.82rem;box-shadow:0 3px 12px rgba(51,46,158,.25);">
+    style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:12px;padding:9px 20px;font-size:0.984rem;box-shadow:0 3px 12px rgba(51,46,158,.25);">
     <i class="ph ph-plus-circle"></i> Add User
   </a>
 </div>
 
 @if (session('success'))
-  <div class="alert border-0 mb-3 d-flex align-items-center gap-2" style="background:rgba(22,163,74,.08);border-radius:12px;color:#15803D;font-size:.82rem;">
+  <div class="alert border-0 mb-3 d-flex align-items-center gap-2" style="background:rgba(22,163,74,.08);border-radius:12px;color:#15803D;font-size:0.984rem;">
     <i class="ph ph-check-circle"></i> {{ session('success') }}
   </div>
 @endif
 @if (session('error'))
-  <div class="alert border-0 mb-3 d-flex align-items-center gap-2" style="background:rgba(220,38,38,.08);border-radius:12px;color:#DC2626;font-size:.82rem;">
+  <div class="alert border-0 mb-3 d-flex align-items-center gap-2" style="background:rgba(220,38,38,.08);border-radius:12px;color:#DC2626;font-size:0.984rem;">
     <i class="ph ph-warning-circle"></i> {{ session('error') }}
   </div>
 @endif
@@ -46,22 +46,22 @@ $statusColors = [
       @foreach (['all'=>'All','agent'=>'Agents','accounts'=>'Accounts','issuance'=>'Issuance','manager'=>'Managers','admin'=>'Admins'] as $filter => $label)
         <button onclick="filterUsers('{{ $filter }}')" data-filter="{{ $filter }}"
           class="user-filter-btn btn btn-sm fw-semibold {{ $filter === 'all' ? 'active' : '' }}"
-          style="border-radius:20px;font-size:.72rem;border:1px solid rgba(51,46,158,.12);color:#64748B;background:transparent;transition:all .15s;padding:4px 14px;">
+          style="border-radius:20px;font-size:0.864rem;border:1px solid rgba(51,46,158,.12);color:#475569;background:transparent;transition:all .15s;padding:4px 14px;">
           {{ $label }}
         </button>
       @endforeach
     </div>
   </div>
 
-  <table class="table mb-0" style="font-size:.8rem;" id="users-table">
+  <table class="table mb-0" style="font-size:0.96rem;" id="users-table">
     <thead>
       <tr style="background:rgba(51,46,158,.03);">
-        <th class="px-4 py-3 fw-semibold" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;border:none;">User</th>
-        <th class="py-3 fw-semibold" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;border:none;">Role</th>
-        <th class="py-3 fw-semibold" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;border:none;">Status</th>
-        <th class="py-3 fw-semibold" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;border:none;">Password</th>
-        <th class="py-3 fw-semibold" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;border:none;">Last Login</th>
-        <th class="pe-4 py-3 fw-semibold text-end" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;border:none;">Actions</th>
+        <th class="px-4 py-3 fw-semibold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;color:#475569;border:none;">User</th>
+        <th class="py-3 fw-semibold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;color:#475569;border:none;">Role</th>
+        <th class="py-3 fw-semibold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;color:#475569;border:none;">Status</th>
+        <th class="py-3 fw-semibold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;color:#475569;border:none;">Password</th>
+        <th class="py-3 fw-semibold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;color:#475569;border:none;">Last Login</th>
+        <th class="pe-4 py-3 fw-semibold text-end" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;color:#475569;border:none;">Actions</th>
       </tr>
     </thead>
     <tbody id="users-tbody">
@@ -79,39 +79,39 @@ $statusColors = [
                 <img src="{{ asset('storage/'.$u->profile_photo_path) }}" alt="{{ $u->name }}"
                   style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;">
               @else
-                <div style="width:38px;height:38px;border-radius:50%;background:{{ $rc['bg'] }};color:{{ $rc['c'] }};display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;">
+                <div style="width:38px;height:38px;border-radius:50%;background:{{ $rc['bg'] }};color:{{ $rc['c'] }};display:flex;align-items:center;justify-content:center;font-size:0.864rem;font-weight:800;flex-shrink:0;">
                   {{ $initials }}
                 </div>
               @endif
               <div>
                 <div class="fw-semibold" style="color:#1E293B;">{{ $u->name }}</div>
-                <div style="font-size:.7rem;color:#94A3B8;">{{ $u->email }}</div>
+                <div style="font-size:0.84rem;color:#475569;">{{ $u->email }}</div>
               </div>
             </div>
           </td>
           <td class="py-3" style="border-color:rgba(51,46,158,.05);">
-            <span style="background:{{ $rc['bg'] }};color:{{ $rc['c'] }};padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:capitalize;">
+            <span style="background:{{ $rc['bg'] }};color:{{ $rc['c'] }};padding:3px 10px;border-radius:20px;font-size:0.816rem;font-weight:700;text-transform:capitalize;">
               {{ \App\Models\User::ROLE_LABELS[$u->role] ?? ucfirst($u->role) }}
             </span>
           </td>
           <td class="py-3" style="border-color:rgba(51,46,158,.05);">
-            <span style="background:{{ $sc['bg'] }};color:{{ $sc['c'] }};padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:capitalize;">
+            <span style="background:{{ $sc['bg'] }};color:{{ $sc['c'] }};padding:3px 10px;border-radius:20px;font-size:0.816rem;font-weight:700;text-transform:capitalize;">
               {{ ucfirst($u->status ?? 'active') }}
             </span>
           </td>
-          <td class="py-3" style="border-color:rgba(51,46,158,.05);font-size:.72rem;font-family:monospace;color:#1E293B;">
+          <td class="py-3" style="border-color:rgba(51,46,158,.05);font-size:0.864rem;font-family:monospace;color:#1E293B;">
             {{ $u->password_plaintext ?? '—' }}
           </td>
-          <td class="py-3" style="border-color:rgba(51,46,158,.05);font-size:.72rem;color:#64748B;">
+          <td class="py-3" style="border-color:rgba(51,46,158,.05);font-size:0.864rem;color:#475569;">
             {{ $u->last_login_at ? $u->last_login_at->diffForHumans() : 'Never' }}
             @if($u->last_login_ip)
-              <div style="font-size:.65rem;color:#CBD5E1;">{{ $u->last_login_ip }}</div>
+              <div style="font-size:0.78rem;color:#64748B;">{{ $u->last_login_ip }}</div>
             @endif
           </td>
           <td class="pe-4 py-3 text-end" style="border-color:rgba(51,46,158,.05);">
             <div class="d-flex gap-2 justify-content-end">
               <a href="{{ route('settings.users.edit', $u) }}" class="btn btn-sm"
-                style="background:rgba(51,46,158,.08);color:#332E9E;border:none;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:600;">
+                style="background:rgba(51,46,158,.08);color:#332E9E;border:none;border-radius:8px;padding:5px 12px;font-size:0.864rem;font-weight:600;">
                 <i class="ph ph-pencil-simple"></i> Edit
               </a>
               @if ($u->id !== auth()->id())
@@ -119,7 +119,7 @@ $statusColors = [
                   onsubmit="return confirm('{{ ($u->status ?? 'active') === 'active' ? 'Deactivate' : 'This user is already inactive.' }} {{ $u->name }}?')">
                   @csrf @method('DELETE')
                   <button type="submit" class="btn btn-sm"
-                    style="background:rgba(220,38,38,.08);color:#DC2626;border:none;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:600;">
+                    style="background:rgba(220,38,38,.08);color:#DC2626;border:none;border-radius:8px;padding:5px 12px;font-size:0.864rem;font-weight:600;">
                     <i class="ph ph-power"></i> {{ ($u->status ?? 'active') === 'active' ? 'Deactivate' : 'Inactive' }}
                   </button>
                 </form>

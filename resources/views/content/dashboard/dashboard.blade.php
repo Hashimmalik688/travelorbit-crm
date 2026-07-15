@@ -24,13 +24,13 @@
 .oc-card.c-sky::after   {background:linear-gradient(90deg,#0EA5E9,#38BDF8)}
 .oc-card.c-violet::after{background:linear-gradient(90deg,#7C3AED,#A78BFA)}
 .oc-val{ font-size:2rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1 }
-.oc-lbl{ font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:4px }
-.oc-sub{ font-size:.71rem;color:#64748B;margin-top:4px }
+.oc-lbl{ font-size:0.744rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:4px }
+.oc-sub{ font-size:0.852rem;color:#475569;margin-top:4px }
 /* Workflow pipeline */
 .wf-step{ flex:1;text-align:center;padding:14px 8px;border-radius:12px;border:1px solid rgba(51,46,158,.07);background:#fff;transition:transform .15s,box-shadow .15s;cursor:default }
 .wf-step:hover{ transform:translateY(-2px);box-shadow:0 4px 14px rgba(51,46,158,.08) }
-.wf-step-val{ font-size:1.5rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1 }
-.wf-step-lbl{ font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:4px }
+.wf-step-val{ font-size:1.8rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1 }
+.wf-step-lbl{ font-size:0.744rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:4px }
 /* Agent table */
 .ag-row{ display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid rgba(51,46,158,.06);margin-bottom:7px;transition:background .12s }
 .ag-row:hover{ background:#F8FAFF;border-color:rgba(51,46,158,.12) }
@@ -45,9 +45,9 @@
   
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-3" style="position:relative;z-index:1;">
     <div>
-      <div style="font-size:.62rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">{{ now()->format('l, d F Y') }}</div>
-      <h2 style="color:#fff;font-size:1.5rem;font-weight:800;letter-spacing:-.03em;margin:0 0 6px;">{{ $greet }}, {{ explode(' ', $user->name)[0] }} 👋</h2>
-      <p style="color:rgba(255,255,255,.55);font-size:.82rem;margin:0;">Operations Centre <span style="opacity:.5;">·</span> Full system overview</p>
+      <div style="font-size:0.744rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">{{ now()->format('l, d F Y') }}</div>
+      <h2 style="color:#fff;font-size:1.8rem;font-weight:800;letter-spacing:-.03em;margin:0 0 6px;">{{ $greet }}, {{ explode(' ', $user->name)[0] }} 👋</h2>
+      <p style="color:rgba(255,255,255,.55);font-size:0.984rem;margin:0;">Operations Centre <span style="opacity:.5;">·</span> Full system overview</p>
     </div>
   </div>
 </div>
@@ -55,8 +55,8 @@
 {{-- ══ WORKFLOW PIPELINE ══ --}}
 <div class="oc-up d2 mb-4" style="background:linear-gradient(135deg,rgba(255,255,255,0.7) 0%,rgba(248,250,252,0.6) 100%);border-radius:16px;padding:20px 24px;border:1px solid rgba(51,46,158,0.08);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(51,46,158,0.06);">
   <div class="d-flex align-items-center gap-2 mb-3">
-    <span class="fw-bold" style="font-size:.84rem;color:#0F172A;">Booking Pipeline</span>
-    <span style="font-size:.68rem;color:#94A3B8;">live status across all bookings</span>
+    <span class="fw-bold" style="font-size:1.008rem;color:#0F172A;">Booking Pipeline</span>
+    <span style="font-size:0.816rem;color:#475569;">live status across all bookings</span>
   </div>
   <div class="d-flex gap-2">
     @php
@@ -72,13 +72,13 @@
     @foreach ($pipeline as $pi => $pw)
       <div class="wf-step oc-up" style="animation-delay:{{ 0.05 + $pi * 0.04 }}s;background:linear-gradient(135deg,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0.75) 100%);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
         <div style="width:34px;height:34px;border-radius:10px;background:{{ $pw['bg'] }};margin:0 auto 10px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-          <i class="ph {{ $pw['icon'] }}" style="font-size:1.05rem;color:{{ $pw['color'] }};"></i>
+          <i class="ph {{ $pw['icon'] }}" style="font-size:1.26rem;color:{{ $pw['color'] }};"></i>
         </div>
         <div class="wf-step-val" style="color:{{ $pw['color'] }};">{{ $pw['val'] }}</div>
         <div class="wf-step-lbl" style="color:{{ $pw['color'] }};">{{ $pw['label'] }}</div>
       </div>
       @if (!$loop->last)
-        <div class="d-flex align-items-center flex-shrink-0" style="color:#CBD5E1;font-size:.85rem;margin-top:14px;"><i class="ph ph-caret-right"></i></div>
+        <div class="d-flex align-items-center flex-shrink-0" style="color:#64748B;font-size:1.02rem;margin-top:14px;"><i class="ph ph-caret-right"></i></div>
       @endif
     @endforeach
   </div>
@@ -99,7 +99,7 @@
       <div class="oc-card {{ $k['color'] }}">
         <div class="d-flex align-items-start justify-content-between mb-3">
           <div style="width:40px;height:40px;border-radius:11px;background:{{ $k['ibg'] }};display:flex;align-items:center;justify-content:center;">
-            <i class="{{ $k['icon'] }}" style="font-size:1.1rem;color:{{ $k['ic'] }};"></i>
+            <i class="{{ $k['icon'] }}" style="font-size:1.32rem;color:{{ $k['ic'] }};"></i>
           </div>
         </div>
         <div class="oc-lbl">{{ $k['label'] }}</div>
@@ -119,8 +119,8 @@
   <div class="col-lg-5 oc-up d3">
     <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
       <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
-        <h6 class="fw-bold mb-0" style="font-size:.85rem;color:#0F172A;">Agent Leaderboard</h6>
-        <span style="font-size:.7rem;color:#94A3B8;">{{ now()->format('F Y') }}</span>
+        <h6 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Agent Leaderboard</h6>
+        <span style="font-size:0.84rem;color:#475569;">{{ now()->format('F Y') }}</span>
       </div>
       <div class="px-4 py-3">
         @forelse ($allAgents->sortByDesc('month_bookings')->take(8) as $idx => $ag)
@@ -131,20 +131,20 @@
             $c = $colors[$idx % count($colors)];
           @endphp
           <div class="ag-row">
-            <div style="width:34px;height:34px;border-radius:50%;background:{{ $c }}18;color:{{ $c }};display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex-shrink:0;">{{ $initials }}</div>
+            <div style="width:34px;height:34px;border-radius:50%;background:{{ $c }}18;color:{{ $c }};display:flex;align-items:center;justify-content:center;font-size:0.816rem;font-weight:800;flex-shrink:0;">{{ $initials }}</div>
             <div class="flex-grow-1 min-width-0">
-              <div class="fw-semibold" style="font-size:.78rem;color:#1E293B;">{{ $ag->name }}</div>
+              <div class="fw-semibold" style="font-size:0.936rem;color:#1E293B;">{{ $ag->name }}</div>
               <div style="height:4px;background:rgba(51,46,158,.07);border-radius:20px;margin-top:4px;overflow:hidden;">
                 <div style="height:100%;width:{{ $pct }}%;background:{{ $c }};border-radius:20px;transition:width .8s;"></div>
               </div>
             </div>
             <div class="text-end flex-shrink-0">
-              <div class="fw-bold" style="font-size:.88rem;color:{{ $c }};">{{ $ag->month_bookings }}</div>
-              <div style="font-size:.62rem;color:#94A3B8;">bookings</div>
+              <div class="fw-bold" style="font-size:1.056rem;color:{{ $c }};">{{ $ag->month_bookings }}</div>
+              <div style="font-size:0.744rem;color:#475569;">bookings</div>
             </div>
           </div>
         @empty
-          <div class="text-center py-4" style="color:#C4C9D4;font-size:.75rem;">No agent data this month.</div>
+          <div class="text-center py-4" style="color:#475569;font-size:0.9rem;">No agent data this month.</div>
         @endforelse
       </div>
     </div>
@@ -157,11 +157,11 @@
       {{-- Donut --}}
       <div class="col-md-5">
         <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);padding:20px 18px;height:100%;">
-          <h6 class="fw-bold mb-3" style="font-size:.82rem;color:#0F172A;">Status Breakdown</h6>
+          <h6 class="fw-bold mb-3" style="font-size:0.984rem;color:#0F172A;">Status Breakdown</h6>
           <div id="oc-donut" style="height:180px;"></div>
           <div class="d-flex flex-column gap-1 mt-2">
             @foreach ([['Pending',$pendingCount,'#332E9E'],['Confirmed',$confirmedCount,'#7C3AED'],['Invoiced',$invoicedCount,'#16A34A'],['Issuance Q.',$issuanceQueue,'#D97706']] as [$l,$v,$c])
-              <div class="d-flex align-items-center justify-content-between" style="font-size:.72rem;">
+              <div class="d-flex align-items-center justify-content-between" style="font-size:0.864rem;">
                 <span class="d-flex align-items-center gap-2"><span style="width:8px;height:8px;border-radius:50%;background:{{ $c }};display:inline-block;"></span>{{ $l }}</span>
                 <span class="fw-semibold" style="color:#374151;">{{ $v }}</span>
               </div>
@@ -173,8 +173,8 @@
       {{-- 7-day trend --}}
       <div class="col-md-7">
         <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);padding:20px 18px;height:100%;">
-          <h6 class="fw-bold mb-1" style="font-size:.82rem;color:#0F172A;">7-Day Bookings</h6>
-          <div style="font-size:.7rem;color:#94A3B8;margin-bottom:12px;">{{ now()->subDays(6)->format('d M') }} - {{ now()->format('d M') }}</div>
+          <h6 class="fw-bold mb-1" style="font-size:0.984rem;color:#0F172A;">7-Day Bookings</h6>
+          <div style="font-size:0.84rem;color:#475569;margin-bottom:12px;">{{ now()->subDays(6)->format('d M') }} - {{ now()->format('d M') }}</div>
           <div id="oc-spark" style="height:160px;"></div>
         </div>
       </div>

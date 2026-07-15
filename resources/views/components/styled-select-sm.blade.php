@@ -49,7 +49,7 @@
       <div style="padding:5px 6px;border-bottom:1px solid rgba(51,46,158,.08);">
         <input type="text" x-model="searchQuery" @click.stop class="to-select-search"
           placeholder="Search..."
-          style="width:100%;border:1px solid rgba(51,46,158,.15);border-radius:6px;padding:4px 8px;font-size:.72rem;outline:none;color:#1E293B;background:#fff;">
+          style="width:100%;border:1px solid rgba(51,46,158,.15);border-radius:6px;padding:4px 8px;font-size:0.864rem;outline:none;color:#1E293B;background:#fff;">
       </div>
       <div style="max-height:220px;overflow-y:auto;">
         <template x-for="opt in filteredOpts" :key="opt.value ?? opt">
@@ -60,7 +60,7 @@
             x-text="opt.label ?? opt"
           ></button>
         </template>
-        <div x-show="filteredOpts.length === 0" style="padding:8px 10px;font-size:.7rem;color:#94A3B8;text-align:center;">No results</div>
+        <div x-show="filteredOpts.length === 0" style="padding:8px 10px;font-size:0.84rem;color:#475569;text-align:center;">No results</div>
       </div>
     @elseif($optgroup)
       @foreach($options as $group)

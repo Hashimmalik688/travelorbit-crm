@@ -96,7 +96,7 @@ $bottomSlugs  = [];
         <span class="sb-uc-name">{{ $user->name ?? 'User' }}</span>
         <span class="sb-uc-role">{{ ucfirst($user->role ?? 'Agent') }}</span>
       </div>
-      <i class="ph ph-caret-up-down" style="color:rgba(255,255,255,.25);font-size:.75rem;flex-shrink:0;margin-left:auto;"></i>
+      <i class="ph ph-caret-up-down" style="color:rgba(255,255,255,.25);font-size:0.9rem;flex-shrink:0;margin-left:auto;"></i>
     </button>
 
     {{-- Dropdown - Glassmorphism --}}
@@ -105,18 +105,18 @@ $bottomSlugs  = [];
       style="position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:linear-gradient(135deg,rgba(26,31,53,0.95) 0%,rgba(15,23,42,0.98) 100%);border:1px solid rgba(79,70,229,0.2);border-radius:14px;overflow:hidden;box-shadow:0 -8px 32px rgba(0,0,0,0.4),0 0 20px rgba(79,70,229,0.1);z-index:999;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);">
       @if($isAdmin)
       <a href="{{ route('settings') }}"
-        style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:rgba(255,255,255,0.75);text-decoration:none;font-size:.82rem;font-weight:500;transition:all .12s;background:transparent;"
+        style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.984rem;font-weight:500;transition:all .12s;background:transparent;"
         onmouseenter="this.style.background='rgba(79,70,229,0.15)'" onmouseleave="this.style.background='transparent'">
-        <i class="ph ph-gear" style="font-size:1rem;color:#A5B4FC;"></i> Settings
+        <i class="ph ph-gear" style="font-size:1.2rem;color:#A5B4FC;"></i> Settings
       </a>
       <div style="height:1px;background:rgba(79,70,229,0.15);margin:4px 8px;"></div>
       @endif
       <form method="POST" action="{{ route('logout') }}">
         @csrf
         <button type="submit"
-          style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 16px;color:rgba(244,63,94,0.85);background:none;border:none;font-size:.82rem;font-weight:600;cursor:pointer;text-align:left;transition:all .12s;"
+          style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 16px;color:rgba(244,63,94,0.85);background:none;border:none;font-size:0.984rem;font-weight:600;cursor:pointer;text-align:left;transition:all .12s;"
           onmouseenter="this.style.background='rgba(244,63,94,0.12)'" onmouseleave="this.style.background='transparent'">
-          <i class="ph ph-sign-out" style="font-size:1rem;"></i> Sign Out
+          <i class="ph ph-sign-out" style="font-size:1.2rem;"></i> Sign Out
         </button>
       </form>
     </div>

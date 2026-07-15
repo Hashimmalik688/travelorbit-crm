@@ -54,12 +54,12 @@ $inputClass = $compact ? 'to-date-input-text-sm' : 'to-date-input-text';
     </div>
     @if($isDateTime)
       <div class="to-date-time-row" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid rgba(51,46,158,.06);">
-        <span style="font-size:.68rem;font-weight:600;color:#64748B;flex-shrink:0;margin-right:2px;">Time (24h)</span>
+        <span style="font-size:0.816rem;font-weight:600;color:#475569;flex-shrink:0;margin-right:2px;">Time (24h)</span>
         <input type="number" x-model="timeH" x-on:input="commit()" min="0" max="23" step="1"
-          style="width:52px;text-align:center;font-weight:700;border-radius:7px;border:1.5px solid rgba(51,46,158,.2);padding:4px 6px;font-size:.8rem;outline:none;" placeholder="HH">
-        <span style="font-size:.9rem;font-weight:700;color:#94A3B8;">:</span>
+          style="width:52px;text-align:center;font-weight:700;border-radius:7px;border:1.5px solid rgba(51,46,158,.2);padding:4px 6px;font-size:0.96rem;outline:none;" placeholder="HH">
+        <span style="font-size:1.08rem;font-weight:700;color:#475569;">:</span>
         <input type="number" x-model="timeM" x-on:input="commit()" min="0" max="59" step="1"
-          style="width:52px;text-align:center;font-weight:700;border-radius:7px;border:1.5px solid rgba(51,46,158,.2);padding:4px 6px;font-size:.8rem;outline:none;" placeholder="MM">
+          style="width:52px;text-align:center;font-weight:700;border-radius:7px;border:1.5px solid rgba(51,46,158,.2);padding:4px 6px;font-size:0.96rem;outline:none;" placeholder="MM">
       </div>
     @endif
     <div class="to-date-footer">

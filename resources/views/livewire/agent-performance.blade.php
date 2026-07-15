@@ -10,7 +10,7 @@
         <div class="card-body d-flex flex-wrap align-items-end gap-3">
             @if ($canViewAll)
                 <div>
-                    <label class="form-label mb-1" style="font-size:.72rem;color:#5A6080;font-weight:600;">Agent</label>
+                    <label class="form-label mb-1" style="font-size:0.864rem;color:#5A6080;font-weight:600;">Agent</label>
                     <select wire:model.live="agentId" class="form-select form-select-sm" style="min-width:210px;border-radius:10px;">
                         <option value="">All agents</option>
                         @foreach ($agentUsers as $a)
@@ -19,13 +19,13 @@
                     </select>
                 </div>
                 <div>
-                    <label class="form-label mb-1" style="font-size:.72rem;color:#5A6080;font-weight:600;">Month</label>
+                    <label class="form-label mb-1" style="font-size:0.864rem;color:#5A6080;font-weight:600;">Month</label>
                     <input type="month" wire:model.live="month" max="{{ now()->format('Y-m') }}"
                            class="form-control form-control-sm" style="min-width:170px;border-radius:10px;">
                 </div>
             @else
                 <div>
-                    <label class="form-label d-block mb-1" style="font-size:.72rem;color:#5A6080;font-weight:600;">Period</label>
+                    <label class="form-label d-block mb-1" style="font-size:0.864rem;color:#5A6080;font-weight:600;">Period</label>
                     <div class="btn-group" role="group">
                         <button type="button" wire:click="setMonth('current')"
                             class="btn btn-sm {{ $month === now()->format('Y-m') ? 'btn-orange' : 'btn-outline-secondary' }}">
@@ -38,7 +38,7 @@
                     </div>
                 </div>
             @endif
-            <div class="ms-auto text-muted" style="font-size:.8rem;">
+            <div class="ms-auto text-muted" style="font-size:0.96rem;">
                 Showing <span class="fw-semibold" style="color:#332E9E;">{{ $monthLabel }}</span>
             </div>
         </div>

@@ -3,7 +3,7 @@
 @section('content')
 
 <div class="mb-5">
-  <div style="font-size:.72rem;color:#94A3B8;margin-bottom:4px;"><a href="{{ route('dashboard') }}" style="color:#94A3B8;text-decoration:none;">Dashboard</a> › Settings</div>
+  <div style="font-size:0.864rem;color:#475569;margin-bottom:4px;"><a href="{{ route('dashboard') }}" style="color:#475569;text-decoration:none;">Dashboard</a> › Settings</div>
   <h1 style="font-size:1.55rem;font-weight:800;color:#0F172A;letter-spacing:-.03em;margin:0;">Settings</h1>
 </div>
 
@@ -65,16 +65,16 @@
         {{-- Background glow --}}
         <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:{{ $c['bg'] }};opacity:.4;pointer-events:none;"></div>
         <div style="width:48px;height:48px;border-radius:14px;background:{{ $c['bg'] }};display:flex;align-items:center;justify-content:center;margin-bottom:18px;position:relative;">
-          <i class="{{ $c['icon'] }}" style="font-size:1.3rem;color:{{ $c['color'] }};"></i>
+          <i class="{{ $c['icon'] }}" style="font-size:1.56rem;color:{{ $c['color'] }};"></i>
         </div>
-        <div class="fw-bold" style="font-size:.95rem;color:#0F172A;margin-bottom:6px;">{{ $c['title'] }}</div>
-        <div style="font-size:.74rem;color:#64748B;line-height:1.55;margin-bottom:14px;">{{ $c['desc'] }}</div>
-        <div style="font-size:.75rem;font-weight:700;color:{{ $c['color'] }};display:inline-flex;align-items:center;gap:4px;">
+        <div class="fw-bold" style="font-size:1.14rem;color:#0F172A;margin-bottom:6px;">{{ $c['title'] }}</div>
+        <div style="font-size:0.888rem;color:#475569;line-height:1.55;margin-bottom:14px;">{{ $c['desc'] }}</div>
+        <div style="font-size:0.9rem;font-weight:700;color:{{ $c['color'] }};display:inline-flex;align-items:center;gap:4px;">
           @if($c['meta'])
-            <span style="background:{{ $c['bg'] }};padding:1px 8px;border-radius:20px;font-size:.65rem;">{{ $c['meta'] }}</span>
+            <span style="background:{{ $c['bg'] }};padding:1px 8px;border-radius:20px;font-size:0.78rem;">{{ $c['meta'] }}</span>
             &nbsp;·&nbsp;
           @endif
-          Open <i class="ph ph-arrow-right" style="font-size:.75rem;"></i>
+          Open <i class="ph ph-arrow-right" style="font-size:0.9rem;"></i>
         </div>
       </a>
     </div>
@@ -83,9 +83,9 @@
 
 {{-- System info strip --}}
 <div class="d-flex align-items-center gap-4 mt-5 px-4 py-3" style="background:#fff;border-radius:12px;border:1px solid rgba(51,46,158,.07);">
-  <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;">System</span>
+  <span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#475569;">System</span>
   @foreach(['PHP'=>phpversion(),'Laravel'=>app()->version(),'Environment'=>ucfirst(app()->environment())] as $k=>$v)
-    <div style="font-size:.72rem;color:#374151;"><span style="color:#94A3B8;">{{ $k }}</span> &nbsp;<span class="fw-semibold" style="font-family:monospace;">{{ $v }}</span></div>
+    <div style="font-size:0.864rem;color:#374151;"><span style="color:#475569;">{{ $k }}</span> &nbsp;<span class="fw-semibold" style="font-family:monospace;">{{ $v }}</span></div>
   @endforeach
 </div>
 @endsection

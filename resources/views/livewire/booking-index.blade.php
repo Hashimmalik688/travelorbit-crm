@@ -14,21 +14,21 @@
     </div>
 
     @if(session()->has('success'))
-      <div class="alert alert-success border-0 py-2 px-3 mb-3" style="font-size:.82rem;">{{ session('success') }}</div>
+      <div class="alert alert-success border-0 py-2 px-3 mb-3" style="font-size:0.984rem;">{{ session('success') }}</div>
     @endif
 
     {{-- Filter bar --}}
     <div style="padding:0 0 16px;">
         <div class="d-flex gap-3 align-items-center flex-wrap">
-          <div style="font-size:.7rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;">Filter</div>
+          <div style="font-size:0.84rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;">Filter</div>
 
           {{-- Date range - only for My Bookings --}}
           @if($context === 'mine')
             <div class="d-flex align-items-center gap-2" style="background:#fff;border:1.5px solid rgba(51,46,158,.15);border-radius:20px;padding:4px 12px;">
-              <i class="ph ph-calendar" style="font-size:.8rem;color:#94A3B8;"></i>
-              <input type="date" wire:model.live="dateFrom" style="border:none;outline:none;font-size:.76rem;color:#374151;background:transparent;width:110px;">
-              <span style="color:#CBD5E1;font-size:.75rem;">→</span>
-              <input type="date" wire:model.live="dateTo"   style="border:none;outline:none;font-size:.76rem;color:#374151;background:transparent;width:110px;">
+              <i class="ph ph-calendar" style="font-size:0.96rem;color:#475569;"></i>
+              <input type="date" wire:model.live="dateFrom" style="border:none;outline:none;font-size:0.912rem;color:#374151;background:transparent;width:110px;">
+              <span style="color:#64748B;font-size:0.9rem;">→</span>
+              <input type="date" wire:model.live="dateTo"   style="border:none;outline:none;font-size:0.912rem;color:#374151;background:transparent;width:110px;">
             </div>
           @endif
 
@@ -41,7 +41,7 @@
           </div>
           @if($statusFilter || $typeFilter || $search)
             <button wire:click="$set('search',''); $set('statusFilter',''); $set('typeFilter','')"
-              style="background:none;border:1.5px solid rgba(51,46,158,.15);color:#64748B;border-radius:20px;padding:4px 12px;font-size:.74rem;font-weight:600;cursor:pointer;">
+              style="background:none;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:20px;padding:4px 12px;font-size:0.888rem;font-weight:600;cursor:pointer;">
               ✕ Clear
             </button>
           @endif
@@ -72,7 +72,7 @@
                             <td>
                                 @if(Auth::user()->role === 'agent')
                                   <span class="fw-semibold">#{{ $monthlyNumbers[$booking->id] ?? $booking->booking_number }}</span>
-                                  <small class="d-block text-muted" style="font-size:.6rem;">{{ $booking->created_at->format('M Y') }}</small>
+                                  <small class="d-block text-muted" style="font-size:0.72rem;">{{ $booking->created_at->format('M Y') }}</small>
                                 @else
                                   <span class="fw-semibold">#{{ $booking->booking_number }}</span>
                                 @endif

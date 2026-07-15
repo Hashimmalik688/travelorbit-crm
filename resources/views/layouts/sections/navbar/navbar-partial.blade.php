@@ -30,7 +30,7 @@
         <a href="{{ route('calldesk.dashboard') }}" target="_blank" rel="noopener" class="to-nav-btn" title="Call Desk">
             <i class="ph ph-headset"></i>
             @if($callDeskPendingCallbacks > 0)
-                <span class="to-nav-badge" style="min-width:16px;height:16px;border-radius:8px;font-size:.58rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;top:3px;right:3px;">
+                <span class="to-nav-badge" style="min-width:16px;height:16px;border-radius:8px;font-size:0.696rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;top:3px;right:3px;">
                     {{ $callDeskPendingCallbacks > 9 ? '9+' : $callDeskPendingCallbacks }}
                 </span>
             @endif

@@ -62,7 +62,7 @@
 /* Calendar styles */
 .ad-cal-day {
   aspect-ratio:1;display:flex;align-items:center;justify-content:center;
-  border-radius:6px;font-size:.6rem;font-weight:500;color:#64748B;cursor:default;
+  border-radius:6px;font-size:0.72rem;font-weight:500;color:#475569;cursor:default;
   transition:all .15s;position:relative;
 }
 .ad-cal-day.sale { background:rgba(22,163,74,.12);color:#16A34A;font-weight:700 }
@@ -94,9 +94,9 @@
   <i class="ph ph-paper-plane-tilt ad-hero-plane"></i>
 
   <div style="position:relative;z-index:1;">
-    <div style="font-size:.62rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">{{ now()->format('l, d F Y') }}</div>
-    <h2 style="color:#fff;font-size:1.45rem;font-weight:800;letter-spacing:-.03em;margin:0 0 6px;">{{ $greeting }}, {{ explode(' ', $user->name)[0] }} 👋</h2>
-    <p style="color:rgba(255,255,255,.55);font-size:.8rem;margin:0;">
+    <div style="font-size:0.744rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">{{ now()->format('l, d F Y') }}</div>
+    <h2 style="color:#fff;font-size:1.74rem;font-weight:800;letter-spacing:-.03em;margin:0 0 6px;">{{ $greeting }}, {{ explode(' ', $user->name)[0] }} 👋</h2>
+    <p style="color:rgba(255,255,255,.55);font-size:0.96rem;margin:0;">
       <span style="color:#4ADE80;font-weight:700;">{{ $myTotalBookings }}</span> booking{{ $myTotalBookings !== 1 ? 's' : '' }} in {{ now()->format('F') }}
       <span style="opacity:.4;">·</span>
       @if ($myTodayBookings > 0)<span style="color:#FBBF24;font-weight:700;">{{ $myTodayBookings }}</span> today
@@ -120,15 +120,15 @@
       <div class="ad-money {{ $ms['key'] }}">
         <div class="d-flex align-items-start justify-content-between mb-3">
           <div class="ad-icon-badge" style="width:42px;height:42px;border-radius:12px;background:{{ $ms['ibg'] }};display:flex;align-items:center;justify-content:center;">
-            <i class="{{ $ms['icon'] }}" style="font-size:1.15rem;color:{{ $ms['ic'] }};"></i>
+            <i class="{{ $ms['icon'] }}" style="font-size:1.38rem;color:{{ $ms['ic'] }};"></i>
           </div>
-          <span style="font-size:.92rem;font-weight:800;color:{{ $ms['ic'] }};background:{{ $ms['ibg'] }};padding:4px 13px;border-radius:20px;">{{ $ms['count'] }}</span>
+          <span style="font-size:1.104rem;font-weight:800;color:{{ $ms['ic'] }};background:{{ $ms['ibg'] }};padding:4px 13px;border-radius:20px;">{{ $ms['count'] }}</span>
         </div>
-        <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8;margin-bottom:4px;">{{ $ms['label'] }}</div>
+        <div style="font-size:0.744rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:4px;">{{ $ms['label'] }}</div>
         <div class="ad-count" data-target="{{ $ms['val'] }}" style="font-size:2.35rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1;">
           £{{ number_format($ms['val'], 2) }}
         </div>
-        <div style="font-size:.71rem;color:#64748B;margin-top:4px;">{{ $ms['sub'] }}</div>
+        <div style="font-size:0.852rem;color:#475569;margin-top:4px;">{{ $ms['sub'] }}</div>
       </div>
     </div>
   @endforeach
@@ -156,15 +156,15 @@
 
       {{-- Header --}}
       <div class="px-3 pt-3 pb-1 d-flex align-items-center justify-content-between">
-        <div class="fw-bold" style="font-size:.76rem;color:#0F172A;" x-text="cur.label"></div>
-        <div style="font-size:.6rem;" x-text="cur.total + ' sale' + (cur.total!==1?'s':'')"
-          :style="cur.total>0?'color:#16A34A;font-weight:700;':'color:#CBD5E1;'"></div>
+        <div class="fw-bold" style="font-size:0.912rem;color:#0F172A;" x-text="cur.label"></div>
+        <div style="font-size:0.72rem;" x-text="cur.total + ' sale' + (cur.total!==1?'s':'')"
+          :style="cur.total>0?'color:#16A34A;font-weight:700;':'color:#64748B;'"></div>
       </div>
 
       {{-- Day headers --}}
       <div class="px-3" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px;">
         @foreach (['M','T','W','T','F','S','S'] as $dh)
-          <div style="text-align:center;font-size:.52rem;font-weight:700;color:#CBD5E1;padding:1px 0;">{{ $dh }}</div>
+          <div style="text-align:center;font-size:0.624rem;font-weight:700;color:#64748B;padding:1px 0;">{{ $dh }}</div>
         @endforeach
       </div>
 
@@ -194,8 +194,8 @@
 {{-- ══ Pending Bookings — full width, most urgent payment date first ══ --}}
 <div class="ad-up d4" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);">
   <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-bottom:1px solid rgba(51,46,158,.06);">
-    <h6 class="fw-bold mb-0" style="font-size:.87rem;color:#0F172A;">Pending Bookings</h6>
-    <span style="font-size:.62rem;font-weight:700;color:#D97706;background:rgba(217,119,6,.10);padding:2px 9px;border-radius:20px;">{{ $pendingTabBookings->count() }} booking{{ $pendingTabBookings->count() !== 1 ? 's' : '' }}</span>
+    <h6 class="fw-bold mb-0" style="font-size:1.044rem;color:#0F172A;">Pending Bookings</h6>
+    <span style="font-size:0.744rem;font-weight:700;color:#D97706;background:rgba(217,119,6,.10);padding:2px 9px;border-radius:20px;">{{ $pendingTabBookings->count() }} booking{{ $pendingTabBookings->count() !== 1 ? 's' : '' }}</span>
   </div>
   @include('content.dashboard.partials._bookings-table', ['bookings' => $pendingTabBookings])
 </div>

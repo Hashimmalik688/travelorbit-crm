@@ -79,7 +79,7 @@ body {
 
 .auth-eyebrow {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.95rem;
+  font-size: 1.14rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: rgba(255,255,255,0.55);
@@ -97,7 +97,7 @@ body {
 }
 
 .auth-desc {
-  font-size: 0.95rem;
+  font-size: 1.14rem;
   color: rgba(255,255,255,0.65);
   line-height: 1.65;
   max-width: 400px;
@@ -105,7 +105,7 @@ body {
 
 /* Photo credit */
 .auth-credit {
-  font-size: 0.68rem;
+  font-size: 0.816rem;
   color: rgba(255,255,255,0.25);
   margin-top: auto;
   padding-top: 16px;
@@ -136,8 +136,8 @@ body {
 }
 
 .auth-form-sub {
-  font-size: 0.875rem;
-  color: #9CA3AF;
+  font-size: 1.05rem;
+  color: #475569;
   margin-bottom: 36px;
 }
 
@@ -148,7 +148,7 @@ body {
 
 .field-lbl {
   display: block;
-  font-size: 0.73rem;
+  font-size: 0.876rem;
   font-weight: 700;
   color: #6B7280;
   text-transform: uppercase;
@@ -164,7 +164,7 @@ body {
   border: 1.5px solid #E8E2D8;
   border-radius: 10px;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 1.08rem;
   color: #20242B;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -206,8 +206,8 @@ body {
   right: 12px; top: 50%;
   transform: translateY(-50%);
   background: none; border: none;
-  color: #9CA3AF; cursor: pointer;
-  font-size: 1.1rem; padding: 4px;
+  color: #475569; cursor: pointer;
+  font-size: 1.32rem; padding: 4px;
   line-height: 1;
   transition: color 0.12s;
 }
@@ -225,7 +225,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.855rem;
+  font-size: 1.026rem;
   color: #6B7280;
   font-weight: 500;
   cursor: pointer;
@@ -240,7 +240,7 @@ body {
 }
 
 .auth-forgot {
-  font-size: 0.83rem;
+  font-size: 0.996rem;
   font-weight: 600;
   color: #332E9E;
   text-decoration: none;
@@ -258,7 +258,7 @@ body {
   border: none;
   border-radius: 10px;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 1.08rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
@@ -286,14 +286,14 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: 1.02rem;
   color: #991B1B;
 }
 
 /* Footer */
 .auth-form-footer {
   margin-top: 36px;
-  font-size: 0.73rem;
+  font-size: 0.876rem;
   color: #D1D5DB;
   text-align: center;
 }
@@ -340,7 +340,7 @@ body {
 
       @if ($errors->any())
       <div class="auth-err">
-        <i class="bx bx-error-circle" style="font-size:1rem;flex-shrink:0;"></i>
+        <i class="bx bx-error-circle" style="font-size:1.2rem;flex-shrink:0;"></i>
         {{ $errors->first() }}
       </div>
       @endif

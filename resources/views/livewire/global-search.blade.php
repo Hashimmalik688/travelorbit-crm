@@ -3,8 +3,8 @@
         {{-- Filter button --}}
         <button type="button" @click="showFilter = !showFilter"
             class="btn btn-sm d-flex align-items-center gap-1"
-            style="background:rgba(51,46,158,0.08);color:#332E9E;border:1px solid rgba(51,46,158,0.15);border-radius:8px;font-size:0.68rem;font-weight:600;padding:4px 8px;white-space:nowrap;flex-shrink:0;">
-            <i class="ph ph-funnel" style="font-size:0.75rem;"></i>
+            style="background:rgba(51,46,158,0.08);color:#332E9E;border:1px solid rgba(51,46,158,0.15);border-radius:8px;font-size:0.816rem;font-weight:600;padding:4px 8px;white-space:nowrap;flex-shrink:0;">
+            <i class="ph ph-funnel" style="font-size:0.9rem;"></i>
             <span class="d-none d-md-inline">
                 @switch($filter)
                     @case('booking_reference') Ref @break
@@ -31,11 +31,11 @@
             ] as $opt)
                 <button type="button" wire:click="$set('filter','{{ $opt['value'] }}')" @click="showFilter = false"
                     class="d-flex align-items-center gap-2 w-100 text-start px-3 py-2 border-0 bg-transparent"
-                    style="font-size:0.72rem;{{ $filter === $opt['value'] ? 'background:rgba(51,46,158,0.08);color:#332E9E;font-weight:600;' : 'color:#374151;' }}">
-                    <i class="ph {{ $opt['icon'] }}" style="font-size:0.8rem;width:18px;text-align:center;"></i>
+                    style="font-size:0.864rem;{{ $filter === $opt['value'] ? 'background:rgba(51,46,158,0.08);color:#332E9E;font-weight:600;' : 'color:#374151;' }}">
+                    <i class="ph {{ $opt['icon'] }}" style="font-size:0.96rem;width:18px;text-align:center;"></i>
                     <span>{{ $opt['label'] }}</span>
                     @if($filter === $opt['value'])
-                        <i class="ph ph-check ms-auto" style="font-size:0.75rem;"></i>
+                        <i class="ph ph-check ms-auto" style="font-size:0.9rem;"></i>
                     @endif
                 </button>
             @endforeach
@@ -43,7 +43,7 @@
 
         {{-- Search input --}}
         <div class="d-flex align-items-center flex-grow-1">
-            <i class="ph ph-magnifying-glass icon-md" style="color:#94A3B8;font-size:1rem;" wire:click="$set('isOpen', true)"></i>
+            <i class="ph ph-magnifying-glass icon-md" style="color:#475569;font-size:1.2rem;" wire:click="$set('isOpen', true)"></i>
             <input
                 type="text"
                 class="form-control border-0 shadow-none ps-1 ps-sm-2"
@@ -69,7 +69,7 @@
                         </span>
                     </div>
                     @if(in_array($filter, ['locator','airline_reference']) && $booking->flightDetail)
-                        <small class="text-muted" style="font-size:0.68rem;">
+                        <small class="text-muted" style="font-size:0.816rem;">
                             {{ $filter === 'locator' ? 'Locator: '.$booking->flightDetail->locator : 'AL: '.$booking->flightDetail->airline_locator }}
                         </small>
                     @endif

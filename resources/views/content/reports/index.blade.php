@@ -3,9 +3,9 @@
 @section('content')
 
 <div class="mb-4">
-  <div style="font-size:.72rem;color:#94A3B8;margin-bottom:4px;"><a href="{{ route('dashboard') }}" style="color:#94A3B8;text-decoration:none;">Dashboard</a> › Reports</div>
+  <div style="font-size:0.864rem;color:#475569;margin-bottom:4px;"><a href="{{ route('dashboard') }}" style="color:#475569;text-decoration:none;">Dashboard</a> › Reports</div>
   <h1 style="font-size:1.55rem;font-weight:800;color:#0F172A;letter-spacing:-.03em;margin:0;">Reports</h1>
-  <div style="font-size:.75rem;color:#94A3B8;margin-top:2px;">Analytics and performance insights</div>
+  <div style="font-size:0.9rem;color:#475569;margin-top:2px;">Analytics and performance insights</div>
 </div>
 
 <div class="row g-3">
@@ -21,12 +21,12 @@
         onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(51,46,158,.10)'"
         onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(51,46,158,.04)'">
         <div style="width:48px;height:48px;border-radius:14px;background:{{ $r['bg'] }};display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-          <i class="{{ $r['icon'] }}" style="font-size:1.3rem;color:{{ $r['color'] }};"></i>
+          <i class="{{ $r['icon'] }}" style="font-size:1.56rem;color:{{ $r['color'] }};"></i>
         </div>
-        <div class="fw-bold" style="font-size:1rem;color:#0F172A;margin-bottom:6px;">{{ $r['title'] }}</div>
-        <div style="font-size:.75rem;color:#94A3B8;line-height:1.5;">{{ $r['desc'] }}</div>
-        <div style="margin-top:14px;font-size:.75rem;font-weight:600;color:{{ $r['color'] }};display:flex;align-items:center;gap:4px;">
-          View Report <i class="ph ph-arrow-right" style="font-size:.75rem;"></i>
+        <div class="fw-bold" style="font-size:1.2rem;color:#0F172A;margin-bottom:6px;">{{ $r['title'] }}</div>
+        <div style="font-size:0.9rem;color:#475569;line-height:1.5;">{{ $r['desc'] }}</div>
+        <div style="margin-top:14px;font-size:0.9rem;font-weight:600;color:{{ $r['color'] }};display:flex;align-items:center;gap:4px;">
+          View Report <i class="ph ph-arrow-right" style="font-size:0.9rem;"></i>
         </div>
       </a>
     </div>

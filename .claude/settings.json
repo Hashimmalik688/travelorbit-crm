@@ -20,7 +20,8 @@
       "Read(//opt/**)",
       "Read(//opt/datapool/**)",
       "Read(//opt/datapool/database/**)",
-      "Read(//opt/datapool/app/**)"
+      "Read(//opt/datapool/app/**)",
+      "Bash(grep -n '@if\\($showChargeModal\\)' resources/views/livewire/booking-show.blade.php)"
     ],
     "additionalDirectories": [
       "/opt/travelorbit-crm"

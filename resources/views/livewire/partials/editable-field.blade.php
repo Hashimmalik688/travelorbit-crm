@@ -24,13 +24,13 @@
       @if($usePhp)
         @if(!$phpEditing)
         <div style="min-height:28px;display:flex;align-items:center;gap:6px;{{ $locked ? 'pointer-events:none;' : '' }}">
-          <span class="bv-value" style="word-break:break-word;{{ empty($val) ? 'color:#C4C9D4;' : '' }}">{{ $val ?: ($placeholder ?: '-') }}</span>
+          <span class="bv-value" style="word-break:break-word;{{ empty($val) ? 'color:#475569;' : '' }}">{{ $val ?: ($placeholder ?: '-') }}</span>
           @if($locked)<span class="bv-edit-pencil locked" title="Read only"><i class="ph ph-lock-simple"></i></span>@endif
         </div>
         @endif
       @else
         <div x-show="!{{ $editingExp }}" style="min-height:28px;display:flex;align-items:center;gap:6px;{{ $locked ? 'pointer-events:none;' : '' }}">
-          <span class="bv-value" style="word-break:break-word;{{ empty($val) ? 'color:#C4C9D4;' : '' }}">{{ $val ?: ($placeholder ?: '-') }}</span>
+          <span class="bv-value" style="word-break:break-word;{{ empty($val) ? 'color:#475569;' : '' }}">{{ $val ?: ($placeholder ?: '-') }}</span>
           @if($locked)<span class="bv-edit-pencil locked" title="Read only"><i class="ph ph-lock-simple"></i></span>@endif
         </div>
       @endif

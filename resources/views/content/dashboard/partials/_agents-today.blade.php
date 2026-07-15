@@ -3,8 +3,8 @@
      Expects: $agents (User collection, each with a `bookings_count` of today's bookings). --}}
 <div class="ad-up d3" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);overflow:hidden;">
   <div class="px-4 pt-4 pb-2" style="border-bottom:1px solid rgba(51,46,158,.06);">
-    <h6 class="fw-bold mb-0" style="font-size:.87rem;color:#0F172A;">Agents Today</h6>
-    <div style="font-size:.65rem;color:#94A3B8;">{{ now()->format('d F Y') }}</div>
+    <h6 class="fw-bold mb-0" style="font-size:1.044rem;color:#0F172A;">Agents Today</h6>
+    <div style="font-size:0.78rem;color:#475569;">{{ now()->format('d F Y') }}</div>
   </div>
   <div class="p-3">
     <div style="display:grid;grid-template-columns:repeat(auto-fill, 96px);justify-content:start;gap:8px;">
@@ -23,13 +23,13 @@
             @if ($photoUrl)
               <img src="{{ $photoUrl }}" alt="{{ $firstName }}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">
             @else
-              <div style="font-size:1.35rem;font-weight:800;color:rgba(255,255,255,0.9);letter-spacing:.04em;">{{ $initials }}</div>
+              <div style="font-size:1.62rem;font-weight:800;color:rgba(255,255,255,0.9);letter-spacing:.04em;">{{ $initials }}</div>
             @endif
             {{-- Status dot --}}
             <span style="position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:{{ $madeBooking ? '#10B981' : '#F43F5E' }};border:2px solid #fff;"></span>
           </div>
           <div style="padding:4px 6px;text-align:center;background:{{ $madeBooking ? 'rgba(16,185,129,0.06)' : 'rgba(244,63,94,0.04)' }};">
-            <div style="font-size:.68rem;font-weight:700;color:#1E293B;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $firstName }}</div>
+            <div style="font-size:0.816rem;font-weight:700;color:#1E293B;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $firstName }}</div>
           </div>
         </div>
       @endforeach

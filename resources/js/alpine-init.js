@@ -36,10 +36,21 @@ document.addEventListener('alpine:init', () => {
     init() {
       this.selected = this.$wire.get(modelName);
       this.updateLabel();
-      this.$watch('$wire.' + modelName, val => {
-        this.selected = val;
-        this.updateLabel();
-      });
+      // Use Livewire's own $wire.$watch, which takes a dot-path STRING (e.g.
+      // "passengers.0.title") — never compiled as a JS expression, so numeric
+      // segments are safe. Alpine's $watch('$wire.'+path) would compile the
+      // path as JS and choke on "0." (a number literal), throwing an uncaught
+      // error that aborts Alpine init for the rest of the page — which silently
+      // breaks every wire:click below it. The try/catch is defence-in-depth so
+      // a single bad select can never brick the whole page again.
+      try {
+        this.$wire.$watch(modelName, val => {
+          this.selected = val;
+          this.updateLabel();
+        });
+      } catch (e) {
+        console.warn('initSelect: watch failed for', modelName, e);
+      }
     },
 
     updateLabel() {

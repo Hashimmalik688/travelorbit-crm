@@ -9,7 +9,7 @@
     $showFooter = $showFooter ?? true;
 @endphp
 <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0" style="font-size:.78rem;">
+    <table class="table table-hover align-middle mb-0" style="font-size:0.936rem;">
         <thead>
             <tr>
                 <th>ID</th>
@@ -47,7 +47,7 @@
                     <td>{{ $bk->user->name ?? '—' }}</td>
                     <td>
                         <div class="fw-medium">{{ $bk->booker_name }}</div>
-                        @if($route)<div class="text-muted" style="font-size:.68rem;">{{ $route }}</div>@endif
+                        @if($route)<div class="text-muted" style="font-size:0.816rem;">{{ $route }}</div>@endif
                     </td>
                     <td class="text-muted">{{ $bk->created_at->format('d/m/Y') }}</td>
                     <td>
