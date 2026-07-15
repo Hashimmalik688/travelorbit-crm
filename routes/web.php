@@ -101,6 +101,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/settings/activity',  [SettingsController::class, 'auditLog'])->name('settings.activity');
         Route::get('/settings/vendors',   [SettingsController::class, 'vendors'])->name('settings.vendors');
         Route::get('/settings/gds', [SettingsController::class, 'gds'])->name('settings.gds');
+        Route::get('/settings/eticket-template', [SettingsController::class, 'eticketTemplate'])->name('settings.eticket-template');
         Route::get('/settings/ip-whitelist', fn() => view('settings.ip-whitelist'))->name('settings.ip')->middleware('role:admin');
     });
 

@@ -730,7 +730,16 @@
                 @endif
                 {{-- Detail --}}
                 @if(!empty($entry['detail']))
-                  <div style="font-size:0.756rem;color:#475569;margin-top:3px;font-style:italic;line-height:1.4;">{{ $entry['detail'] }}</div>
+                  @if(!empty($entry['preset']))
+                    @php $pc = $entry['preset']['color']; @endphp
+                    <div style="margin-top:5px;border-left:3px solid {{ $pc }};background:{{ $pc }}0D;border-radius:0 8px 8px 0;padding:6px 10px;">
+                      <div style="font-size:0.66rem;font-weight:800;color:{{ $pc }};text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">{{ $entry['preset']['label'] }}</div>
+                      {{-- pre-wrap keeps pasted line breaks + indentation intact --}}
+                      <div style="font-size:0.78rem;color:#334155;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
+                    </div>
+                  @else
+                    <div style="font-size:0.756rem;color:#475569;margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
+                  @endif
                 @endif
                 {{-- Comments --}}
                 @if(!empty($entry['is_json']))
@@ -746,7 +755,7 @@
                           @if($r['agent'])<span style="font-size:0.744rem;font-weight:700;color:#332E9E;">{{ $r['agent'] }}</span>@endif
                           @if($r['at'])<span style="font-size:0.696rem;color:#475569;">{{ $r['at'] }}</span>@endif
                         </div>
-                        <div style="font-size:0.78rem;color:#374151;line-height:1.5;">{{ $r['text'] }}</div>
+                        <div style="font-size:0.78rem;color:#374151;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $r['text'] }}</div>
                       </div>
                     </div>
                   @endforeach
@@ -774,9 +783,40 @@
         @endif
       </div>
       @if($this->canComment())
-      <div class="d-flex gap-1 align-items-center px-4 py-2" style="border-top:1px solid rgba(51,46,158,.06);background:#FAFBFF;">
-        <input type="text" wire:model="newComment" placeholder="Add a comment..." class="form-control form-control-sm" style="border-radius:20px;font-size:0.84rem;border-color:rgba(51,46,158,.12);" wire:keydown.enter="addComment">
-        <button type="button" wire:click="addComment" class="btn btn-sm flex-shrink-0" style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:0.816rem;font-weight:600;">Add Comment</button>
+      {{-- Header preset bubbles: pick one to prepend a coloured heading to the comment --}}
+      <div class="d-flex gap-1 align-items-center flex-wrap px-4 pt-2" style="border-top:1px solid rgba(51,46,158,.06);background:#FAFBFF;">
+        @foreach($this->commentPresets as $key => $p)
+          @php $on = $commentPreset === $key; @endphp
+          <button type="button" wire:click="toggleCommentPreset('{{ $key }}')"
+            title="{{ $p['label'] }}"
+            style="font-size:0.69rem;font-weight:700;padding:3px 10px;border-radius:20px;cursor:pointer;transition:all .12s;
+                   border:1.5px solid {{ $on ? $p['color'] : $p['color'].'55' }};
+                   background:{{ $on ? $p['color'] : $p['color'].'12' }};
+                   color:{{ $on ? '#fff' : $p['color'] }};">
+            {{ $p['short'] }}
+          </button>
+        @endforeach
+        @if($commentPreset)
+          <button type="button" wire:click="$set('commentPreset','')"
+            style="font-size:0.66rem;font-weight:600;color:#64748B;background:none;border:none;cursor:pointer;padding:3px 4px;">✕ clear</button>
+        @endif
+      </div>
+      {{-- Textarea (not <input>): an input silently strips newlines, so pasted
+           multi-line text would collapse onto one line. Enter inserts a newline;
+           Ctrl/Cmd+Enter submits. --}}
+      <div class="d-flex gap-2 align-items-end px-4 py-2" style="background:#FAFBFF;">
+        @php $ap = $commentPreset ? ($this->commentPresets[$commentPreset] ?? null) : null; @endphp
+        <textarea wire:model="newComment" rows="1"
+          placeholder="{{ $ap ? $ap['label'].' — add details...' : 'Add a comment...' }}"
+          class="form-control form-control-sm"
+          x-data
+          x-init="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,220)+'px'"
+          @input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,220)+'px'"
+          @keydown.ctrl.enter.prevent="$wire.addComment()"
+          @keydown.meta.enter.prevent="$wire.addComment()"
+          style="border-radius:14px;font-size:0.84rem;line-height:1.5;resize:vertical;overflow-y:auto;min-height:34px;max-height:220px;white-space:pre-wrap;border-color:{{ $ap ? $ap['color'].'66' : 'rgba(51,46,158,.12)' }};"></textarea>
+        <button type="button" wire:click="addComment" class="btn btn-sm flex-shrink-0"
+          style="background:{{ $ap ? $ap['color'] : 'linear-gradient(135deg,#332E9E,#4A45B5)' }};color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:0.816rem;font-weight:600;">Add Comment</button>
       </div>
       @endif
     </div>

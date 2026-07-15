@@ -30,6 +30,7 @@ class BookingShow extends Component
 
     public Booking $booking;
     public $newComment = '';
+    public $commentPreset = '';   // key from BookingComment::PRESETS, '' = plain comment
     public $bookingStatus;
 
     // Refund modal
@@ -373,6 +374,7 @@ class BookingShow extends Component
                 'timestamp'       => $c->created_at?->format('d M Y, H:i'),
                 'ts_sort'         => $c->created_at?->timestamp ?? 0,
                 'color'           => $this->getActivityColorConfig($action, $type),
+                'preset'          => BookingComment::PRESETS[$c->preset] ?? null,
                 'is_json'         => false,
             ];
         }
@@ -1699,10 +1701,31 @@ class BookingShow extends Component
     }
 
     // ── Comments ───────────────────────────────────────────────────────
+    /** Header presets available when commenting. */
+    public function getCommentPresetsProperty(): array
+    {
+        return BookingComment::PRESETS;
+    }
+
+    /** Clicking the same bubble again clears it, so a preset is never sticky by accident. */
+    public function toggleCommentPreset(string $key): void
+    {
+        if (!array_key_exists($key, $this->commentPresets)) return;
+        $this->commentPreset = $this->commentPreset === $key ? '' : $key;
+    }
+
     public function addComment()
     {
         if (!$this->canComment()) return;
-        $this->validate(['newComment' => 'required|string|max:2000']);
+        // Column is TEXT (unlimited); 20k is a sanity bound that still allows
+        // pasting long multi-line content (PNR dumps, policy text) intact.
+        $this->validate(['newComment' => 'required|string|max:20000']);
+
+        // Never trust the posted preset — re-check it against what this user may use.
+        $preset = array_key_exists($this->commentPreset, $this->commentPresets)
+            ? $this->commentPreset
+            : null;
+
         $user = Auth::user();
         BookingComment::create([
             'booking_id' => $this->booking->id,
@@ -1711,9 +1734,14 @@ class BookingShow extends Component
             'avatar_url' => $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null,
             'action'     => 'comment_added',
             'comment'    => $this->newComment,
+            'preset'     => $preset,
         ]);
-        AuditLogger::log(Auth::user(), $this->booking, 'comment_added', 'Comment added', null, ['comment' => $this->newComment]);
+
+        $label = $preset ? BookingComment::PRESETS[$preset]['label'] . ': ' : '';
+        AuditLogger::log(Auth::user(), $this->booking, 'comment_added', 'Comment added', null, ['comment' => $label . $this->newComment]);
+
         $this->newComment = '';
+        $this->commentPreset = '';
         $this->booking->load(['comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
         $this->activityLog = $this->buildActivityLog($this->booking);
     }

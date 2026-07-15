@@ -55,11 +55,22 @@
         'url'   => route('settings.gds'),
         'meta'  => 'Booking',
       ],
+      [
+        'title' => 'E-Ticket Template',
+        'desc'  => 'Open the printable e-ticket. Edit the DATA block at the bottom, then Print to save as PDF.',
+        'icon'  => 'ph ph-ticket',
+        'color' => '#D6197F',
+        'bg'    => 'rgba(214,25,127,.08)',
+        'url'   => route('settings.eticket-template'),
+        'meta'  => 'Booking',
+        // Opens in its own tab: it is a standalone print document, not a CRM page.
+        'target' => '_blank',
+      ],
     ];
   @endphp
   @foreach($cards as $c)
     <div class="col-md-4">
-      <a href="{{ $c['url'] }}" style="display:block;text-decoration:none;background:#fff;border-radius:18px;border:1px solid rgba(51,46,158,.08);padding:28px 26px;box-shadow:0 2px 12px rgba(51,46,158,.04);transition:all .18s;position:relative;overflow:hidden;"
+      <a href="{{ $c['url'] }}" @if(!empty($c['target'])) target="{{ $c['target'] }}" rel="noopener" @endif style="display:block;text-decoration:none;background:#fff;border-radius:18px;border:1px solid rgba(51,46,158,.08);padding:28px 26px;box-shadow:0 2px 12px rgba(51,46,158,.04);transition:all .18s;position:relative;overflow:hidden;"
         onmouseenter="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(51,46,158,.12)';this.style.borderColor='rgba(51,46,158,.18)'"
         onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(51,46,158,.04)';this.style.borderColor='rgba(51,46,158,.08)'">
         {{-- Background glow --}}
