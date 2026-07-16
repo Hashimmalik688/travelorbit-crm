@@ -358,6 +358,9 @@ class Booking extends Model
                 // Visas
                 $total += $this->visas()->sum('actual_cost');
 
+                // Transfers (pickups + dropoffs)
+                $total += $this->transfers()->sum('actual_cost');
+
                 // Excursion
                 if ($this->excursion_data && $cost = ($this->excursion_data['actual_cost'] ?? null)) {
                     $total += (float) $cost;
@@ -384,6 +387,9 @@ class Booking extends Model
 
                 // Visas
                 $total += $this->visas()->sum('selling_price');
+
+                // Transfers (pickups + dropoffs)
+                $total += $this->transfers()->sum('selling_price');
 
                 // Excursion
                 if ($this->excursion_data && $sp = ($this->excursion_data['selling_price'] ?? null)) {

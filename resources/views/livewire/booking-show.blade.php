@@ -11,6 +11,12 @@
 .bv-value { font-size:0.96rem;font-weight:500;color:#1E293B; }
 .bv-divider { height:1px;background:rgba(51,46,158,.05);margin:14px 0; }
 .bv-pill { display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;font-size:0.792rem;font-weight:700; }
+/* Cost & Margins rows — section headings sit clearly above their lighter column headers. */
+.bv-cm-hdr { display:flex;align-items:center;gap:8px;padding:11px 20px;font-size:0.744rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em; }
+.bv-cm-cols { display:grid;padding:7px 20px; }
+.bv-cm-cols span { font-size:0.63rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8; }
+.bv-cm-row { display:grid;align-items:center;padding:10px 20px; }
+.bv-cm-total { display:grid;align-items:center;padding:9px 20px; }
 .bv-action { padding:5px 14px;border-radius:9px;font-size:0.864rem;font-weight:600;border:1.5px solid;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-decoration:none;transition:all .15s; }
 .bv-action:hover { opacity:.85; }
 .bv-edit-pencil { display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;border:1px solid rgba(51,46,158,.12);background:transparent;color:#475569;cursor:pointer;font-size:0.792rem;flex-shrink:0;margin-left:3px;transition:all .12s; }
@@ -925,6 +931,11 @@
           $hotelSold  = collect($hotels)->sum(fn($h)=>(float)($h['selling_price']??0));
           $visaCost   = collect($visas)->sum(fn($v)=>(float)($v['actual_cost']??0));
           $visaSold   = collect($visas)->sum(fn($v)=>(float)($v['selling_price']??0));
+          // Transfers are charged per leg — pickups and dropoffs each carry their own cost/sold.
+          $bvTransfers   = collect($transferPickups)->map(fn($t)=>$t+['leg'=>'Pickup'])
+                             ->merge(collect($transferDropoffs)->map(fn($t)=>$t+['leg'=>'Dropoff']));
+          $transferCost  = $bvTransfers->sum(fn($t)=>(float)($t['actual_cost']??0));
+          $transferSold  = $bvTransfers->sum(fn($t)=>(float)($t['selling_price']??0));
           $excCost    = (float)($excursion_actual_cost ?: 0);
           $excSold    = (float)($excursion_selling_price ?: 0);
           $ccAmt      = (float)($cc_charges ?: 0);
@@ -942,15 +953,15 @@
         <div style="border-top:1px solid rgba(51,46,158,.06);">
 
           {{-- ── FLIGHT section (aggregated by type) ── --}}
-          <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(51,46,158,.03);border-bottom:1px solid rgba(51,46,158,.07);">
-            <i class="ph ph-airplane-tilt" style="font-size:0.864rem;color:#332E9E;"></i>
-            <span style="font-size:0.684rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#332E9E;">Flight</span>
+          <div class="bv-cm-hdr" style="background:rgba(51,46,158,.04);border-bottom:1px solid rgba(51,46,158,.08);">
+            <i class="ph ph-airplane-tilt" style="font-size:0.9rem;color:#332E9E;"></i>
+            <span style="color:#332E9E;">Flight</span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;padding:4px 20px;background:rgba(248,250,255,.9);border-bottom:1px solid rgba(51,46,158,.05);">
-            <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;">Type</span>
-            <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:center;">Pax</span>
-            <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:right;">Cost</span>
-            <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:right;">Sold</span>
+          <div class="bv-cm-cols" style="grid-template-columns:1fr 36px 76px 76px;background:rgba(248,250,255,.9);border-bottom:1px solid rgba(51,46,158,.05);">
+            <span>Type</span>
+            <span style="text-align:center;">Pax</span>
+            <span style="text-align:right;">Cost</span>
+            <span style="text-align:right;">Sold</span>
           </div>
           @foreach ($bvTypeOrder as $t)
             @php
@@ -959,7 +970,7 @@
               $tMgn   = $tData['sold'] - $tData['cost'];
             @endphp
             @if($tData['count'] > 0)
-            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(51,46,158,.05);border-left:3px solid {{ $tColor }};">
+            <div class="bv-cm-row" style="grid-template-columns:1fr 36px 76px 76px;border-bottom:1px solid rgba(51,46,158,.05);border-left:3px solid {{ $tColor }};">
               <div>
                 <span style="font-size:0.768rem;font-weight:700;color:{{ $tColor }};">{{ $bvTypeLabels[$t] }}</span>
                 @if($tMgn != 0)
@@ -973,7 +984,7 @@
             @endif
           @endforeach
           @if($this->safiTax > 0)
-            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(51,46,158,.03);border-bottom:1px solid rgba(51,46,158,.06);border-left:3px solid #332E9E;">
+            <div class="bv-cm-row" style="grid-template-columns:1fr 36px 76px 76px;background:rgba(51,46,158,.03);border-bottom:1px solid rgba(51,46,158,.06);border-left:3px solid #332E9E;">
               <span style="font-size:0.744rem;font-weight:700;color:#332E9E;">SAFI</span>
               <span style="font-size:0.744rem;font-weight:700;color:#332E9E;text-align:center;">{{ $this->nonInfantPassengerCount }}</span>
               <span style="font-size:0.816rem;font-weight:600;color:#374151;text-align:right;">&pound;{{ number_format($this->safiTax,2) }}</span>
@@ -981,14 +992,14 @@
             </div>
           @endif
           @if($this->atolTax > 0)
-            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(255,107,53,.04);border-bottom:1px solid rgba(255,107,53,.10);border-left:3px solid #FF6B35;">
+            <div class="bv-cm-row" style="grid-template-columns:1fr 36px 76px 76px;background:rgba(255,107,53,.04);border-bottom:1px solid rgba(255,107,53,.10);border-left:3px solid #FF6B35;">
               <span style="font-size:0.744rem;font-weight:700;color:#FF6B35;">ATOL</span>
               <span style="font-size:0.744rem;font-weight:700;color:#FF6B35;text-align:center;">{{ $this->nonInfantPassengerCount }}</span>
               <span style="font-size:0.816rem;font-weight:600;color:#374151;text-align:right;">&pound;{{ number_format($this->atolTax,2) }}</span>
               <span style="font-size:0.816rem;font-weight:600;color:#475569;text-align:right;">—</span>
             </div>
           @endif
-          <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(51,46,158,.04);border-bottom:1px solid rgba(51,46,158,.08);">
+          <div class="bv-cm-total" style="grid-template-columns:1fr 36px 76px 76px;background:rgba(51,46,158,.04);border-bottom:1px solid rgba(51,46,158,.08);">
             <span style="font-size:0.72rem;font-weight:800;color:#1E293B;">Total</span>
             <span></span>
             <span style="font-size:0.84rem;font-weight:800;color:#1E293B;text-align:right;">&pound;{{ number_format($flightCost + $this->atolSafiTax,2) }}</span>
@@ -997,19 +1008,19 @@
 
           {{-- ── HOTEL section ── --}}
           @if(count($hotels) > 0)
-            <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(124,58,237,.04);border-bottom:1px solid rgba(124,58,237,.08);border-top:1px solid rgba(124,58,237,.08);">
-              <i class="ph ph-buildings" style="font-size:0.864rem;color:#7C3AED;"></i>
-              <span style="font-size:0.684rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#7C3AED;">Hotel</span>
+            <div class="bv-cm-hdr" style="background:rgba(124,58,237,.05);border-bottom:1px solid rgba(124,58,237,.10);border-top:1px solid rgba(124,58,237,.10);">
+              <i class="ph ph-buildings" style="font-size:0.9rem;color:#7C3AED;"></i>
+              <span style="color:#7C3AED;">Hotel</span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;padding:4px 20px;background:rgba(124,58,237,.06);border-bottom:1px solid rgba(124,58,237,.08);">
-              <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;">Hotel</span>
-              <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:center;">Rms</span>
-              <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:right;">Cost</span>
-              <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:right;">Sold</span>
+            <div class="bv-cm-cols" style="grid-template-columns:1fr 36px 76px 76px;background:rgba(124,58,237,.06);border-bottom:1px solid rgba(124,58,237,.08);">
+              <span>Hotel</span>
+              <span style="text-align:center;">Rms</span>
+              <span style="text-align:right;">Cost</span>
+              <span style="text-align:right;">Sold</span>
             </div>
             @foreach($hotels as $hi => $h)
               @php $hCost = (float)($h['actual_cost']??0); $hSold = (float)($h['selling_price']??0); $hMgn = $hSold - $hCost; $hRooms = (int)($h['number_of_rooms']??1); @endphp
-              <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(124,58,237,.05);border-left:3px solid #7C3AED;">
+              <div class="bv-cm-row" style="grid-template-columns:1fr 36px 76px 76px;border-bottom:1px solid rgba(124,58,237,.05);border-left:3px solid #7C3AED;">
                 <div>
                   <span style="font-size:0.792rem;font-weight:600;color:#1E293B;display:block;">{{ $h['hotel_name']?:'Hotel '.($hi+1) }}</span>
                   @if($hMgn != 0)<span style="font-size:0.648rem;font-weight:700;color:{{ $hMgn >= 0 ? '#16A34A' : '#DC2626' }};">{{ $hMgn >= 0 ? '+' : '' }}£{{ number_format($hMgn,2) }}</span>@endif
@@ -1019,7 +1030,7 @@
                 <span style="font-size:0.816rem;font-weight:700;color:#111827;text-align:right;">£{{ number_format($hSold,2) }}</span>
               </div>
             @endforeach
-            <div style="display:grid;grid-template-columns:1fr 36px 76px 76px;align-items:center;padding:6px 20px;background:rgba(124,58,237,.04);border-bottom:1px solid rgba(124,58,237,.08);">
+            <div class="bv-cm-total" style="grid-template-columns:1fr 36px 76px 76px;background:rgba(124,58,237,.05);border-bottom:1px solid rgba(124,58,237,.10);">
               <span style="font-size:0.72rem;font-weight:800;color:#1E293B;">Total</span>
               <span></span>
               <span style="font-size:0.84rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($hotelCost,2) }}</span>
@@ -1029,25 +1040,25 @@
 
           {{-- ── VISA section ── --}}
           @if(count($visas) > 0)
-            <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(22,163,74,.04);border-bottom:1px solid rgba(22,163,74,.08);border-top:1px solid rgba(22,163,74,.08);">
-              <i class="ph ph-identification-card" style="font-size:0.864rem;color:#16A34A;"></i>
-              <span style="font-size:0.684rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#16A34A;">Visa</span>
+            <div class="bv-cm-hdr" style="background:rgba(22,163,74,.05);border-bottom:1px solid rgba(22,163,74,.10);border-top:1px solid rgba(22,163,74,.10);">
+              <i class="ph ph-identification-card" style="font-size:0.9rem;color:#16A34A;"></i>
+              <span style="color:#16A34A;">Visa</span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 76px 76px;padding:4px 20px;background:rgba(22,163,74,.06);border-bottom:1px solid rgba(22,163,74,.08);">
-              <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;">Passenger</span>
-              <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:right;">Cost</span>
-              <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748B;text-align:right;">Sold</span>
+            <div class="bv-cm-cols" style="grid-template-columns:1fr 76px 76px;background:rgba(22,163,74,.06);border-bottom:1px solid rgba(22,163,74,.08);">
+              <span>Passenger</span>
+              <span style="text-align:right;">Cost</span>
+              <span style="text-align:right;">Sold</span>
             </div>
             @foreach($visas as $vi => $v)
               @php $vCost = (float)($v['actual_cost']??0); $vSold = (float)($v['selling_price']??0); @endphp
-              <div style="display:grid;grid-template-columns:1fr 76px 76px;align-items:center;padding:6px 20px;border-bottom:1px solid rgba(22,163,74,.05);border-left:3px solid #16A34A;">
+              <div class="bv-cm-row" style="grid-template-columns:1fr 76px 76px;border-bottom:1px solid rgba(22,163,74,.05);border-left:3px solid #16A34A;">
                 <span style="font-size:0.78rem;font-weight:600;color:#1E293B;">{{ $v['passenger_name'] ?: 'Visa '.($vi+1) }}</span>
                 <span style="font-size:0.816rem;font-weight:600;color:#374151;text-align:right;">£{{ number_format($vCost,2) }}</span>
                 <span style="font-size:0.816rem;font-weight:700;color:#111827;text-align:right;">£{{ number_format($vSold,2) }}</span>
               </div>
             @endforeach
             @if(count($visas) > 1)
-              <div style="display:grid;grid-template-columns:1fr 76px 76px;align-items:center;padding:6px 20px;background:rgba(22,163,74,.04);border-bottom:1px solid rgba(22,163,74,.08);">
+              <div class="bv-cm-total" style="grid-template-columns:1fr 76px 76px;background:rgba(22,163,74,.05);border-bottom:1px solid rgba(22,163,74,.10);">
                 <span style="font-size:0.72rem;font-weight:800;color:#1E293B;">Total</span>
                 <span style="font-size:0.84rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($visaCost,2) }}</span>
                 <span style="font-size:0.84rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($visaSold,2) }}</span>
@@ -1055,13 +1066,47 @@
             @endif
           @endif
 
+          {{-- ── TRANSFERS section ── --}}
+          @if($bvTransfers->isNotEmpty())
+            <div class="bv-cm-hdr" style="background:rgba(14,165,233,.05);border-bottom:1px solid rgba(14,165,233,.10);border-top:1px solid rgba(14,165,233,.10);">
+              <i class="ph ph-van" style="font-size:0.9rem;color:#0EA5E9;"></i>
+              <span style="color:#0EA5E9;">Transfers</span>
+            </div>
+            <div class="bv-cm-cols" style="grid-template-columns:1fr 60px 76px 76px;background:rgba(14,165,233,.06);border-bottom:1px solid rgba(14,165,233,.10);">
+              <span>Transfer</span>
+              <span style="text-align:center;">Leg</span>
+              <span style="text-align:right;">Cost</span>
+              <span style="text-align:right;">Sold</span>
+            </div>
+            @foreach($bvTransfers as $tri => $tr)
+              @php $trCost = (float)($tr['actual_cost']??0); $trSold = (float)($tr['selling_price']??0); $trMgn = $trSold - $trCost; @endphp
+              <div class="bv-cm-row" style="grid-template-columns:1fr 60px 76px 76px;border-bottom:1px solid rgba(14,165,233,.06);border-left:3px solid #0EA5E9;">
+                <div>
+                  <span style="font-size:0.792rem;font-weight:600;color:#1E293B;display:block;">{{ $tr['location'] ?: ($tr['route'] ?: 'Transfer '.($tri+1)) }}</span>
+                  @if($trMgn != 0)<span style="font-size:0.648rem;font-weight:700;color:{{ $trMgn >= 0 ? '#16A34A' : '#DC2626' }};">{{ $trMgn >= 0 ? '+' : '' }}£{{ number_format($trMgn,2) }}</span>@endif
+                </div>
+                <span style="font-size:0.696rem;font-weight:700;color:#0EA5E9;text-align:center;">{{ $tr['leg'] }}</span>
+                <span style="font-size:0.816rem;font-weight:600;color:#1E293B;text-align:right;">£{{ number_format($trCost,2) }}</span>
+                <span style="font-size:0.816rem;font-weight:700;color:#1E293B;text-align:right;">£{{ number_format($trSold,2) }}</span>
+              </div>
+            @endforeach
+            @if($bvTransfers->count() > 1)
+              <div class="bv-cm-total" style="grid-template-columns:1fr 60px 76px 76px;background:rgba(14,165,233,.05);border-bottom:1px solid rgba(14,165,233,.10);">
+                <span style="font-size:0.72rem;font-weight:800;color:#1E293B;">Total</span>
+                <span></span>
+                <span style="font-size:0.84rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($transferCost,2) }}</span>
+                <span style="font-size:0.84rem;font-weight:800;color:#1E293B;text-align:right;">£{{ number_format($transferSold,2) }}</span>
+              </div>
+            @endif
+          @endif
+
           {{-- ── EXCURSION section ── --}}
           @if($excCost > 0 || $excSold > 0)
-            <div style="display:flex;align-items:center;gap:7px;padding:7px 20px;background:rgba(255,107,53,.04);border-bottom:1px solid rgba(255,107,53,.08);border-top:1px solid rgba(255,107,53,.08);">
-              <i class="ph ph-binoculars" style="font-size:0.864rem;color:#FF6B35;"></i>
-              <span style="font-size:0.684rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#FF6B35;">Excursion</span>
+            <div class="bv-cm-hdr" style="background:rgba(255,107,53,.05);border-bottom:1px solid rgba(255,107,53,.10);border-top:1px solid rgba(255,107,53,.10);">
+              <i class="ph ph-binoculars" style="font-size:0.9rem;color:#FF6B35;"></i>
+              <span style="color:#FF6B35;">Excursion</span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 76px 76px;align-items:center;padding:7px 20px;border-bottom:1px solid rgba(255,107,53,.06);border-left:3px solid #FF6B35;">
+            <div class="bv-cm-row" style="grid-template-columns:1fr 76px 76px;border-bottom:1px solid rgba(255,107,53,.06);border-left:3px solid #FF6B35;">
               <span style="font-size:0.792rem;font-weight:600;color:#1E293B;">{{ $excursion_name ?: 'Excursion' }}</span>
               <span style="font-size:0.816rem;font-weight:600;color:#374151;text-align:right;">£{{ number_format($excCost,2) }}</span>
               <span style="font-size:0.816rem;font-weight:700;color:#111827;text-align:right;">£{{ number_format($excSold,2) }}</span>
@@ -1070,8 +1115,8 @@
 
           {{-- ── Grand Totals + CC + Dual Margin ── --}}
           @php
-            $totCost  = $flightCost + $this->atolSafiTax + $hotelCost + $visaCost + $excCost;
-            $totSold  = $flightSold + $hotelSold + $visaSold + $excSold;
+            $totCost  = $flightCost + $this->atolSafiTax + $hotelCost + $visaCost + $transferCost + $excCost;
+            $totSold  = $flightSold + $hotelSold + $visaSold + $transferSold + $excSold;
             $grossMgn = $totSold - $totCost;
             $netMgn   = $grossMgn - $ccAmt;
             $netPct   = $totSold > 0 ? round(($netMgn / $totSold) * 100, 1) : 0;
@@ -1223,14 +1268,30 @@
 
           {{-- Existing documents --}}
           @if(count($booking->documents))
+            @php
+              // Each document type gets its own colour so the kind of file is
+              // readable at a glance rather than buried in grey text.
+              $bvDocColors = [
+                'e_ticket'      => '#332E9E',
+                'hotel_voucher' => '#7C3AED',
+                'passport'      => '#16A34A',
+                'visa'          => '#D97706',
+                'itinerary'     => '#64748B',
+                'invoice'       => '#D83F87',
+                'other'         => '#94A3B8',
+              ];
+            @endphp
             <div style="margin-bottom:8px;">
               @php $audioExts = ['mp3','wav','m4a','ogg','aac','flac','webm','opus']; @endphp
               @foreach($booking->documents as $doc)
-                @php $docExt = strtolower(pathinfo($doc->file_name, PATHINFO_EXTENSION)); @endphp
+                @php
+                  $docExt = strtolower(pathinfo($doc->file_name, PATHINFO_EXTENSION));
+                  $bvDocC = $bvDocColors[$doc->document_type] ?? '#94A3B8';
+                @endphp
                 <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:7px;">
                   <button type="button" @click="openDoc(docs.find(d => d.id === {{ $doc->id }}))" style="background:none;border:none;font-size:0.864rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;">
                     <i class="ph {{ in_array($docExt, $audioExts) ? 'ph-waveform' : 'ph-file' }} me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }}
-                    <span style="font-size:0.72rem;color:#475569;font-weight:500;margin-left:6px;">{{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</span>
+                    <span style="font-size:0.66rem;font-weight:700;margin-left:6px;padding:2px 8px;border-radius:20px;background:{{ $bvDocC }}1A;color:{{ $bvDocC }};border:1px solid {{ $bvDocC }}33;white-space:nowrap;">{{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</span>
                   </button>
                   @if(Auth::user()->role === 'admin')
                     <button type="button" wire:click="deleteDocument({{ $doc->id }})" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:5px;padding:1px 7px;font-size:0.72rem;cursor:pointer;">✕</button>

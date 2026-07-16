@@ -700,7 +700,21 @@ class BookingShow extends Component
             + $this->atolSafiTax
             + collect($this->hotels)->sum(fn($h) => (float)($h['actual_cost'] ?? 0))
             + collect($this->visas)->sum(fn($v) => (float)($v['actual_cost'] ?? 0))
+            + $this->totalTransferCost
             + (float)($this->excursion_actual_cost ?: 0);
+    }
+
+    /** Transfers are charged per leg — pickups and dropoffs both carry their own cost/sold. */
+    public function getTotalTransferCostProperty(): float
+    {
+        return collect($this->transferPickups)->merge($this->transferDropoffs)
+            ->sum(fn($t) => (float)($t['actual_cost'] ?? 0));
+    }
+
+    public function getTotalTransferSoldProperty(): float
+    {
+        return collect($this->transferPickups)->merge($this->transferDropoffs)
+            ->sum(fn($t) => (float)($t['selling_price'] ?? 0));
     }
 
     public function getTotalSoldPriceProperty(): float
@@ -708,6 +722,7 @@ class BookingShow extends Component
         return $this->totalFlightSold
             + collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0))
             + collect($this->visas)->sum(fn($v) => (float)($v['selling_price'] ?? 0))
+            + $this->totalTransferSold
             + (float)($this->excursion_selling_price ?: 0);
     }
 
