@@ -38,7 +38,7 @@ class GlobalSearch extends Component
                 'booking_reference' => Booking::query()
                     ->where('booking_number', 'ILIKE', "%{$q}%")
                     ->orderByDesc('created_at')
-                    ->limit(8)
+                    ->limit(50)
                     ->get(),
 
                 'name' => Booking::query()
@@ -47,33 +47,33 @@ class GlobalSearch extends Component
                           ->orWhere('booker_last_name', 'ILIKE', "%{$q}%");
                     })
                     ->orderByDesc('created_at')
-                    ->limit(8)
+                    ->limit(50)
                     ->get(),
 
                 'locator' => Booking::query()
                     ->whereHas('flightDetail', fn($f) => $f->where('locator', 'ILIKE', "%{$q}%"))
                     ->with('flightDetail')
                     ->orderByDesc('created_at')
-                    ->limit(8)
+                    ->limit(50)
                     ->get(),
 
                 'email' => Booking::query()
                     ->where('booker_email', 'ILIKE', "%{$q}%")
                     ->orderByDesc('created_at')
-                    ->limit(8)
+                    ->limit(50)
                     ->get(),
 
                 'phone' => Booking::query()
                     ->where('booker_mobile', 'ILIKE', "%{$q}%")
                     ->orderByDesc('created_at')
-                    ->limit(8)
+                    ->limit(50)
                     ->get(),
 
                 'airline_reference' => Booking::query()
                     ->whereHas('flightDetail', fn($f) => $f->where('airline_locator', 'ILIKE', "%{$q}%"))
                     ->with('flightDetail')
                     ->orderByDesc('created_at')
-                    ->limit(8)
+                    ->limit(50)
                     ->get(),
 
                 default => collect(),

@@ -55,7 +55,8 @@
                     </td>
                     <td class="text-end">£{{ number_format($bk->total_cost_price, 2) }}</td>
                     <td class="text-end">£{{ number_format($bk->total_sale_price, 2) }}</td>
-                    <td class="text-end fw-semibold {{ $bk->total_margin >= 0 ? 'text-success' : 'text-danger' }}">£{{ number_format($bk->total_margin, 2) }}</td>
+                    @php $bkMargin = $bk->netMargin(); @endphp
+                    <td class="text-end fw-semibold {{ $bkMargin >= 0 ? 'text-success' : 'text-danger' }}">£{{ number_format($bkMargin, 2) }}</td>
                     <td class="text-end">£{{ number_format($received, 2) }}</td>
                     <td class="text-end fw-semibold {{ $settled ? 'text-success' : 'text-warning' }}">£{{ number_format($balance, 2) }}</td>
                     <td class="text-end">
@@ -80,7 +81,7 @@
             @php
                 $totalCost = $bookings->sum('total_cost_price');
                 $totalSold = $bookings->sum('total_sale_price');
-                $totalMargin = $bookings->sum('total_margin');
+                $totalMargin = $bookings->sum(fn ($bk) => $bk->netMargin());
                 $totalReceived = $bookings->sum(fn ($bk) => $bk->totalReceived());
                 $totalRemaining = $bookings->sum(fn ($bk) => (float) $bk->total_sale_price - $bk->totalReceived());
             @endphp

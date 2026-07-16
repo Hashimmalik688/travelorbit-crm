@@ -407,4 +407,14 @@ class Booking extends Model
             get: fn () => $this->total_sale_price - $this->total_cost_price,
         );
     }
+
+    /**
+     * Margin after card charges — what the agency actually keeps. total_margin
+     * is the gross figure (sale - cost); the CC fee comes off the top of it, so
+     * anything reporting real earnings should use this.
+     */
+    public function netMargin(): float
+    {
+        return round($this->total_margin - (float) ($this->payment->cc_charges ?? 0), 2);
+    }
 }

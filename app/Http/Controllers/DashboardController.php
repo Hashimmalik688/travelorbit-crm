@@ -56,7 +56,7 @@ class DashboardController extends Controller
         $totals = [
             'cost'      => $sorted->sum('total_cost_price'),
             'sold'      => $sorted->sum('total_sale_price'),
-            'margin'    => $sorted->sum('total_margin'),
+            'margin'    => $sorted->sum(fn (Booking $b) => $b->netMargin()),
             'received'  => $sorted->sum(fn (Booking $b) => $b->totalReceived()),
             'remaining' => $sorted->sum(fn (Booking $b) => $b->total_sale_price - $b->totalReceived()),
         ];
@@ -257,7 +257,7 @@ class DashboardController extends Controller
         $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan', 'invoiced'];
 
         // Net margin = gross margin (sale - cost) minus CC charges — always used for these figures.
-        $netMargin = fn (Booking $b) => $b->total_margin - (float) ($b->payment->cc_charges ?? 0);
+        $netMargin = fn (Booking $b) => $b->netMargin();
 
         // ── FRESH: net margin from bookings NOT yet issued, created this month ──
         $freshBookings = Booking::where('user_id', $userId)
@@ -325,8 +325,10 @@ class DashboardController extends Controller
         ];
 
         // ── Pending Bookings box: all-time, not-yet-issued bookings, most
-        //    urgent payment date first ──
-        $pendingTabBookings = $this->sortByNextDueDate($allTimeNotYetIssuedBookings)->take(15)->values();
+        //    urgent payment date first. Not capped — the table's Totals row has
+        //    to cover every pending booking, and a silent take() made it
+        //    disagree with the Pending KPI above it. ──
+        $pendingTabBookings = $this->sortByNextDueDate($allTimeNotYetIssuedBookings)->values();
 
         // ── All agents with today's booking count ──
         $allAgents = \App\Models\User::where('role', 'agent')
