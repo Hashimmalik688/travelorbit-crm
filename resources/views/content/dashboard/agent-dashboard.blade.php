@@ -109,7 +109,7 @@
 <div class="row g-3 mb-4 ad-money-row ad-up d2">
   @php
     $moneyStats = [
-      ['key'=>'fresh',   'label'=>'Fresh',            'sub'=>'Not yet issued, this month',  'val'=>$myFresh,          'count'=>$myFreshCount,          'icon'=>'ph ph-trend-up',       'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)'],
+      ['key'=>'fresh',   'label'=>'Fresh',            'sub'=>'All margin, this month',      'val'=>$myFresh,          'count'=>$myFreshCount,          'icon'=>'ph ph-trend-up',       'ic'=>'#332E9E','ibg'=>'rgba(51,46,158,.10)'],
       ['key'=>'issued',  'label'=>'Issued',           'sub'=>'Margin issued & fully paid',  'val'=>$myIssued,         'count'=>$myIssuedCount,         'icon'=>'ph ph-check-circle',   'ic'=>'#16A34A','ibg'=>'rgba(22,163,74,.10)'],
       ['key'=>'pending', 'label'=>'Pending',          'sub'=>'Not yet issued, this month',  'val'=>$myPending,        'count'=>$myPendingCount,        'icon'=>'ph ph-clock-countdown','ic'=>'#D97706','ibg'=>'rgba(217,119,6,.10)'],
       ['key'=>'alltime', 'label'=>'All-Time Pending', 'sub'=>'Not yet issued, all time',    'val'=>$myPendingAllTime, 'count'=>$myPendingAllTimeCount, 'icon'=>'ph ph-hourglass',      'ic'=>'#64748B','ibg'=>'rgba(100,116,139,.10)'],

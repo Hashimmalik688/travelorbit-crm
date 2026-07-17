@@ -271,9 +271,15 @@ class DashboardController extends Controller
         // Net margin = gross margin (sale - cost) minus CC charges — always used for these figures.
         $netMargin = fn (Booking $b) => $b->netMargin();
 
-        // ── FRESH: net margin from bookings NOT yet issued, created this month ──
+        // Statuses that represent a lost booking — never counted as margin.
+        $deadStatuses = ['cancelled', 'refund_queue'];
+
+        // ── FRESH: ALL margin generated this month — issued or still pending —
+        //    excluding only cancelled/refunded bookings (no margin earned). This
+        //    is the total this-month figure; Issued and Pending below are the two
+        //    slices of it. ──
         $freshBookings = Booking::where('user_id', $userId)
-            ->whereNotIn('booking_status', $issuedStatuses)
+            ->whereNotIn('booking_status', $deadStatuses)
             ->whereBetween('created_at', [$som, $eom])
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
@@ -290,18 +296,23 @@ class DashboardController extends Controller
         $myIssued = (float) $issuedBookings->sum($netMargin);
         $myIssuedCount = $issuedBookings->count();
 
-        // ── PENDING (THIS MONTH): same status filter as Fresh (not yet issued at all,
-        //    no balance check) — it's Fresh's number restated as "Pending" for this
-        //    card. Resets to 0 each new month. ──
-        $myPending = $myFresh;
-        $myPendingCount = $myFreshCount;
+        // ── PENDING (THIS MONTH): the not-yet-issued slice of Fresh — bookings
+        //    created this month that aren't issued yet (and aren't cancelled). Once
+        //    a booking is issued it leaves this figure and shows under Issued. ──
+        $pendingBookings = Booking::where('user_id', $userId)
+            ->whereNotIn('booking_status', array_merge($issuedStatuses, $deadStatuses))
+            ->whereBetween('created_at', [$som, $eom])
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->get();
+        $myPending = (float) $pendingBookings->sum($netMargin);
+        $myPendingCount = $pendingBookings->count();
 
         // ── PENDING (ALL TIME): the same "not yet issued at all" rule as Fresh/Pending,
         //    just without the month restriction — never resets. Bookings that are
         //    already issued (payment plan/awaiting/etc.) are tracked separately in the
         //    tabs below, not rolled into this figure. ──
         $allTimeNotYetIssuedBookings = Booking::where('user_id', $userId)
-            ->whereNotIn('booking_status', $issuedStatuses)
+            ->whereNotIn('booking_status', array_merge($issuedStatuses, $deadStatuses))
             ->with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
             ->orderByDesc('created_at')
             ->get();
