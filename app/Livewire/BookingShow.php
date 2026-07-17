@@ -937,7 +937,7 @@ class BookingShow extends Component
         BookingPayment::updateOrCreate(
             ['booking_id' => $this->booking->id],
             [
-                'booking_plan'        => $this->selected_payment_method ?: null,
+                'booking_plan'        => $this->selected_payment_method ?: '',
                 'payment_instalments' => count($instalments) ? ['instalments' => $instalments, 'paid' => $this->instalment_paid] : null,
             ]
         );

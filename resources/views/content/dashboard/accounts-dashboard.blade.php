@@ -96,12 +96,14 @@
         </div>
         <div class="flex-shrink-0 d-flex gap-2 align-items-center">
           <span style="font-size:0.78rem;color:#475569;">{{ $bk->updated_at->format('d M') }}</span>
+          @if(auth()->user()->hasPermission('payments.issue'))
           <button type="button" class="inv-btn issue-btn" style="background:linear-gradient(135deg,#D97706,#B45309);color:#fff;"
             data-booking-id="{{ $bk->id }}"
             data-booking-ref="{{ $bk->booking_number }}"
             data-route="{{ route('bookings.issue', $bk) }}">
             <i class="ph ph-ticket"></i> Issue
           </button>
+          @endif
           <a href="{{ route('bookings.show', $bk) }}" class="inv-btn" style="background:rgba(51,46,158,.08);color:#332E9E;">View</a>
         </div>
       </div>
