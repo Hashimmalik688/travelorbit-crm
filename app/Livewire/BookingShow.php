@@ -741,17 +741,6 @@ class BookingShow extends Component
         return collect($this->hotels)->sum(fn($h) => (float)($h['selling_price'] ?? 0) - (float)($h['actual_cost'] ?? 0));
     }
 
-    public function getAgentMonthlyNumberProperty(): int
-    {
-        $b = $this->booking;
-        return \App\Models\Booking::withTrashed()
-            ->where('user_id', $b->user_id)
-            ->whereYear('created_at', $b->created_at->year)
-            ->whereMonth('created_at', $b->created_at->month)
-            ->where('booking_number', '<=', $b->booking_number)
-            ->count();
-    }
-
     public function getIsLockedProperty(): bool
     {
         return $this->booking->booking_status !== 'pending';

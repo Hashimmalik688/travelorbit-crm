@@ -78,23 +78,9 @@ class BookingIndex extends Component
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        // Pre-compute monthly numbers for agent role (N queries, max 20 per page)
-        $monthlyNumbers = [];
-        if (Auth::user()->role === 'agent') {
-            foreach ($bookings as $b) {
-                $monthlyNumbers[$b->id] = Booking::withTrashed()
-                    ->where('user_id', $b->user_id)
-                    ->whereYear('created_at', $b->created_at->year)
-                    ->whereMonth('created_at', $b->created_at->month)
-                    ->where('booking_number', '<=', $b->booking_number)
-                    ->count();
-            }
-        }
-
         return view('livewire.booking-index', [
-            'bookings'       => $bookings,
-            'context'        => $this->context,
-            'monthlyNumbers' => $monthlyNumbers,
+            'bookings' => $bookings,
+            'context'  => $this->context,
         ]);
     }
 }

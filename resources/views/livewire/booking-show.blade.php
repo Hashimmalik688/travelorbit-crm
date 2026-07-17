@@ -155,12 +155,7 @@
     <div>
       <div class="bv-label">Booking</div>
       <div class="d-flex align-items-center gap-3 flex-wrap">
-        @if(in_array(Auth::user()->role, ['admin','manager','operations','accounts','issuance']))
-          <span style="font-size:1.44rem;font-weight:800;color:#0F172A;letter-spacing:-.02em;">#{{ $booking->booking_number }}</span>
-        @else
-          <span style="font-size:1.44rem;font-weight:800;color:#0F172A;letter-spacing:-.02em;">#{{ $this->agentMonthlyNumber }}</span>
-          <span style="font-size:0.696rem;font-weight:600;color:#475569;padding:2px 8px;border-radius:8px;background:rgba(51,46,158,.06);border:1px solid rgba(51,46,158,.10);">{{ $booking->created_at->format('M Y') }}</span>
-        @endif
+        <span style="font-size:1.44rem;font-weight:800;color:#0F172A;letter-spacing:-.02em;">#{{ $booking->booking_number }}</span>
         <span class="d-flex align-items-center gap-1" style="font-size:0.768rem;font-weight:500;color:#475569;background:rgba(148,163,184,.08);padding:3px 8px;border-radius:10px;">
           <i class="ph {{ $typeIcon }}" style="color:#332E9E;font-size:0.84rem;"></i> {{ ucfirst($booking->booking_type ?? '-') }}
         </span>

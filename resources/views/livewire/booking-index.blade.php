@@ -70,12 +70,7 @@
                     @forelse ($bookings as $booking)
                         <tr>
                             <td>
-                                @if(Auth::user()->role === 'agent')
-                                  <span class="fw-semibold">#{{ $monthlyNumbers[$booking->id] ?? $booking->booking_number }}</span>
-                                  <small class="d-block text-muted" style="font-size:0.72rem;">{{ $booking->created_at->format('M Y') }}</small>
-                                @else
-                                  <span class="fw-semibold">#{{ $booking->booking_number }}</span>
-                                @endif
+                                <span class="fw-semibold">#{{ $booking->booking_number }}</span>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
