@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Models\Booking;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class SalesReport extends Component
@@ -21,63 +20,76 @@ class SalesReport extends Component
         $this->dateTo = now()->format('Y-m-d');
     }
 
+    private ?\Illuminate\Support\Collection $filteredBookingsCache = null;
+
+    /**
+     * The old version of this report summed booking_flight_details.selling_price
+     * via a raw join — an INNER join, so any booking_type without a flight
+     * segment (hotel/visa/transfers/excursion-only bookings) was silently
+     * dropped from every total, even though it appeared fine in the table
+     * below. Aggregating over the Booking model's own total_sale_price /
+     * total_cost_price accessors (the same figures the booking detail page
+     * shows) fixes that and makes every booking type report real totals.
+     */
+    private function filteredBookings()
+    {
+        return $this->filteredBookingsCache ??= Booking::query()
+            ->when($this->dateFrom, fn($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
+            ->when($this->bookingType, fn($q) => $q->where('booking_type', $this->bookingType))
+            ->when($this->agentId, fn($q) => $q->where('user_id', $this->agentId))
+            ->with(['flightDetails', 'hotels', 'visas', 'transfers', 'passengers', 'user'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
     public function getSummaryProperty()
     {
-        $totals = DB::table('booking_flight_details')
-            ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
-            ->leftJoin('booking_flight_costs', 'booking_flight_costs.booking_id', '=', 'bookings.id')
-            ->when($this->dateFrom, fn($q) => $q->whereDate('bookings.created_at', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn($q) => $q->whereDate('bookings.created_at', '<=', $this->dateTo))
-            ->when($this->bookingType, fn($q) => $q->where('bookings.booking_type', $this->bookingType))
-            ->when($this->agentId, fn($q) => $q->where('bookings.user_id', $this->agentId))
-            ->selectRaw('COUNT(DISTINCT bookings.id) as total_bookings')
-            ->selectRaw('SUM(booking_flight_details.selling_price) as total_revenue')
-            ->selectRaw('SUM(COALESCE(booking_flight_costs.cost * booking_flight_costs.quantity, 0)) as total_cost')
-            ->selectRaw('SUM(booking_flight_details.selling_price - COALESCE(booking_flight_costs.cost * booking_flight_costs.quantity, 0)) as total_margin')
-            ->first();
+        $bookings = $this->filteredBookings();
+        $count = $bookings->count();
+        $margin = (float) $bookings->sum(fn (Booking $b) => $b->total_margin);
 
         return [
-            'totalBookings' => (int) ($totals->total_bookings ?? 0),
-            'totalRevenue' => (float) ($totals->total_revenue ?? 0),
-            'totalCost' => (float) ($totals->total_cost ?? 0),
-            'totalMargin' => (float) ($totals->total_margin ?? 0),
-            'avgMargin' => $totals->total_bookings > 0 ? ($totals->total_margin / $totals->total_bookings) : 0,
+            'totalBookings' => $count,
+            'totalRevenue' => (float) $bookings->sum(fn (Booking $b) => $b->total_sale_price),
+            'totalCost' => (float) $bookings->sum(fn (Booking $b) => $b->total_cost_price),
+            'totalMargin' => $margin,
+            'avgMargin' => $count > 0 ? $margin / $count : 0,
         ];
+    }
+
+    /**
+     * Booking counts by type, for the breakdown strip — deliberately ignores
+     * the bookingType filter itself (but keeps date/agent) so switching the
+     * type filter doesn't collapse this down to a single count; you can still
+     * see how many bookings fall in every other type at the same time.
+     */
+    public function getTypeCountsProperty()
+    {
+        return Booking::query()
+            ->when($this->dateFrom, fn($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
+            ->when($this->agentId, fn($q) => $q->where('user_id', $this->agentId))
+            ->get()
+            ->countBy('booking_type');
     }
 
     public function getChartDataProperty()
     {
-        $data = DB::table('booking_flight_details')
-            ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
-            ->leftJoin('booking_flight_costs', 'booking_flight_costs.booking_id', '=', 'bookings.id')
-            ->when($this->dateFrom, fn($q) => $q->whereDate('bookings.created_at', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn($q) => $q->whereDate('bookings.created_at', '<=', $this->dateTo))
-            ->when($this->bookingType, fn($q) => $q->where('bookings.booking_type', $this->bookingType))
-            ->when($this->agentId, fn($q) => $q->where('bookings.user_id', $this->agentId))
-            ->selectRaw("TO_CHAR(bookings.created_at, 'YYYY-MM') as month")
-            ->selectRaw('SUM(booking_flight_details.selling_price) as revenue')
-            ->selectRaw('SUM(booking_flight_details.selling_price - COALESCE(booking_flight_costs.cost * booking_flight_costs.quantity, 0)) as margin')
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+        $grouped = $this->filteredBookings()
+            ->groupBy(fn (Booking $b) => $b->created_at->format('Y-m'))
+            ->sortKeys();
 
         return [
-            'labels' => $data->pluck('month')->map(fn($m) => Carbon::createFromFormat('Y-m', $m)->format('M Y'))->toArray(),
-            'revenue' => $data->pluck('revenue')->toArray(),
-            'margin' => $data->pluck('margin')->toArray(),
+            'labels' => $grouped->keys()->map(fn($m) => Carbon::createFromFormat('Y-m', $m)->format('M Y'))->toArray(),
+            'revenue' => $grouped->map(fn($g) => (float) $g->sum(fn (Booking $b) => $b->total_sale_price))->values()->toArray(),
+            'margin' => $grouped->map(fn($g) => (float) $g->sum(fn (Booking $b) => $b->total_margin))->values()->toArray(),
         ];
     }
 
     public function getBookingsProperty()
     {
-        return Booking::query()
-            ->when($this->dateFrom, fn($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
-            ->when($this->bookingType, fn($q) => $q->where('booking_type', $this->bookingType))
-            ->when($this->agentId, fn($q) => $q->where('user_id', $this->agentId))
-            ->with(['user', 'passengers'])
-            ->orderByDesc('created_at')
-            ->get();
+        return $this->filteredBookings();
     }
 
     private function getAgentUsers()
@@ -122,6 +134,7 @@ class SalesReport extends Component
             'summary' => $this->summary,
             'chartData' => $this->chartData,
             'bookings' => $this->bookings,
+            'typeCounts' => $this->typeCounts,
             'agents' => $this->getAgentUsers(),
         ]);
     }

@@ -23,6 +23,7 @@ class BookingPassenger extends Model
         'ticket_number',
         'frequent_flyer_number',
         'e_ticket_number',
+        'airline_reference',
         'contact_number',
         'cost_per_pax',
         'sold_per_pax',

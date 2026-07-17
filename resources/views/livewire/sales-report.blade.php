@@ -21,16 +21,28 @@
                 <label class="form-label">To Date</label>
                 <input type="date" class="form-control" wire:model.live="dateTo">
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Booking Type</label>
-                <x-styled-select modelName="bookingType" :options="[['value'=>'','label'=>'All Types'],['value'=>'flight','label'=>'Flight'],['value'=>'flight_hotel','label'=>'Flight + Hotel'],['value'=>'umrah','label'=>'Umrah'],['value'=>'group','label'=>'Group']]" placeholder="All Types" :live="true" />
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <label class="form-label">Agent</label>
                 @php $agentOpts = array_merge([['value'=>'','label'=>'All Agents']], collect($agents)->map(fn($a)=>['value'=>(string)$a->id,'label'=>$a->name])->toArray()); @endphp
                 <x-styled-select modelName="agentId" :options="$agentOpts" placeholder="All Agents" :live="true" />
             </div>
         </div>
+    </div>
+
+    {{-- Booking type filter — clickable, doubles as the type breakdown --}}
+    @php
+        $typeLabels = ['flight'=>'Flight','hotel'=>'Hotel','umrah'=>'Umrah','holiday'=>'Holiday','visa'=>'Visa','transfers'=>'Transfers','excursion'=>'Excursion'];
+    @endphp
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <button type="button" wire:click="$set('bookingType', '')" style="font-size:0.816rem;font-weight:700;border-radius:20px;padding:5px 12px;border:none;cursor:pointer;{{ !$bookingType ? 'background:#332E9E;color:#fff;' : 'background:rgba(51,46,158,.05);border:1px solid rgba(51,46,158,.10);color:#332E9E;' }}">
+            All Types
+        </button>
+        @foreach ($typeLabels as $key => $label)
+            <button type="button" wire:click="$set('bookingType', '{{ $key }}')" class="d-flex align-items-center gap-1" style="font-size:0.816rem;font-weight:700;border-radius:20px;padding:5px 12px;border:none;cursor:pointer;{{ $bookingType === $key ? 'background:#332E9E;color:#fff;' : 'background:rgba(51,46,158,.05);border:1px solid rgba(51,46,158,.10);color:#332E9E;' }}">
+                <span style="{{ $bookingType === $key ? 'color:#fff;' : 'color:#475569;font-weight:400;' }}">{{ $label }}</span>
+                <span>{{ $typeCounts->get($key, 0) }}</span>
+            </button>
+        @endforeach
     </div>
 
     {{-- Stat cards --}}

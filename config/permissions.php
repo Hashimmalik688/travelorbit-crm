@@ -132,6 +132,12 @@ return [
             'icon'        => 'ph ph-trend-up',
             'description' => 'Open the Agent Performance report.',
         ],
+        'reports.apply_deduction' => [
+            'label'       => 'Apply margin deductions',
+            'group'       => 'Reports',
+            'icon'        => 'ph ph-minus-circle',
+            'description' => "Apply or remove a margin deduction against an agent's performance report.",
+        ],
 
         // ── Data scope ───────────────────────────────────────────
         'data.view_all' => [
@@ -182,7 +188,7 @@ return [
             'bookings.delete', 'bookings.edit_any', 'bookings.share_margin', 'customers.view',
             'issuance.access', 'issuance.manage', 'accounts.access',
             'payments.charge', 'payments.invoice', 'payments.issue',
-            'reports.view', 'reports.performance', 'refunds.manage', 'data.view_all',
+            'reports.view', 'reports.performance', 'reports.apply_deduction', 'refunds.manage', 'data.view_all',
         ],
         // admin is a hard-wired super-user; '*' just pre-ticks every box in the UI.
         'admin' => ['*'],

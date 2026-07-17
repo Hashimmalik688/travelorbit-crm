@@ -56,14 +56,14 @@
         'meta'  => 'Booking',
       ],
       [
-        'title' => 'E-Ticket Template',
-        'desc'  => 'Open the printable e-ticket. Edit the DATA block at the bottom, then Print to save as PDF.',
+        'title' => 'E-Ticket Builder',
+        'desc'  => 'Build and print an e-ticket any time. Pick a booking to pull its details in, edit anything, then print — nothing here is saved back to the booking.',
         'icon'  => 'ph ph-ticket',
         'color' => '#D6197F',
         'bg'    => 'rgba(214,25,127,.08)',
-        'url'   => route('settings.eticket-template'),
+        'url'   => route('eticket.builder'),
         'meta'  => 'Booking',
-        // Opens in its own tab: it is a standalone print document, not a CRM page.
+        // Opens in its own tab: it is a standalone print tool, not a CRM page.
         'target' => '_blank',
       ],
     ];

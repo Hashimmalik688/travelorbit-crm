@@ -360,6 +360,7 @@
               </div>
               <div class="row g-2 mb-2">
                 <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Airline','model'=>"flightSegments.{$si}.airline",'val'=>$seg['airline'] ? strtoupper($seg['airline']) : '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Flight #','model'=>"flightSegments.{$si}.flight_number",'val'=>$seg['flight_number'] ?? '','placeholder'=>'e.g. UM 725','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'GDS','model'=>"flightSegments.{$si}.gds",'val'=>$seg['gds'] ?? '','type'=>'select','options'=>$gdsOptions,'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Cabin','model'=>"flightSegments.{$si}.cabin",'val'=>$seg['cabin'] ?? '','type'=>'select','options'=>[['value'=>'Economy','label'=>'Economy'],['value'=>'Premium Economy','label'=>'Premium Economy'],['value'=>'Business','label'=>'Business'],['value'=>'First Class','label'=>'First Class']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Reservation','model'=>"flightSegments.{$si}.reservation_status",'val'=>$seg['reservation_status'] ?? '','type'=>'select','options'=>[['value'=>'Confirmed','label'=>'Confirmed'],['value'=>'Ticketed','label'=>'Ticketed'],['value'=>'Pending','label'=>'Pending'],['value'=>'On Hold','label'=>'On Hold'],['value'=>'Cancelled','label'=>'Cancelled']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
@@ -367,12 +368,29 @@
               </div>
               <div class="row g-2 mb-2">
                 <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Dep. Airport','model'=>"flightSegments.{$si}.departure_airport",'val'=>$seg['departure_airport'] ? strtoupper($seg['departure_airport']) : '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-1">@include('livewire.partials.editable-field', ['label'=>'Dep. Term.','model'=>"flightSegments.{$si}.dep_terminal",'val'=>$seg['dep_terminal'] ?? '','placeholder'=>'e.g. 2','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Arr. Airport','model'=>"flightSegments.{$si}.arrival_airport",'val'=>$seg['arrival_airport'] ? strtoupper($seg['arrival_airport']) : '','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-1">@include('livewire.partials.editable-field', ['label'=>'Arr. Term.','model'=>"flightSegments.{$si}.arr_terminal",'val'=>$seg['arr_terminal'] ?? '','placeholder'=>'e.g. 5','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Flight Type','model'=>"flightSegments.{$si}.flight_type",'val'=>($seg['flight_type'] ?? 'return') === 'one_way' ? 'One Way' : 'Return','type'=>'select','options'=>[['value'=>'return','label'=>'Return'],['value'=>'one_way','label'=>'One Way']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
-                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Dep. Date','model'=>"flightSegments.{$si}.departure_date",'val'=>$seg['departure_date'] ? \Carbon\Carbon::parse($seg['departure_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Dep. Date','model'=>"flightSegments.{$si}.departure_date",'val'=>$seg['departure_date'] ? \Carbon\Carbon::parse($seg['departure_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 @if (($seg['flight_type'] ?? 'return') !== 'one_way')
-                <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Return Date','model'=>"flightSegments.{$si}.return_date",'val'=>$seg['return_date'] ? \Carbon\Carbon::parse($seg['return_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Return Date','model'=>"flightSegments.{$si}.return_date",'val'=>$seg['return_date'] ? \Carbon\Carbon::parse($seg['return_date'])->format('d M Y') : '','type'=>'date','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
                 @endif
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Dep. Time','model'=>"flightSegments.{$si}.departure_time",'val'=>$seg['departure_time'] ?? '','placeholder'=>'e.g. 18:20','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Arr. Time','model'=>"flightSegments.{$si}.arrival_time",'val'=>$seg['arrival_time'] ?? '','placeholder'=>'e.g. 05:50','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Arrival','model'=>"flightSegments.{$si}.arrival_next_day",'val'=>!empty($seg['arrival_next_day']) ? '+1 Day' : 'Same Day','type'=>'select','options'=>[['value'=>0,'label'=>'Same Day'],['value'=>1,'label'=>'+1 Day']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Duration','model'=>"flightSegments.{$si}.duration",'val'=>$seg['duration'] ?? '','placeholder'=>'e.g. 10h 30m','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Baggage Allowance','model'=>"flightSegments.{$si}.baggage_allowance",'val'=>$seg['baggage_allowance'] ?? '','placeholder'=>'e.g. 2 x 23kg + 7kg cabin','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Rez. Class','model'=>"flightSegments.{$si}.rez_class",'val'=>$seg['rez_class'] ?? '','placeholder'=>'e.g. V','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Fare Basis','model'=>"flightSegments.{$si}.fare_basis",'val'=>$seg['fare_basis'] ?? '','placeholder'=>'e.g. VLSPRT','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'NVB','model'=>"flightSegments.{$si}.nvb",'val'=>$seg['nvb'] ?? '','placeholder'=>'e.g. 01AUG26','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'NVA','model'=>"flightSegments.{$si}.nva",'val'=>$seg['nva'] ?? '','placeholder'=>'e.g. 01AUG27','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Seat','model'=>"flightSegments.{$si}.seat",'val'=>$seg['seat'] ?? '','placeholder'=>'e.g. 24A · 24B','locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
+                <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Tkt St','model'=>"flightSegments.{$si}.ticket_status",'val'=>$seg['ticket_status'] ?? '','type'=>'select','options'=>[['value'=>'O','label'=>'O — OK'],['value'=>'X','label'=>'X — Not OK']],'locked'=>!$canEditFlightHotel,'phpEditing'=>$flightSectionEditing])</div>
               </div>
               {{-- Passenger Pricing grouped by type --}}
               @if(count($passengers) > 0)
@@ -1171,11 +1189,26 @@
               <div style="font-size:0.768rem;font-weight:700;color:{{ $netMgn >= 0 ? '#16A34A' : '#DC2626' }};margin-top:3px;opacity:.8;">{{ $netPct }}% margin</div>
             </div>
 
-            {{-- Balance Due --}}
-            @php $bal = $this->runningBalance; @endphp
-            <div style="margin-top:10px;padding:12px;border-radius:12px;{{ $bal <= 0 ? 'background:linear-gradient(135deg,rgba(22,163,74,.07),rgba(22,163,74,.02));border:1.5px solid rgba(22,163,74,.14);' : 'background:linear-gradient(135deg,rgba(220,38,38,.07),rgba(220,38,38,.02));border:1.5px solid rgba(220,38,38,.14);' }}">
-              <div style="font-size:0.672rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $bal <= 0 ? '#15803D' : '#DC2626' }};margin-bottom:2px;">{{ $bal <= 0 ? 'Fully Settled' : 'Balance Due' }}</div>
-              <div style="font-size:1.32rem;font-weight:800;color:{{ $bal <= 0 ? '#16A34A' : '#DC2626' }};line-height:1;letter-spacing:-.01em;">&pound;{{ number_format($bal <= 0 ? 0 : $bal, 2) }}</div>
+            {{-- Balance Due / Fully Settled / Overpaid --}}
+            @php
+              // Three distinct states. Previously ANY negative balance was clamped
+              // to £0.00 and labelled "Fully Settled", which silently hid real
+              // overpayments (e.g. a sold price reduced after payment was taken).
+              // Tolerance of half a penny absorbs float noise so a genuinely
+              // settled booking still reads as settled.
+              $bal   = $this->runningBalance;
+              $state = abs($bal) < 0.005 ? 'settled' : ($bal > 0 ? 'due' : 'over');
+              $bc    = ['settled' => ['#15803D','#16A34A','22,163,74'],
+                        'due'     => ['#DC2626','#DC2626','220,38,38'],
+                        'over'    => ['#B45309','#D97706','217,119,6']][$state];
+              $blabel = ['settled' => 'Fully Settled', 'due' => 'Balance Due', 'over' => 'Overpaid'][$state];
+            @endphp
+            <div style="margin-top:10px;padding:12px;border-radius:12px;background:linear-gradient(135deg,rgba({{ $bc[2] }},.07),rgba({{ $bc[2] }},.02));border:1.5px solid rgba({{ $bc[2] }},.14);">
+              <div style="font-size:0.672rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $bc[0] }};margin-bottom:2px;">{{ $blabel }}</div>
+              <div style="font-size:1.32rem;font-weight:800;color:{{ $bc[1] }};line-height:1;letter-spacing:-.01em;">&pound;{{ number_format(abs($bal), 2) }}</div>
+              @if($state === 'over')
+                <div style="font-size:0.672rem;font-weight:600;color:#B45309;margin-top:3px;">Paid £{{ number_format($this->totalPaid, 2) }} against a £{{ number_format($this->totalSoldPrice, 2) }} sale</div>
+              @endif
             </div>
 
             {{-- Margin sharing --}}
@@ -1535,40 +1568,73 @@
 
 {{-- SHARE MARGIN MODAL --}}
 @if($shareMarginOpen)
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
-    <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#332E9E,#4A45B5);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
-        <h5 class="fw-bold mb-0" style="font-size:1.08rem;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-share-network" style="font-size:1.2rem;"></i> Share Margin</h5>
-        <button type="button" wire:click="$set('shareMarginOpen',false)" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.96rem;">✕</button>
+  <div style="position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:bvFadeIn .15s ease-out;">
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:460px;box-shadow:0 24px 70px rgba(15,23,42,.28);overflow:hidden;animation:bvPopIn .18s cubic-bezier(.34,1.56,.64,1);">
+      <div style="background:linear-gradient(135deg,#332E9E 0%,#4A45B5 60%,#5B54D6 100%);padding:22px 26px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-30px;right:-20px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);"></div>
+        <div style="position:absolute;bottom:-40px;right:40px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.06);"></div>
+        <div class="d-flex align-items-start justify-content-between" style="position:relative;">
+          <div class="d-flex align-items-center gap-3">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="ph ph-share-network" style="font-size:1.32rem;color:#fff;"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0" style="font-size:1.104rem;color:#fff;">Share Margin</h5>
+              <div style="font-size:0.792rem;color:rgba(255,255,255,.75);">Booking #{{ $booking->booking_number }} · Net Margin £{{ number_format($this->totalMargin, 2) }}</div>
+            </div>
+          </div>
+          <button type="button" wire:click="$set('shareMarginOpen',false)" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.96rem;flex-shrink:0;">✕</button>
+        </div>
       </div>
-      <div class="p-4">
-        <div class="mb-3">
-          <label class="bv-label">Share With <span style="color:#DC2626;">*</span></label>
-          <select wire:model="shareUserId" class="bv-select-inline" style="width:100%;font-size:0.936rem;">
-            <option value="">Select a user…</option>
-            @foreach($this->shareCandidateUsers as $u)
-              <option value="{{ $u->id }}">{{ $u->name }}</option>
-            @endforeach
-          </select>
-          @error('shareUserId') <div style="font-size:0.816rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
-        </div>
-        <div class="mb-3">
-          <label class="bv-label">Amount (£) <span style="color:#DC2626;">*</span></label>
-          <input type="number" wire:model="shareAmount" class="bv-input-inline" style="width:100%;font-size:0.936rem;" placeholder="0.00" min="0.01" step="0.01">
-          @error('shareAmount') <div style="font-size:0.816rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
-        </div>
-        <div class="mb-3">
-          <label class="bv-label">Note (optional)</label>
-          <textarea wire:model="shareNote" rows="2" class="bv-input-inline" style="width:100%;font-size:0.936rem;" placeholder="Why is this margin being shared?"></textarea>
-          @error('shareNote') <div style="font-size:0.816rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
-        </div>
-        <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
-          <button type="button" wire:click="$set('shareMarginOpen',false)" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:8px 22px;font-size:0.876rem;font-weight:600;cursor:pointer;">Cancel</button>
-          <button type="button" wire:click="saveMarginShare" style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:10px;padding:8px 22px;font-size:0.876rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(51,46,158,.25);">Save Share</button>
+      <div class="p-4" style="padding:24px 26px 26px !important;">
+        @if($this->shareCandidateUsers->isEmpty())
+          <div class="text-center" style="padding:18px 8px;">
+            <i class="ph ph-users" style="font-size:1.8rem;color:#94A3B8;"></i>
+            <p class="mb-0 mt-2" style="font-size:0.876rem;color:#64748B;">No other agents available to share this margin with.</p>
+          </div>
+        @else
+          <div class="mb-3">
+            <label class="bv-label">Share With <span style="color:#DC2626;">*</span></label>
+            <div style="position:relative;">
+              <i class="ph ph-user" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#332E9E;font-size:1rem;pointer-events:none;"></i>
+              <select wire:model="shareUserId" class="bv-select-inline" style="width:100%;font-size:0.936rem;padding-left:32px;">
+                <option value="">Select an agent…</option>
+                @foreach($this->shareCandidateUsers as $u)
+                  <option value="{{ $u->id }}">{{ $u->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            @error('shareUserId') <div style="font-size:0.816rem;color:#DC2626;margin-top:4px;display:flex;align-items:center;gap:4px;"><i class="ph ph-warning-circle"></i>{{ $message }}</div> @enderror
+          </div>
+          <div class="mb-3">
+            <label class="bv-label">Amount <span style="color:#DC2626;">*</span></label>
+            <div style="position:relative;">
+              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#332E9E;font-size:0.936rem;font-weight:700;">£</span>
+              <input type="number" wire:model="shareAmount" class="bv-input-inline" style="width:100%;font-size:0.984rem;font-weight:700;padding-left:26px;" placeholder="0.00" min="0.01" step="0.01">
+            </div>
+            @error('shareAmount') <div style="font-size:0.816rem;color:#DC2626;margin-top:4px;display:flex;align-items:center;gap:4px;"><i class="ph ph-warning-circle"></i>{{ $message }}</div> @enderror
+          </div>
+          <div class="mb-1">
+            <label class="bv-label">Note (optional)</label>
+            <textarea wire:model="shareNote" rows="2" class="bv-input-inline" style="width:100%;font-size:0.912rem;resize:none;" placeholder="Why is this margin being shared?"></textarea>
+            @error('shareNote') <div style="font-size:0.816rem;color:#DC2626;margin-top:4px;display:flex;align-items:center;gap:4px;"><i class="ph ph-warning-circle"></i>{{ $message }}</div> @enderror
+          </div>
+        @endif
+        <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.08);">
+          <button type="button" wire:click="$set('shareMarginOpen',false)" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:9px 22px;font-size:0.876rem;font-weight:600;cursor:pointer;">Cancel</button>
+          @if($this->shareCandidateUsers->isNotEmpty())
+            <button type="button" wire:click="saveMarginShare" style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:10px;padding:9px 24px;font-size:0.876rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(51,46,158,.3);display:flex;align-items:center;gap:6px;">
+              <i class="ph ph-check-circle"></i> Save Share
+            </button>
+          @endif
         </div>
       </div>
     </div>
   </div>
+  <style>
+    @keyframes bvFadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes bvPopIn { from { opacity:0; transform:scale(.94) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
+  </style>
 @endif
 
 </div>

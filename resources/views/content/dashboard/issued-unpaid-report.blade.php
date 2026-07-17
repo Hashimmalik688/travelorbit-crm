@@ -10,6 +10,22 @@
     </div>
 </div>
 
+{{-- ══ Booking type filter ══ --}}
+@php
+    $typeLabels = ['flight'=>'Flight','hotel'=>'Hotel','umrah'=>'Umrah','holiday'=>'Holiday','visa'=>'Visa','transfers'=>'Transfers','excursion'=>'Excursion'];
+@endphp
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{{ request()->url() }}" style="font-size:0.816rem;font-weight:700;border-radius:20px;padding:5px 12px;text-decoration:none;{{ !$type ? 'background:#332E9E;color:#fff;' : 'background:rgba(51,46,158,.05);border:1px solid rgba(51,46,158,.10);color:#332E9E;' }}">
+        All Types
+    </a>
+    @foreach ($typeLabels as $key => $label)
+        <a href="{{ request()->url() }}?type={{ $key }}" class="d-flex align-items-center gap-1" style="font-size:0.816rem;font-weight:700;border-radius:20px;padding:5px 12px;text-decoration:none;{{ $type === $key ? 'background:#332E9E;color:#fff;' : 'background:rgba(51,46,158,.05);border:1px solid rgba(51,46,158,.10);color:#332E9E;' }}">
+            <span style="{{ $type === $key ? 'color:#fff;' : 'color:#475569;font-weight:400;' }}">{{ $label }}</span>
+            <span>{{ $typeCounts->get($key, 0) }}</span>
+        </a>
+    @endforeach
+</div>
+
 {{-- ══ Prominent totals — visible the moment the page opens ══ --}}
 <div class="row g-3 mb-4">
     @php

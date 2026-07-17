@@ -43,6 +43,22 @@
           </div>
         </div>
 
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" style="font-size:0.864rem;color:#5A6080;">Phone</label>
+            <input type="tel" name="phone" value="{{ old('phone') }}" placeholder="020 3932 3459"
+              class="form-control @error('phone') is-invalid @enderror" style="border-radius:10px;">
+            @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div class="text-muted" style="font-size:0.78rem;margin-top:2px;">Shown on this agent's printed e-tickets.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" style="font-size:0.864rem;color:#5A6080;">WhatsApp</label>
+            <input type="tel" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="07853 072479"
+              class="form-control @error('whatsapp') is-invalid @enderror" style="border-radius:10px;">
+            @error('whatsapp')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+        </div>
+
         {{-- Role --}}
         <div class="mb-3">
           <label class="form-label fw-semibold" style="font-size:0.864rem;color:#5A6080;">Role <span class="text-danger">*</span></label>

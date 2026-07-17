@@ -29,6 +29,8 @@ class UserController extends Controller
         $data = [
             'name'               => $request->name,
             'email'              => strtolower($request->email),
+            'phone'              => $request->phone,
+            'whatsapp'           => $request->whatsapp,
             'password'           => $request->password,
             'password_plaintext' => $request->password,
             'role'               => $request->role,
@@ -79,6 +81,8 @@ class UserController extends Controller
         $attributes = [
             'name'   => $request->name,
             'email'  => strtolower($request->email),
+            'phone'  => $request->phone,
+            'whatsapp' => $request->whatsapp,
             'role'   => $request->role,
             'permissions' => $this->resolvePermissions($request),
             'status' => $request->input('status', 'active'),

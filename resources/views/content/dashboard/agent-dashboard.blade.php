@@ -197,6 +197,20 @@
     <h6 class="fw-bold mb-0" style="font-size:1.044rem;color:#0F172A;">Pending Bookings</h6>
     <span style="font-size:0.744rem;font-weight:700;color:#D97706;background:rgba(217,119,6,.10);padding:2px 9px;border-radius:20px;">{{ $pendingTabBookings->count() }} booking{{ $pendingTabBookings->count() !== 1 ? 's' : '' }}</span>
   </div>
+  @php
+      $pendingTypeLabels = ['flight'=>'Flight','hotel'=>'Hotel','umrah'=>'Umrah','holiday'=>'Holiday','visa'=>'Visa','transfers'=>'Transfers','excursion'=>'Excursion'];
+  @endphp
+  <div class="px-4 pt-3 pb-2 d-flex align-items-center flex-wrap gap-2" style="border-bottom:1px solid rgba(51,46,158,.06);">
+    <a href="{{ request()->url() }}" style="font-size:0.792rem;font-weight:700;border-radius:20px;padding:5px 12px;text-decoration:none;{{ !$pendingTypeFilter ? 'background:#332E9E;color:#fff;' : 'background:rgba(51,46,158,.05);border:1px solid rgba(51,46,158,.10);color:#332E9E;' }}">
+        All Types
+    </a>
+    @foreach ($pendingTypeLabels as $key => $label)
+        <a href="{{ request()->url() }}?type={{ $key }}" class="d-flex align-items-center gap-1" style="font-size:0.792rem;font-weight:700;border-radius:20px;padding:5px 12px;text-decoration:none;{{ $pendingTypeFilter === $key ? 'background:#332E9E;color:#fff;' : 'background:rgba(51,46,158,.05);border:1px solid rgba(51,46,158,.10);color:#332E9E;' }}">
+            <span style="{{ $pendingTypeFilter === $key ? 'color:#fff;' : 'color:#475569;font-weight:400;' }}">{{ $label }}</span>
+            <span>{{ $pendingTypeCounts->get($key, 0) }}</span>
+        </a>
+    @endforeach
+  </div>
   @include('content.dashboard.partials._bookings-table', ['bookings' => $pendingTabBookings])
 </div>
 

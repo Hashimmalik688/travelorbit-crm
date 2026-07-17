@@ -19,6 +19,7 @@ class UpdateUserRequest extends FormRequest
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => [Rule::in(array_keys(config('permissions.permissions')))],
             'phone'     => ['nullable', 'string', 'max:20'],
+            'whatsapp'  => ['nullable', 'string', 'max:20'],
             'status'    => ['nullable', 'in:active,inactive,suspended'],
             'is_active' => ['nullable', 'boolean'],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],

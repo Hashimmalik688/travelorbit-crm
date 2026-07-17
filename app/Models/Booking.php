@@ -340,16 +340,25 @@ class Booking extends Model
             get: function () {
                 $total = 0;
 
-                // Flight: per-passenger costs from passenger_costs JSON (matches booking show)
-                if ($this->flightDetail && $this->flightDetail->passenger_costs) {
-                    $total += collect($this->flightDetail->passenger_costs)->sum(fn ($pc) => (float) ($pc['cost'] ?? 0));
+                // Flight: per-passenger costs from passenger_costs JSON, summed across EVERY
+                // flight segment — a multi-segment booking has one booking_flight_details row
+                // per segment, and using the singular flightDetail() (hasOne) relation here
+                // silently dropped every segment but the first, understating cost/sold and
+                // producing a bogus "overpaid" balance downstream (matches booking show's
+                // flightSegments loop).
+                foreach ($this->flightDetails as $fd) {
+                    if ($fd->passenger_costs) {
+                        $total += collect($fd->passenger_costs)->sum(fn ($pc) => (float) ($pc['cost'] ?? 0));
+                    }
                 }
 
-                // ATOL/SAFI: £2.50 per non-infant passenger (matches booking show)
-                if ($this->flightDetail) {
+                // ATOL/SAFI: £2.50 per non-infant passenger, charged once per booking
+                // (matches booking show, which takes the flag from the first segment only).
+                $firstFd = $this->flightDetails->first();
+                if ($firstFd) {
                     $nonInfant = $this->passengers->filter(fn ($p) => $p->passenger_type !== 'infant')->count();
-                    if ($this->flightDetail->atol) $total += 2.50 * $nonInfant;
-                    if ($this->flightDetail->safi) $total += 2.50 * $nonInfant;
+                    if ($firstFd->atol) $total += 2.50 * $nonInfant;
+                    if ($firstFd->safi) $total += 2.50 * $nonInfant;
                 }
 
                 // Hotels
@@ -377,9 +386,13 @@ class Booking extends Model
             get: function () {
                 $total = 0;
 
-                // Flight: per-passenger sold from passenger_costs JSON (matches booking show)
-                if ($this->flightDetail && $this->flightDetail->passenger_costs) {
-                    $total += collect($this->flightDetail->passenger_costs)->sum(fn ($pc) => (float) ($pc['sold'] ?? 0));
+                // Flight: per-passenger sold from passenger_costs JSON, summed across EVERY
+                // flight segment — see totalCostPrice() for why this can't use the singular
+                // flightDetail() (hasOne) relation.
+                foreach ($this->flightDetails as $fd) {
+                    if ($fd->passenger_costs) {
+                        $total += collect($fd->passenger_costs)->sum(fn ($pc) => (float) ($pc['sold'] ?? 0));
+                    }
                 }
 
                 // Hotels

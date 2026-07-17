@@ -37,12 +37,24 @@ class DashboardController extends Controller
 
     protected function issuedPaymentReport(string $status, string $title, string $subtitle)
     {
+        $type = request('type');
+
+        // Booking-type counts always reflect the FULL list (ignoring $type
+        // itself) so switching the type filter doesn't hide how many bookings
+        // exist in every other type.
+        $typeCounts = Booking::where('user_id', Auth::id())
+            ->where('booking_status', $status)
+            ->whereHas('payment')
+            ->get()
+            ->countBy('booking_type');
+
         // No balance filter — a booking stays in its payment-plan/awaiting status
         // even once fully paid, so settled bookings stay visible here (shown
         // with a "Settled" highlight) rather than silently disappearing.
         $all = Booking::where('user_id', Auth::id())
             ->where('booking_status', $status)
             ->whereHas('payment')
+            ->when($type, fn ($q) => $q->where('booking_type', $type))
             ->with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
             ->get();
 
@@ -71,7 +83,7 @@ class DashboardController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        return view('content.dashboard.issued-unpaid-report', compact('bookings', 'title', 'subtitle', 'totals'));
+        return view('content.dashboard.issued-unpaid-report', compact('bookings', 'title', 'subtitle', 'totals', 'type', 'typeCounts'));
     }
 
     /**
@@ -327,8 +339,18 @@ class DashboardController extends Controller
         // ── Pending Bookings box: all-time, not-yet-issued bookings, most
         //    urgent payment date first. Not capped — the table's Totals row has
         //    to cover every pending booking, and a silent take() made it
-        //    disagree with the Pending KPI above it. ──
-        $pendingTabBookings = $this->sortByNextDueDate($allTimeNotYetIssuedBookings)->values();
+        //    disagree with the Pending KPI above it.
+        //
+        //    Type counts are always computed from the FULL unfiltered set (so
+        //    the breakdown chips don't collapse to one number once a type is
+        //    picked); the KPI card above stays unfiltered too — only the table
+        //    itself narrows down when a type is selected. ──
+        $pendingTypeCounts = $allTimeNotYetIssuedBookings->countBy('booking_type');
+        $pendingTypeFilter = request('type');
+        $pendingBookingsForTab = $pendingTypeFilter
+            ? $allTimeNotYetIssuedBookings->where('booking_type', $pendingTypeFilter)->values()
+            : $allTimeNotYetIssuedBookings;
+        $pendingTabBookings = $this->sortByNextDueDate($pendingBookingsForTab)->values();
 
         // ── All agents with today's booking count ──
         $allAgents = \App\Models\User::where('role', 'agent')
@@ -341,7 +363,7 @@ class DashboardController extends Controller
             'myFresh', 'myIssued', 'myPending', 'myPendingAllTime',
             'myFreshCount', 'myIssuedCount', 'myPendingCount', 'myPendingAllTimeCount',
             'calendarDays', 'allMonthData',
-            'pendingTabBookings',
+            'pendingTabBookings', 'pendingTypeCounts', 'pendingTypeFilter',
             'allAgents'
         ));
     }

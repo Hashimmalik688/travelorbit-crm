@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Crm\CustomerController;
 use App\Http\Controllers\Crm\BookingController;
 use App\Http\Controllers\Crm\BookingWorkflowController;
+use App\Http\Controllers\EticketController;
 use App\Http\Controllers\Finance\PaymentController;
 use App\Http\Controllers\Finance\RefundController;
 use App\Http\Controllers\Mis\ReportController;
@@ -61,6 +62,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/bookings/{booking}/restore-pending',   [BookingWorkflowController::class, 'restoreToPending'])->name('bookings.restore-pending')->middleware('permission:issuance.manage');
     Route::post('/bookings/{booking}/issue',             [BookingWorkflowController::class, 'issue'])->name('bookings.issue')->middleware('permission:payments.issue');
 
+    // E-ticket builder — a standalone print tool, not tied to any booking's page.
+    // Pick a booking from the dropdown to prefill the form; nothing here saves back.
+    Route::get('/eticket', [EticketController::class, 'index'])->name('eticket.builder');
+    Route::get('/eticket/data/{booking}', [EticketController::class, 'data'])->name('eticket.data');
+
     Route::middleware('permission:customers.view')->group(function () {
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers');
         Route::get('/customers/{phone}', [CustomerController::class, 'show'])->name('customers.show');
@@ -101,7 +107,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/settings/activity',  [SettingsController::class, 'auditLog'])->name('settings.activity');
         Route::get('/settings/vendors',   [SettingsController::class, 'vendors'])->name('settings.vendors');
         Route::get('/settings/gds', [SettingsController::class, 'gds'])->name('settings.gds');
-        Route::get('/settings/eticket-template', [SettingsController::class, 'eticketTemplate'])->name('settings.eticket-template');
         Route::get('/settings/ip-whitelist', fn() => view('settings.ip-whitelist'))->name('settings.ip')->middleware('role:admin');
     });
 

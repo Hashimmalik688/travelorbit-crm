@@ -451,11 +451,17 @@ class BookingShow extends Component
                     'airline_locator' => $fd->airline_locator ?? '',
                     'type_issuer' => $fd->type_issuer ?? '',
                     'reservation_status' => $fd->reservation_status ?? '',
+                    'ticket_status' => $fd->ticket_status ?? '',
                     'flight_type' => $fd->flight_type ?? 'return',
                     'airline' => $fd->airline ?? '',
+                    'flight_number' => $fd->flight_number ?? '',
                     'vendor' => $fd->vendor ?? '',
                     'gds' => $fd->gds ?? '',
                     'cabin' => $fd->cabin ?? '',
+                    'rez_class' => $fd->rez_class ?? '',
+                    'fare_basis' => $fd->fare_basis ?? '',
+                    'nvb' => $fd->nvb ?? '',
+                    'nva' => $fd->nva ?? '',
                     'ticket_issue_limit' => $fd->ticket_issue_limit ? $fd->ticket_issue_limit->format('Y-m-d\TH:i') : '',
                     'cost' => $fd->cost ?? '',
                     'sold' => $fd->sold ?? '',
@@ -463,16 +469,26 @@ class BookingShow extends Component
                     'departure_airport' => $fd->departure_airport ?? '',
                     'arrival_airport' => $fd->arrival_airport ?? '',
                     'departure_date' => $fd->departure_date ? $fd->departure_date->format('Y-m-d') : '',
+                    'departure_time' => $fd->departure_time ?? '',
+                    'dep_terminal' => $fd->dep_terminal ?? '',
                     'return_date' => $fd->return_date ? $fd->return_date->format('Y-m-d') : '',
+                    'arrival_time' => $fd->arrival_time ?? '',
+                    'arr_terminal' => $fd->arr_terminal ?? '',
+                    'arrival_next_day' => (bool) $fd->arrival_next_day,
+                    'duration' => $fd->duration ?? '',
+                    'seat' => $fd->seat ?? '',
+                    'baggage_allowance' => $fd->baggage_allowance ?? '',
                 ];
             }
         } else {
             $this->flightSegments = [[
                 'pnr' => '', 'locator' => '', 'airline_locator' => '', 'type_issuer' => '',
-                'reservation_status' => '', 'flight_type' => 'return', 'airline' => '', 'vendor' => '', 'gds' => '',
-                'cabin' => '', 'ticket_issue_limit' => '', 'cost' => '', 'sold' => '', 'passenger_costs' => [],
+                'reservation_status' => '', 'ticket_status' => '', 'flight_type' => 'return', 'airline' => '', 'flight_number' => '', 'vendor' => '', 'gds' => '',
+                'cabin' => '', 'rez_class' => '', 'fare_basis' => '', 'nvb' => '', 'nva' => '',
+                'ticket_issue_limit' => '', 'cost' => '', 'sold' => '', 'passenger_costs' => [],
                 'departure_airport' => '',
-                'arrival_airport' => '', 'departure_date' => '', 'return_date' => '',
+                'arrival_airport' => '', 'departure_date' => '', 'departure_time' => '', 'dep_terminal' => '', 'return_date' => '', 'arrival_time' => '', 'arr_terminal' => '',
+                'arrival_next_day' => false, 'duration' => '', 'seat' => '', 'baggage_allowance' => '',
             ]];
         }
 
@@ -980,10 +996,12 @@ class BookingShow extends Component
         $this->suppressLogging = true;
         $this->flightSegments[] = [
             'pnr' => '', 'locator' => '', 'airline_locator' => '', 'type_issuer' => '',
-            'reservation_status' => '', 'flight_type' => 'return', 'airline' => '', 'vendor' => '', 'gds' => '',
-            'cabin' => '', 'ticket_issue_limit' => '', 'cost' => '', 'sold' => '',
+            'reservation_status' => '', 'ticket_status' => '', 'flight_type' => 'return', 'airline' => '', 'flight_number' => '', 'vendor' => '', 'gds' => '',
+            'cabin' => '', 'rez_class' => '', 'fare_basis' => '', 'nvb' => '', 'nva' => '',
+            'ticket_issue_limit' => '', 'cost' => '', 'sold' => '',
             'departure_airport' => '',
-            'arrival_airport' => '', 'departure_date' => '', 'return_date' => '',
+            'arrival_airport' => '', 'departure_date' => '', 'departure_time' => '', 'dep_terminal' => '', 'return_date' => '', 'arrival_time' => '', 'arr_terminal' => '',
+            'arrival_next_day' => false, 'duration' => '', 'seat' => '', 'baggage_allowance' => '',
         ];
         $this->suppressLogging = false;
         $this->logActivity('Added PNR segment', 'PNR #'.count($this->flightSegments).' added', 'update');
@@ -1171,10 +1189,13 @@ class BookingShow extends Component
     }
 
     // ── Margin sharing ─────────────────────────────────────────────────
-    /** Other users this booking's margin can be shared with. */
+    /** Other agents this booking's margin can be shared with (agents only — not managers/other roles). */
     public function getShareCandidateUsersProperty()
     {
-        return User::where('id', '!=', Auth::id())->orderBy('name')->get();
+        return User::where('role', User::ROLE_AGENT)
+            ->where('id', '!=', Auth::id())
+            ->orderBy('name')
+            ->get();
     }
 
     public function openShareMargin(): void
@@ -1423,7 +1444,7 @@ class BookingShow extends Component
         }
 
         // Flight segments: flightSegments.N.field
-        $segFields = ['locator','airline_locator','airline','departure_airport','arrival_airport','departure_date','return_date','cabin','vendor','gds','pnr','reservation_status','ticket_issue_limit','flight_type'];
+        $segFields = ['locator','airline_locator','airline','flight_number','departure_airport','arrival_airport','departure_date','departure_time','dep_terminal','return_date','arrival_time','arr_terminal','arrival_next_day','duration','seat','baggage_allowance','cabin','rez_class','fare_basis','nvb','nva','vendor','gds','pnr','reservation_status','ticket_status','ticket_issue_limit','flight_type'];
         if (preg_match('/^flightSegments\.(\d+)\.('.implode('|',$segFields).')$/', $property, $m)) {
             return 'PNR #'.($m[1]+1).' '.ucwords(str_replace('_',' ',$m[2]));
         }
@@ -1981,18 +2002,32 @@ class BookingShow extends Component
                             'airline_locator' => $seg['airline_locator'] ?: null,
                             'type_issuer' => $seg['type_issuer'] ?: null,
                             'reservation_status' => $seg['reservation_status'] ?: null,
+                            'ticket_status' => $seg['ticket_status'] ?: null,
                             'flight_type' => $seg['flight_type'] ?? 'return',
                             'airline' => $seg['airline'] ? strtoupper($seg['airline']) : null,
+                            'flight_number' => $seg['flight_number'] ?: null,
                             'vendor' => $seg['vendor'] ?: null,
                             'gds' => $seg['gds'] ?: null,
                             'cabin' => $seg['cabin'] ?: null,
+                            'rez_class' => $seg['rez_class'] ?: null,
+                            'fare_basis' => $seg['fare_basis'] ?: null,
+                            'nvb' => $seg['nvb'] ?: null,
+                            'nva' => $seg['nva'] ?: null,
                             'ticket_issue_limit' => $seg['ticket_issue_limit'] ?: null,
                             'atol' => $this->flight_atol,
                             'safi' => $this->flight_safi,
                             'departure_airport' => $seg['departure_airport'] ?: null,
                             'arrival_airport' => $seg['arrival_airport'] ?: null,
                             'departure_date' => $seg['departure_date'] ?: null,
+                            'departure_time' => $seg['departure_time'] ?: null,
+                            'dep_terminal' => $seg['dep_terminal'] ?: null,
                             'return_date' => $seg['return_date'] ?: null,
+                            'arrival_time' => $seg['arrival_time'] ?: null,
+                            'arr_terminal' => $seg['arr_terminal'] ?: null,
+                            'arrival_next_day' => (bool) ($seg['arrival_next_day'] ?? false),
+                            'duration' => $seg['duration'] ?: null,
+                            'seat' => $seg['seat'] ?: null,
+                            'baggage_allowance' => $seg['baggage_allowance'] ?: null,
                             'selling_price' => $this->flight_selling_price ?: 0,
                             'cost' => is_numeric($seg['cost'] ?? '') ? (float)$seg['cost'] : null,
                             'sold' => is_numeric($seg['sold'] ?? '') ? (float)$seg['sold'] : null,
@@ -2284,18 +2319,32 @@ class BookingShow extends Component
                                 'airline_locator' => $seg['airline_locator'] ?: null,
                                 'type_issuer' => $seg['type_issuer'] ?: null,
                                 'reservation_status' => $seg['reservation_status'] ?: null,
+                                'ticket_status' => $seg['ticket_status'] ?: null,
                                 'flight_type' => $seg['flight_type'] ?? 'return',
                                 'airline' => $seg['airline'] ? strtoupper($seg['airline']) : null,
+                                'flight_number' => $seg['flight_number'] ?: null,
                                 'vendor' => $seg['vendor'] ?: null,
                                 'gds' => $seg['gds'] ?: null,
                                 'cabin' => $seg['cabin'] ?: null,
+                                'rez_class' => $seg['rez_class'] ?: null,
+                                'fare_basis' => $seg['fare_basis'] ?: null,
+                                'nvb' => $seg['nvb'] ?: null,
+                                'nva' => $seg['nva'] ?: null,
                                 'ticket_issue_limit' => $seg['ticket_issue_limit'] ?: null,
                                 'atol' => $this->flight_atol,
                                 'safi' => $this->flight_safi,
                                 'departure_airport' => $seg['departure_airport'] ?: null,
                                 'arrival_airport' => $seg['arrival_airport'] ?: null,
                                 'departure_date' => $seg['departure_date'] ?: null,
+                                'departure_time' => $seg['departure_time'] ?: null,
+                                'dep_terminal' => $seg['dep_terminal'] ?: null,
                                 'return_date' => $seg['return_date'] ?: null,
+                                'arrival_time' => $seg['arrival_time'] ?: null,
+                                'arr_terminal' => $seg['arr_terminal'] ?: null,
+                                'arrival_next_day' => (bool) ($seg['arrival_next_day'] ?? false),
+                                'duration' => $seg['duration'] ?: null,
+                                'seat' => $seg['seat'] ?: null,
+                                'baggage_allowance' => $seg['baggage_allowance'] ?: null,
                                 'selling_price' => $this->flight_selling_price ?: 0,
                                 'cost' => is_numeric($seg['cost'] ?? '') ? (float)$seg['cost'] : null,
                                 'sold' => is_numeric($seg['sold'] ?? '') ? (float)$seg['sold'] : null,
