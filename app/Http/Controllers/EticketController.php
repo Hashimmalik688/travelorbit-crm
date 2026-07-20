@@ -34,10 +34,12 @@ class EticketController extends Controller
     /** JSON snapshot of a booking's agent/passenger/flight data, used to prefill the builder form. */
     public function data(Booking $booking)
     {
-        $booking->load(['user', 'passengers', 'flightDetails']);
+        $booking->load(['user', 'customer', 'passengers', 'flightDetails']);
 
         return response()->json([
             'bookingRef' => 'TO-' . str_pad((string) $booking->booking_number, 6, '0', STR_PAD_LEFT),
+            'customerName' => $booking->customer->full_name
+                ?? trim("{$booking->booker_first_name} {$booking->booker_last_name}") ?: 'Unnamed',
             'issueDate'  => \Carbon\Carbon::parse($booking->invoiced_at ?? $booking->created_at)->format('d M Y'),
             'status'     => Booking::STATUS_LABELS[$booking->booking_status === 'invoiced' ? 'issued' : $booking->booking_status]
                 ?? ucfirst(str_replace('_', ' ', $booking->booking_status)),
@@ -45,6 +47,9 @@ class EticketController extends Controller
             'agentPhone'   => $booking->user->phone ?? '',
             'agentWhatsapp'=> $booking->user->whatsapp ?? '',
             'agentEmail'   => $booking->user->email ?? '',
+            'agentPhoto'   => $booking->user?->profile_photo_path
+                ? asset('storage/' . $booking->user->profile_photo_path)
+                : null,
             'passengers'   => $booking->passengers->map(fn ($p) => [
                 'name'       => $p->display_name,
                 'type'       => $p->type_label,

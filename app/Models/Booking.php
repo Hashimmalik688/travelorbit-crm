@@ -152,6 +152,13 @@ class Booking extends Model
         ]);
     }
 
+    // Correction path for a booking mistakenly marked Issued - Payment Plan —
+    // sends it back to the issuance queue for reprocessing.
+    public function canRevertIssuedPaymentPlan(): bool
+    {
+        return $this->booking_status === self::STATUS_ISSUED_PAYMENT_PLAN;
+    }
+
     const TITLES = [
         1 => 'Mr.',
         2 => 'Ms.',

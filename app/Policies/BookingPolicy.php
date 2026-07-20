@@ -79,4 +79,13 @@ class BookingPolicy
         return $user->hasPermission('issuance.manage')
             && $booking->canRestoreToPending();
     }
+
+    // Manager/admin-only correction: a booking mistakenly marked Issued -
+    // Payment Plan gets sent back to the issuance queue. Admin already
+    // passes via before(); this only needs to admit manager.
+    public function revertIssuedPaymentPlan(User $user, Booking $booking): bool
+    {
+        return $user->isManager()
+            && $booking->canRevertIssuedPaymentPlan();
+    }
 }

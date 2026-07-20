@@ -1556,6 +1556,29 @@ class BookingShow extends Component
         $this->logActivity('Ticket Issued', "Status set to: {$label}", 'update');
     }
 
+    // Correction action, manager/admin only: undoes a mistaken "Issued -
+    // Payment Plan" disposition and sends the booking back to the issuance
+    // queue so it can be reprocessed.
+    public function revertIssuedPaymentPlan(): void
+    {
+        $this->abortIfViewer();
+        $this->authorize('revertIssuedPaymentPlan', $this->booking);
+
+        $oldStatus = $this->booking->booking_status;
+        $this->booking->update([
+            'booking_status'      => \App\Models\Booking::STATUS_ISSUANCE_QUEUE,
+            'issuance_queued_at'  => now(),
+            'last_issue_date'     => null,
+            'last_payment_date'   => null,
+        ]);
+        $this->booking->refresh();
+        $this->bookingStatus = \App\Models\Booking::STATUS_ISSUANCE_QUEUE;
+
+        AuditLogger::log(Auth::user(), $this->booking, 'status_changed', 'Reverted mistaken Issued - Payment Plan — sent back to Issuance Queue', ['booking_status' => $oldStatus], ['booking_status' => 'issuance_queue']);
+        $this->logActivity('Reverted to Issuance Queue', 'Corrected — was mistakenly marked Issued - Payment Plan', 'update');
+        session()->flash('success', 'Booking reverted to the Issuance Queue.');
+    }
+
     // ── Charge Popup ─────────────────────────────────────────────────
     public function openChargeModal(): void
     {

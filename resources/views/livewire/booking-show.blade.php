@@ -205,6 +205,13 @@
       </button>
     @endif
 
+    {{-- Revert mistaken Issued - Payment Plan: manager/admin only correction --}}
+    @if($status === 'issued_payment_plan' && in_array($role, ['admin','manager']))
+      <button type="button" wire:click="revertIssuedPaymentPlan" wire:confirm="Revert this booking from Issued - Payment Plan back to the Issuance Queue? Use this only to correct a mistaken issuance." class="bv-action" style="background:rgba(14,116,144,.08);border-color:rgba(14,116,144,.3);color:#0E7490;">
+        <i class="ph ph-arrow-counter-clockwise"></i> Revert to Issuance Queue
+      </button>
+    @endif
+
     {{-- separator --}}
     <div style="width:1px;height:28px;background:rgba(51,46,158,.1);margin:0 2px;"></div>
 
