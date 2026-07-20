@@ -21,11 +21,7 @@ class EticketController extends Controller
             ->get()
             ->map(fn (Booking $b) => [
                 'id' => $b->id,
-                'label' => sprintf(
-                    'TO-%06d — %s',
-                    $b->booking_number,
-                    $b->customer->full_name ?? trim("{$b->booker_first_name} {$b->booker_last_name}") ?: 'Unnamed'
-                ),
+                'label' => sprintf('TO-%06d — %s', $b->booking_number, self::resolveName($b)),
             ]);
 
         return view('eticket.builder', compact('bookings'));
@@ -38,8 +34,7 @@ class EticketController extends Controller
 
         return response()->json([
             'bookingRef' => 'TO-' . str_pad((string) $booking->booking_number, 6, '0', STR_PAD_LEFT),
-            'customerName' => $booking->customer->full_name
-                ?? trim("{$booking->booker_first_name} {$booking->booker_last_name}") ?: 'Unnamed',
+            'customerName' => self::resolveName($booking),
             'issueDate'  => \Carbon\Carbon::parse($booking->invoiced_at ?? $booking->created_at)->format('d M Y'),
             'status'     => Booking::STATUS_LABELS[$booking->booking_status === 'invoiced' ? 'issued' : $booking->booking_status]
                 ?? ucfirst(str_replace('_', ' ', $booking->booking_status)),
@@ -47,9 +42,6 @@ class EticketController extends Controller
             'agentPhone'   => $booking->user->phone ?? '',
             'agentWhatsapp'=> $booking->user->whatsapp ?? '',
             'agentEmail'   => $booking->user->email ?? '',
-            'agentPhoto'   => $booking->user?->profile_photo_path
-                ? asset('storage/' . $booking->user->profile_photo_path)
-                : null,
             'passengers'   => $booking->passengers->map(fn ($p) => [
                 'name'       => $p->display_name,
                 'type'       => $p->type_label,
@@ -83,5 +75,17 @@ class EticketController extends Controller
                 'ticketStatus'      => $f->ticket_status ?: 'O',
             ])->values(),
         ]);
+    }
+
+    /**
+     * The booker's own entered name, not the linked customer record — most
+     * bookings here point at a shared "Default Customer" placeholder, so
+     * customer->full_name is almost never the traveller's real name.
+     */
+    private static function resolveName(Booking $booking): string
+    {
+        $booker = trim("{$booking->booker_first_name} {$booking->booker_last_name}");
+
+        return $booker !== '' ? $booker : ($booking->customer->full_name ?? 'Unnamed');
     }
 }

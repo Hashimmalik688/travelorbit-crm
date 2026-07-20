@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>E-Ticket Builder — Travel Orbit UK</title>
+<title>E-Ticket Builder | Travel Orbit UK</title>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
   :root{
-    /* Real Travel Orbit brand colours, sampled from the logo mark itself
-       (not invented placeholders): navy wordmark, indigo orbit arc,
-       magenta arc, orange comet streak. */
-    --ink:#101828; --sub:#5f6579; --faint:#98a0b3;
-    --line:#e7e9f1; --line2:#f0f1f7; --mist:#f8f9fc; --paper:#ffffff;
-    --indigo:#2008a0; --indigo-dk:#160670;
-    --magenta:#d00878; --orange:#f84008;
-    --green:#1c8a4c; --green-bg:rgba(28,138,76,.08);
+    /* Softer, lighter take on the Travel Orbit palette — same indigo/magenta/
+       orange family as the logo, pulled down in saturation so the ticket reads
+       calm and airy rather than bold/loud. */
+    --ink:#2b3040; --sub:#6b7280; --faint:#a3a9b7;
+    --line:#ebedf3; --line2:#f2f3f8; --mist:#f9fafc; --paper:#ffffff;
+    --indigo:#5b56d6; --indigo-dk:#4640b8;
+    --magenta:#dd6ba3; --orange:#f2a15c;
+    --green:#3fa168; --green-bg:rgba(63,161,104,.10);
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#eef0f5;color:var(--ink);
@@ -33,7 +33,7 @@
   .brandbar .t{font-family:'Manrope';font-weight:800;font-size:13px;color:var(--ink)}
   .brandbar .t small{display:block;font-weight:600;font-size:9.5px;color:var(--faint);letter-spacing:.4px;text-transform:uppercase}
 
-  .fieldset{border:1px solid var(--line);border-radius:3px;padding:14px;margin-bottom:14px;background:var(--mist)}
+  .fieldset{border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px;background:var(--mist)}
   .fieldset h3{font-family:'Manrope';font-size:10.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
     color:var(--indigo);margin:0 0 10px;display:flex;align-items:center;gap:7px}
   .fieldset h3 svg{width:13px;height:13px;flex-shrink:0}
@@ -42,21 +42,21 @@
   .frow.c3{grid-template-columns:1fr 1fr 1fr}
   .frow.c1{grid-template-columns:1fr}
   .field label{display:block;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
-  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:3px;padding:6px 8px;font:inherit;
+  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:inherit;
     font-size:12.5px;background:#fff;color:var(--ink)}
   .field input:focus,.field select:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 2px rgba(51,46,143,.12)}
 
-  .pax-card,.seg-card{border:1px solid var(--line);border-radius:3px;padding:10px;margin-bottom:10px;background:#fff;position:relative}
-  .card-remove{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:3px;border:none;
+  .pax-card,.seg-card{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:#fff;position:relative}
+  .card-remove{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:6px;border:none;
     background:rgba(220,38,38,.08);color:#dc2626;cursor:pointer;font-size:12px;line-height:1}
   .add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1.5px dashed var(--indigo);
-    border-radius:3px;background:transparent;color:var(--indigo);font-weight:700;font-size:12px;padding:8px;cursor:pointer}
+    border-radius:8px;background:transparent;color:var(--indigo);font-weight:700;font-size:12px;padding:8px;cursor:pointer}
   .add-btn:hover{background:rgba(51,46,143,.05)}
 
   /* booking search */
   .search-wrap{position:relative}
   .search-results{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--line);
-    border-radius:3px;box-shadow:0 10px 30px rgba(18,22,42,.18);max-height:260px;overflow-y:auto;z-index:20}
+    border-radius:8px;box-shadow:0 12px 28px rgba(60,50,120,.14);max-height:260px;overflow-y:auto;z-index:20}
   .search-results button{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:none;
     font-size:12px;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line2)}
   .search-results button:hover{background:var(--mist)}
@@ -64,9 +64,9 @@
   .loading-tag{font-size:10.5px;color:var(--indigo);font-weight:700;margin-top:6px}
 
   /* selected-booking chip (replaces the search box once a booking is picked) */
-  .selected-booking{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:3px;
+  .selected-booking{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
     background:rgba(32,8,160,.06);border:1px solid rgba(32,8,160,.22)}
-  .selected-booking .sb-icon{flex-shrink:0;width:30px;height:30px;border-radius:3px;display:flex;align-items:center;
+  .selected-booking .sb-icon{flex-shrink:0;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;
     justify-content:center;background:var(--indigo);color:#fff}
   .selected-booking .sb-icon svg{width:15px;height:15px}
   .selected-booking .sb-info{min-width:0;flex:1}
@@ -74,18 +74,18 @@
   .selected-booking .sb-name{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--sub);font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .selected-booking .sb-name svg{width:10px;height:10px;color:var(--faint);flex-shrink:0}
   .selected-booking .sb-change{flex-shrink:0;border:1px solid var(--indigo);background:#fff;color:var(--indigo);
-    font-weight:700;font-size:10.5px;letter-spacing:.2px;border-radius:3px;padding:5px 11px;cursor:pointer}
+    font-weight:700;font-size:10.5px;letter-spacing:.2px;border-radius:6px;padding:5px 11px;cursor:pointer}
   .selected-booking .sb-change:hover{background:var(--indigo);color:#fff}
 
   .toolbar-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border:none;
-    border-radius:3px;padding:11px;font-family:'Inter';font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px}
+    border-radius:8px;padding:11px;font-family:'Inter';font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px}
   .toolbar-btn.print{background:var(--indigo);color:#fff}
   .toolbar-btn.print:hover{background:var(--indigo-dk)}
   .toolbar-btn.reset{background:#fff;border:1.5px solid var(--line);color:var(--sub)}
 
   /* ================= TICKET PREVIEW (mirrors printed design) ================= */
-  .sheet{width:800px;max-width:100%;margin:22px 0;background:var(--paper);padding:36px 40px 30px;
-    box-shadow:0 8px 34px rgba(18,22,42,.14);position:relative}
+  .sheet{width:800px;max-width:100%;margin:22px 0;background:var(--paper);padding:46px 50px 40px;
+    box-shadow:0 6px 24px rgba(60,50,120,.10);position:relative}
   .sheet::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--indigo)}
 
   /* Security-paper watermark, sunk behind every in-flow element via negative
@@ -98,68 +98,53 @@
 
   /* Letterhead band — bleeds edge-to-edge across the sheet (cancels .sheet's
      own padding with negative margins) instead of sitting as an inset card.
-     Photo + a brand-tinted gradient (indigo→magenta) rather than a flat black
-     scrim, so the overlay reads as "branded" instead of "darkened stock photo". */
-  .header-block{position:relative;overflow:hidden;margin:-36px -40px 22px;padding:26px 40px 22px;
-    background-image:url('https://images.unsplash.com/photo-1500835556837-99ac94a94552?w=1600&q=85&auto=format&fit=crop');
-    background-size:cover;background-position:center 38%}
+     A bright, pale sky photo washed with soft white so it reads as a gentle
+     texture behind the (dark, normal-colour) logo and text, not a moody scrim. */
+  .header-block{position:relative;overflow:hidden;margin:-46px -50px 28px;padding:32px 50px 26px;
+    background-image:url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1600&q=85&auto=format&fit=crop');
+    background-size:cover;background-position:center 45%}
   .header-block::before{content:"";position:absolute;inset:0;
-    background:linear-gradient(115deg, rgba(14,4,38,.93) 0%, rgba(32,8,90,.80) 42%, rgba(10,2,26,.90) 100%)}
+    background:linear-gradient(115deg, rgba(255,255,255,.86) 0%, rgba(245,244,253,.72) 45%, rgba(255,255,255,.88) 100%)}
   .header-block::after{content:"";position:absolute;left:0;right:0;bottom:0;height:34px;
     background:linear-gradient(to bottom,rgba(255,255,255,0) 0%,var(--paper) 100%)}
 
-  header{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:16px}
-  header .logo img{height:44px;display:block;
-    /* the brand's real logo art, forced to pure white via filter (no separate
-       white asset needed) so the navy wordmark reads cleanly on the photo */
-    filter:brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,.4))}
-  header .services{font-size:10.5px;color:rgba(255,255,255,.82);margin-top:9px;letter-spacing:.2px;font-weight:600;
-    text-shadow:0 1px 3px rgba(0,0,0,.45)}
+  header{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:6px}
+  header .logo img{height:44px;display:block;filter:drop-shadow(0 1px 2px rgba(43,48,64,.12))}
+  header .services{font-size:10.5px;color:var(--sub);margin-top:9px;letter-spacing:.2px;font-weight:600}
   header .contacts{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:2px}
-  header .doctitle{display:inline-flex;align-items:center;gap:6px;font-family:'Manrope';font-size:9.5px;
-    font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:#fff;margin-bottom:2px;
-    text-shadow:0 1px 3px rgba(0,0,0,.45)}
-  header .doctitle .dot{width:5px;height:5px;border-radius:50%;background:var(--magenta)}
-  header .c-row{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:rgba(255,255,255,.92);
-    text-shadow:0 1px 3px rgba(0,0,0,.45)}
-  header .c-row b{color:#fff;font-weight:800}
-  header .c-row .ic{flex-shrink:0;width:16px;height:16px;border-radius:3px;display:flex;align-items:center;
-    justify-content:center;background:rgba(255,255,255,.22);color:#fff}
-  header .c-row.wa .ic{background:rgba(37,171,96,.45);color:#fff}
+  header .c-row{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--sub)}
+  header .c-row b{color:var(--ink);font-weight:800}
+  header .c-row .ic{flex-shrink:0;width:16px;height:16px;border-radius:6px;display:flex;align-items:center;
+    justify-content:center;background:rgba(91,86,214,.12);color:var(--indigo)}
+  header .c-row.wa .ic{background:rgba(63,161,104,.14);color:#3fa168}
   header .c-row .ic svg{width:9.5px;height:9.5px}
 
-  .strip{display:flex;border:1px solid var(--line);border-radius:0;overflow:hidden;margin-bottom:18px}
-  .strip .cell{flex:1;padding:11px 16px;border-right:1px solid var(--line)}
-  .strip .cell:last-child{border-right:none}
-  .strip .cell.hi{background:var(--indigo)}
-  .strip .lab{font-family:'Manrope';font-size:8px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--faint)}
-  .strip .cell.hi .lab{color:rgba(255,255,255,.6)}
-  .strip .val{font-family:'Manrope';font-size:14.5px;font-weight:800;color:var(--ink);margin-top:3px;letter-spacing:.3px}
-  .strip .cell.hi .val{color:#fff}
-  .strip .val.status{display:flex;align-items:center;gap:6px;font-size:12.5px}
-  .strip .val.status .lz{width:6px;height:6px;border-radius:50%;background:var(--green)}
+  /* prominent centered document title, sat between the contact row and the
+     agent card — the header's one clear statement of what this document is */
+  .doc-title{position:relative;z-index:1;display:flex;align-items:center;gap:16px;
+    justify-content:center;margin:6px 0 18px}
+  .doc-title .dt-line{flex:0 1 64px;height:1px;background:linear-gradient(90deg,transparent,rgba(91,86,214,.55))}
+  .doc-title .dt-line:last-child{background:linear-gradient(90deg,rgba(91,86,214,.55),transparent)}
+  .doc-title .dt-text{font-family:'Manrope';font-weight:800;font-size:19px;letter-spacing:2.5px;
+    text-transform:uppercase;color:var(--ink);white-space:nowrap}
 
-  .agent{position:relative;z-index:1;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-    padding:13px 18px;border-radius:3px;border:1px solid rgba(255,255,255,.5);
-    background:rgba(255,255,255,.94);
-    box-shadow:0 6px 20px rgba(10,8,30,.22)}
-  .agent .av{flex-shrink:0;width:38px;height:38px;border-radius:3px;display:flex;align-items:center;justify-content:center;
-    font-family:'Manrope';font-weight:800;font-size:13px;color:#fff;background:var(--indigo)}
-  .agent .av-photo{object-fit:cover;border:1px solid rgba(32,8,160,.18)}
-  .agent .id{padding-right:14px;border-right:1px solid rgba(32,8,160,.18)}
-  .agent .nm{font-family:'Manrope';font-weight:800;font-size:13.5px;color:var(--ink);line-height:1.3}
-  .agent .role{font-size:8.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--indigo)}
-  .agent .cts{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-left:auto}
-  .agent .it{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--sub)}
-  .agent .it .ic{flex-shrink:0;width:19px;height:19px;border-radius:3px;display:flex;align-items:center;justify-content:center;
+  .agent{position:relative;z-index:1;display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:20px 24px;border-radius:8px;border:1px solid rgba(91,86,214,.16);
+    background:rgba(255,255,255,.92);
+    box-shadow:0 6px 18px rgba(60,50,120,.10)}
+  .agent .id{padding-right:18px;border-right:1px solid rgba(32,8,160,.18)}
+  .agent .nm{font-family:'Manrope';font-weight:800;font-size:17px;color:var(--ink);line-height:1.3}
+  .agent .cts{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-left:auto}
+  .agent .it{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--sub)}
+  .agent .it .ic{flex-shrink:0;width:23px;height:23px;border-radius:6px;display:flex;align-items:center;justify-content:center;
     background:rgba(51,46,143,.1);color:var(--indigo)}
   .agent .it.wa .ic{background:rgba(37,171,96,.14);color:#25ab60}
-  .agent .it .ic svg{width:10.5px;height:10.5px}
+  .agent .it .ic svg{width:13px;height:13px}
 
   .sec{font-family:'Manrope';font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;
-    color:var(--ink);padding-bottom:8px;margin:26px 0 14px;border-bottom:2px solid var(--indigo);
+    color:var(--ink);padding-bottom:10px;margin:34px 0 18px;border-bottom:2px solid var(--indigo);
     display:flex;align-items:center;gap:8px}
-  .sec .ic{flex-shrink:0;width:20px;height:20px;border-radius:3px;background:var(--indigo);color:#fff;
+  .sec .ic{flex-shrink:0;width:20px;height:20px;border-radius:6px;background:var(--indigo);color:#fff;
     display:flex;align-items:center;justify-content:center}
   .sec .ic svg{width:11px;height:11px}
   .sec .n{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:none;color:var(--faint)}
@@ -167,27 +152,27 @@
   table.pax{width:100%;border-collapse:collapse}
   table.pax th{font-family:'Manrope';font-size:8.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
     color:var(--faint);text-align:left;padding:0 12px 8px;border-bottom:1px solid var(--line)}
-  table.pax td{padding:10px 12px;font-size:12.5px;border-bottom:1px solid var(--line2);vertical-align:top}
+  table.pax td{padding:14px 12px;font-size:13px;border-bottom:1px solid var(--line2);vertical-align:top}
   table.pax tr:last-child td{border-bottom:1px solid var(--line)}
   table.pax .pname{font-weight:700}
   table.pax .ptype{display:block;font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--faint);margin-top:1px}
   table.pax .tkt{font-variant-numeric:tabular-nums;font-weight:700;color:var(--indigo)}
   .empty-note{font-size:11.5px;color:var(--faint);font-style:italic;padding:8px 2px}
 
-  .flight{border:1px solid var(--line);border-radius:0;margin-bottom:12px;overflow:hidden}
+  .flight{border:1px solid var(--line);border-radius:8px;margin-bottom:18px;overflow:hidden}
   .flight .top{height:3px;background:var(--indigo)}
   .fhead{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px dashed var(--line)}
   .fhead .tag{font-family:'Manrope';font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--faint)}
   .fhead .rt{font-family:'Manrope';font-weight:800;font-size:13.5px;color:var(--ink)}
   .fhead .rt .ar{color:var(--faint);font-weight:600;margin:0 4px}
   .fhead .cabin{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
-    color:var(--indigo);background:rgba(51,46,143,.08);border-radius:2px;padding:3px 11px}
+    color:var(--indigo);background:rgba(91,86,214,.10);border-radius:5px;padding:3px 11px}
   .fhead .ret{font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--magenta);
-    background:rgba(207,26,118,.08);border-radius:2px;padding:3px 11px}
+    background:rgba(221,107,163,.12);border-radius:5px;padding:3px 11px}
 
-  .froute{display:grid;grid-template-columns:100px 1fr 110px 1fr;gap:10px;align-items:center;padding:16px 18px}
+  .froute{display:grid;grid-template-columns:100px 1fr 110px 1fr;gap:12px;align-items:center;padding:22px 20px}
   .fcarrier{display:flex;flex-direction:column;gap:2px}
-  .fcarrier .code{width:38px;height:38px;border-radius:3px;display:flex;align-items:center;justify-content:center;
+  .fcarrier .code{width:38px;height:38px;border-radius:7px;display:flex;align-items:center;justify-content:center;
     font-family:'Manrope';font-size:14px;font-weight:800;color:#fff;background:var(--indigo)}
   .fcarrier .no{font-size:10px;color:var(--sub);font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
 
@@ -205,7 +190,7 @@
   .fmid .line::before{left:-1px} .fmid .line::after{right:-1px;background:var(--faint)}
 
   .fmeta{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--mist)}
-  .fmeta .cell{padding:9px 12px;border-right:1px solid var(--line);border-top:1px solid var(--line);min-width:0}
+  .fmeta .cell{padding:12px 14px;border-right:1px solid var(--line);border-top:1px solid var(--line);min-width:0}
   .fmeta .cell:nth-child(4n){border-right:none}
   .fmeta .cell:nth-child(-n+4){border-top:none}
   .fmeta .k{font-family:'Manrope';font-size:7.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--faint)}
@@ -214,37 +199,62 @@
   .legend{font-size:9.5px;color:var(--faint);margin:9px 1px 0;line-height:1.6}
   .legend b{color:var(--sub);font-weight:700}
 
-  .callout{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;border-radius:0;
-    background:var(--mist);border-left:3px solid var(--indigo);margin-bottom:4px}
-  .callout .ch{font-family:'Manrope';font-weight:800;font-size:12px;color:var(--ink)}
-  .callout .cd{font-size:11.5px;color:var(--sub);line-height:1.55;margin-top:2px}
-
   ol.terms{list-style:none;counter-reset:t;padding:0;margin:0}
-  ol.terms li{counter-increment:t;position:relative;padding:0 0 11px 30px;font-size:11px;line-height:1.55;color:#333952}
-  ol.terms li::before{content:counter(t);position:absolute;left:0;top:0;width:19px;height:19px;border-radius:2px;
+  ol.terms li{counter-increment:t;position:relative;padding:0 0 15px 32px;font-size:11.5px;line-height:1.65;color:#333952}
+  ol.terms li::before{content:counter(t);position:absolute;left:0;top:0;width:19px;height:19px;border-radius:6px;
     background:var(--mist);border:1px solid var(--line);color:var(--indigo);font-family:'Manrope';font-weight:800;
     font-size:9.5px;display:flex;align-items:center;justify-content:center}
   ol.terms a{color:var(--indigo);font-weight:700;text-decoration:none;border-bottom:1px solid rgba(51,46,143,.35)}
   ol.terms b{color:var(--ink)}
 
   /* Footer letterhead band — same full-bleed photo treatment as the header. */
-  footer{position:relative;overflow:hidden;margin:28px -40px -30px;padding:22px 40px 24px;
-    background-image:url('https://images.unsplash.com/photo-1569154941061-e231b4725ef1?w=1600&q=85&auto=format&fit=crop');
-    background-size:cover;background-position:center 42%;
-    display:flex;align-items:center;justify-content:space-between;gap:16px}
-  footer::before{content:"";position:absolute;inset:0;
-    background:linear-gradient(115deg, rgba(10,2,26,.90) 0%, rgba(32,8,90,.78) 50%, rgba(14,4,38,.92) 100%)}
-  footer::after{content:"";position:absolute;left:0;right:0;top:0;height:26px;
-    background:linear-gradient(to top,rgba(255,255,255,0) 0%,var(--paper) 100%)}
-  .badges{position:relative;z-index:1;display:flex;align-items:center;gap:11px}
-  .badge{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:'Manrope';font-weight:800;
-    font-size:8px;color:rgba(255,255,255,.85);letter-spacing:.4px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
-  .badge .mk{font-size:10px;color:#fff;border:1.2px solid rgba(255,255,255,.7);border-radius:2px;padding:2px 8px}
-  .badge .mk.round{border-radius:2px}
-  footer .foot-right{position:relative;z-index:1}
-  footer .visit{font-size:11px;font-weight:600;color:#fff;text-align:right;text-shadow:0 1px 3px rgba(0,0,0,.45)}
-  footer .visit a{color:#ffb47a;font-weight:800;text-decoration:none}
-  footer .protected{font-size:9.5px;color:rgba(255,255,255,.78);margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+  footer{position:relative;margin:34px -50px -40px;padding:26px 50px 30px;
+    background:var(--mist);border-top:1px solid var(--line);
+    display:flex;align-items:center}
+  .foot-inner{width:100%;display:flex;flex-direction:column;gap:14px}
+  .foot-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+  .badges{display:flex;align-items:center;gap:18px}
+  .badge{display:flex;align-items:center;gap:7px}
+  .badge .bi{flex-shrink:0;width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    background:rgba(91,86,214,.10);color:var(--indigo)}
+  .badge .bi svg{width:14px;height:14px}
+  .badge .bt{font-family:'Manrope';font-weight:800;font-size:10.5px;color:var(--ink);letter-spacing:.2px;line-height:1.2}
+  .badge .bt small{display:block;font-size:8px;font-weight:700;color:var(--faint);letter-spacing:.4px;text-transform:uppercase}
+  /* Full standalone accreditation marks (ATOL roundel, IATA globe+wings) —
+     shown as-is rather than icon+text pairs, matching how agencies actually
+     display them. */
+  .badge-logo{flex-shrink:0}
+  .badge-logo img{display:block}
+  .badge-logo.atol img{height:44px;width:auto}
+  .badge-logo.iata img{height:34px;width:auto}
+
+  /* payment network marks — flat wordmark/glyph cards on white, no external
+     logo files (kept legally safe: stylised, not exact trademark artwork) */
+  .pay{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pay .pay-label{font-size:8.5px;font-weight:700;letter-spacing:.6px;
+    text-transform:uppercase;color:var(--faint);margin-right:2px}
+  .pay-chip{display:flex;align-items:center;justify-content:center;height:26px;min-width:44px;padding:0 10px;
+    border-radius:6px;background:#fff;border:1px solid var(--line);box-shadow:0 1px 3px rgba(43,48,64,.08)}
+  .pay-chip.visa{color:#1a1f71;font-family:'Manrope';font-weight:800;font-size:12px;font-style:italic;letter-spacing:.5px}
+  .pay-chip.amex{background:#1478c8;border-color:#1478c8;color:#fff;font-family:'Manrope';font-weight:800;font-size:9px;letter-spacing:.5px}
+  .pay-chip.stripe{color:#635bff;font-family:'Manrope';font-weight:800;font-size:12px;letter-spacing:.2px}
+  .pay-chip.mc{gap:0}
+  .pay-chip.mc .mc-dots{display:flex}
+  .pay-chip.mc .mc-dots span{width:14px;height:14px;border-radius:50%}
+  .pay-chip.mc .mc-dots span:first-child{background:#eb5b28}
+  .pay-chip.mc .mc-dots span:last-child{background:#f2a15c;margin-left:-5px;mix-blend-mode:multiply}
+  .pay-chip.paypal{font-family:'Manrope';font-weight:800;font-size:11px;letter-spacing:.2px}
+  .pay-chip.paypal .pp1{color:#003087}
+  .pay-chip.paypal .pp2{color:#009cde;margin-left:-1px}
+  .pay-chip.apple{display:flex;align-items:center;gap:3px;color:#111;font-family:'Manrope';font-weight:700;font-size:11px}
+  .pay-chip.apple svg{width:11px;height:11px}
+  .pay-chip.klarna{background:#ffb3c7;border-color:#ffb3c7;color:#17120f;font-family:'Manrope';font-weight:800;font-size:11px;font-style:italic}
+  .pay-chip.clearpay{background:#b2fce4;border-color:#b2fce4;color:#0b1f1a;font-family:'Manrope';font-weight:800;font-size:10px;letter-spacing:.1px}
+
+  footer .visit{font-size:11px;font-weight:600;color:var(--ink);text-align:right}
+  footer .visit a{color:var(--indigo);font-weight:800;text-decoration:none}
+  footer .protected{font-size:9.5px;color:var(--sub);margin-top:2px}
 
   @page{size:A4;margin:14mm 13mm}
   @media print{
@@ -259,7 +269,7 @@
     .panel{max-height:none !important;overflow:visible !important}
     .sheet{margin:0;box-shadow:none;width:auto}
     .sheet::before{display:none}
-    .flight,.callout,.strip,.agent,.header-block,footer,table.pax tr{break-inside:avoid;page-break-inside:avoid}
+    .flight,.agent,.header-block,footer,table.pax tr{break-inside:avoid;page-break-inside:avoid}
     .sec{break-after:avoid;page-break-after:avoid}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
@@ -279,6 +289,10 @@
     'plane'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-1 0-1.3.4l-.7.9c-.4.4-.2 1.1.3 1.3L9 11l-2 3H4l-1 1.5 3.5 1.5 1.5 3.5L9 19v-3l3-2 2.1 6.2c.2.5.9.7 1.3.3l.9-.7c.4-.3.5-.8.4-1.3z"/></svg>',
     'shield'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
     'doc'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>',
+    'globe'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    'award'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/></svg>',
+    'lock'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    'apple'    => '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.7 12.7c0-3 2.4-4.4 2.5-4.5-1.4-2-3.5-2.3-4.2-2.3-1.8-.2-3.5 1-4.4 1-.9 0-2.3-1-3.8-1-1.9 0-3.7 1.1-4.7 2.9-2 3.5-.5 8.6 1.4 11.5 1 1.4 2.1 3 3.6 2.9 1.4-.1 2-.9 3.7-.9s2.2.9 3.7.9c1.5 0 2.5-1.4 3.5-2.8.9-1.3 1.4-2.7 1.4-2.7-1.7-.6-2.7-2.3-2.7-4.2z"/><path d="M13.9 4.2c.8-1 1.4-2.4 1.2-3.7-1.2 0-2.6.8-3.5 1.8-.7.8-1.4 2.2-1.2 3.6 1.4.1 2.7-.7 3.5-1.7z"/></svg>',
   ];
 @endphp
 <body x-data="eticketBuilder()">
@@ -288,7 +302,7 @@
   <div class="panel left">
     <div class="brandbar">
       <img src="{{ asset('images/eticket-logo.png') }}" alt="Travel Orbit">
-      <div class="t">E-Ticket Builder<small>Standalone — nothing here saves to the booking</small></div>
+      <div class="t">E-Ticket Builder<small>Standalone: nothing here saves to the booking</small></div>
     </div>
 
     <button type="button" class="toolbar-btn print" @click="print()">
@@ -304,7 +318,7 @@
           <input type="text" placeholder="Search booking # or customer name…" x-model="query"
                  @focus="showDropdown = true" @input="showDropdown = true"
                  @click.outside="showDropdown = false"
-                 style="width:100%;border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-size:12.5px;">
+                 style="width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:12.5px;">
           <div class="search-results" x-show="showDropdown" x-cloak>
             <template x-for="b in filteredBookings" :key="b.id">
               <button type="button" @click="pickBooking(b)" x-text="b.label"></button>
@@ -379,7 +393,7 @@
             <div class="field"><label>Airline (code)</label><input type="text" x-model="s.airline" maxlength="3" placeholder="UM"></div>
             <div class="field"><label>Flight #</label><input type="text" x-model="s.flightNumber" placeholder="UM 725"></div>
             <div class="field"><label>Cabin</label>
-              <select x-model="s.cabin"><option value="">—</option><option>Economy</option><option>Premium Economy</option><option>Business</option><option>First Class</option></select>
+              <select x-model="s.cabin"><option value="">None</option><option>Economy</option><option>Premium Economy</option><option>Business</option><option>First Class</option></select>
             </div>
           </div>
           <div class="frow">
@@ -423,10 +437,10 @@
           </div>
           <div class="frow">
             <div class="field"><label>Reservation</label>
-              <select x-model="s.reservationStatus"><option value="">—</option><option>Confirmed</option><option>Ticketed</option><option>Pending</option><option>On Hold</option><option>Cancelled</option></select>
+              <select x-model="s.reservationStatus"><option value="">None</option><option>Confirmed</option><option>Ticketed</option><option>Pending</option><option>On Hold</option><option>Cancelled</option></select>
             </div>
             <div class="field"><label>Tkt St</label>
-              <select x-model="s.ticketStatus"><option value="O">O — OK</option><option value="X">X — Not OK</option></select>
+              <select x-model="s.ticketStatus"><option value="O">O (OK)</option><option value="X">X (Not OK)</option></select>
             </div>
           </div>
         </div>
@@ -449,19 +463,21 @@
             <div class="services">Flight&nbsp; ·&nbsp; Hotel&nbsp; ·&nbsp; Holiday&nbsp; ·&nbsp; Book Now, Pay Later</div>
           </div>
           <div class="contacts">
-            <div class="doctitle"><span class="dot"></span>E-Ticket Receipt &amp; Itinerary</div>
             <div class="c-row"><span class="ic">{!! $icon['phone'] !!}</span><b x-text="brand.mainPhone"></b></div>
             <div class="c-row wa"><span class="ic">{!! $icon['whatsapp'] !!}</span><span x-text="brand.waPhone"></span></div>
             <div class="c-row"><span class="ic">{!! $icon['mail'] !!}</span><span x-text="brand.supportEmail"></span></div>
           </div>
         </header>
 
+        <div class="doc-title">
+          <span class="dt-line"></span>
+          <span class="dt-text">Electronic Ticket Record</span>
+          <span class="dt-line"></span>
+        </div>
+
         <div class="agent">
-          <img :src="agentPhoto" x-show="agentPhoto" class="av av-photo" x-cloak>
-          <div class="av" x-text="agentInitials" x-show="!agentPhoto"></div>
           <div class="id">
             <div class="nm" x-text="agentName || 'Travel Orbit Team'"></div>
-            <div class="role">Your Travel Consultant</div>
           </div>
           <div class="cts">
             <div class="it"><span class="ic">{!! $icon['phone'] !!}</span><span x-text="agentPhone || brand.mainPhone"></span></div>
@@ -471,35 +487,17 @@
         </div>
       </div>
 
-      <div class="strip">
-        <div class="cell hi">
-          <div class="lab">Booking Reference</div>
-          <div class="val" x-text="bookingRef || '—'"></div>
-        </div>
-        <div class="cell">
-          <div class="lab">Airline Ref / PNR</div>
-          <div class="val" x-text="airlineRef || '—'"></div>
-        </div>
-        <div class="cell">
-          <div class="lab">Date Issued</div>
-          <div class="val" x-text="issueDate || '—'"></div>
-        </div>
-        <div class="cell">
-          <div class="lab">Status</div>
-          <div class="val status"><span class="lz"></span><span x-text="status || '—'"></span></div>
-        </div>
-      </div>
-
       <div class="sec"><span class="ic">{!! $icon['users'] !!}</span>Electronic Ticket Record <span class="n" x-text="passengers.length + ' ' + (passengers.length === 1 ? 'Traveller' : 'Travellers')"></span></div>
       <table class="pax">
-        <thead><tr><th style="width:34px;">#</th><th>Traveller</th><th>E-Ticket Number</th><th>Airline Ref</th></tr></thead>
+        <thead><tr><th style="width:34px;">#</th><th>Traveller</th><th>E-Ticket Number</th><th>Baggage</th><th>Airline Ref</th></tr></thead>
         <tbody>
           <template x-for="(p, i) in passengers" :key="i">
             <tr>
               <td x-text="String(i+1).padStart(2,'0')"></td>
-              <td><span class="pname" x-text="p.name || '—'"></span><span class="ptype" x-text="p.type"></span></td>
-              <td class="tkt" x-text="p.eticket || '—'"></td>
-              <td class="tkt" x-text="p.airlineRef || '—'"></td>
+              <td><span class="pname" x-text="p.name || 'N/A'"></span><span class="ptype" x-text="p.type"></span></td>
+              <td class="tkt" x-text="p.eticket || 'N/A'"></td>
+              <td x-text="(segments[0] && segments[0].baggage) || 'Confirm with airline'"></td>
+              <td class="tkt" x-text="p.airlineRef || 'N/A'"></td>
             </tr>
           </template>
         </tbody>
@@ -512,81 +510,85 @@
           <div class="fhead">
             <span class="tag" x-text="'Flight ' + (i+1)"></span>
             <span class="rt">
-              <span x-text="(s.departureAirport || '—').toUpperCase()"></span>
+              <span x-text="(s.departureAirport || 'N/A').toUpperCase()"></span>
               <span class="ar">→</span>
-              <span x-text="(s.arrivalAirport || '—').toUpperCase()"></span>
+              <span x-text="(s.arrivalAirport || 'N/A').toUpperCase()"></span>
             </span>
             <span class="ret" x-show="s.flightType === 'return' && s.returnDate" x-text="'Return ' + fmtDate(s.returnDate)"></span>
           </div>
           <div class="froute">
             <div class="fcarrier">
-              <div class="code" x-text="(s.airline || '—').toUpperCase()"></div>
+              <div class="code" x-text="(s.airline || 'N/A').toUpperCase()"></div>
               <div class="no" x-text="s.flightNumber"></div>
             </div>
             <div class="endp dep">
-              <div class="code2" x-text="(s.departureAirport || '—').toUpperCase()"></div>
-              <div class="tm" x-text="s.departureTime || '—'"></div>
-              <div class="dt" x-text="fmtDate(s.departureDate) || '—'"></div>
+              <div class="code2" x-text="(s.departureAirport || 'N/A').toUpperCase()"></div>
+              <div class="tm" x-text="s.departureTime || 'N/A'"></div>
+              <div class="dt" x-text="fmtDate(s.departureDate) || 'N/A'"></div>
             </div>
             <div class="fmid">
               <span class="dur" x-text="s.duration"></span>
               <span class="line"></span>
             </div>
             <div class="endp arr">
-              <div class="code2" x-text="(s.arrivalAirport || '—').toUpperCase()"></div>
-              <div class="tm"><span x-text="s.arrivalTime || '—'"></span><span class="plus" x-show="s.arrivalNextDay">+1</span></div>
-              <div class="dt" x-text="arrivalDate(s) || '—'"></div>
+              <div class="code2" x-text="(s.arrivalAirport || 'N/A').toUpperCase()"></div>
+              <div class="tm"><span x-text="s.arrivalTime || 'N/A'"></span><span class="plus" x-show="s.arrivalNextDay">+1</span></div>
+              <div class="dt" x-text="arrivalDate(s) || 'N/A'"></div>
             </div>
           </div>
           <div class="fmeta">
-            <div class="cell"><div class="k">Cabin</div><div class="v" x-text="s.cabin || '—'"></div></div>
+            <div class="cell"><div class="k">Cabin</div><div class="v" x-text="s.cabin || 'N/A'"></div></div>
             <div class="cell"><div class="k">Flight Type</div><div class="v" x-text="s.flightType === 'one_way' ? 'One Way' : 'Return'"></div></div>
-            <div class="cell"><div class="k">Rez. Class</div><div class="v" x-text="s.rezClass || '—'"></div></div>
-            <div class="cell"><div class="k">Fare Basis</div><div class="v" x-text="s.fareBasis || '—'"></div></div>
-            <div class="cell"><div class="k">NVB</div><div class="v" x-text="s.nvb || '—'"></div></div>
-            <div class="cell"><div class="k">NVA</div><div class="v" x-text="s.nva || '—'"></div></div>
-            <div class="cell"><div class="k">Seat</div><div class="v" x-text="s.seat || '—'"></div></div>
+            <div class="cell"><div class="k">Rez. Class</div><div class="v" x-text="s.rezClass || 'N/A'"></div></div>
+            <div class="cell"><div class="k">Fare Basis</div><div class="v" x-text="s.fareBasis || 'N/A'"></div></div>
+            <div class="cell"><div class="k">NVB</div><div class="v" x-text="s.nvb || 'N/A'"></div></div>
+            <div class="cell"><div class="k">NVA</div><div class="v" x-text="s.nva || 'N/A'"></div></div>
+            <div class="cell"><div class="k">Seat</div><div class="v" x-text="s.seat || 'N/A'"></div></div>
             <div class="cell"><div class="k">Baggage</div><div class="v" x-text="s.baggage || 'Confirm with airline'"></div></div>
-            <div class="cell"><div class="k">Dep. Terminal</div><div class="v" x-text="s.depTerminal || '—'"></div></div>
-            <div class="cell"><div class="k">Arr. Terminal</div><div class="v" x-text="s.arrTerminal || '—'"></div></div>
-            <div class="cell"><div class="k">Locator</div><div class="v" x-text="s.locator || '—'"></div></div>
-            <div class="cell"><div class="k">Airline Ref</div><div class="v" x-text="s.airlineLocator || '—'"></div></div>
-            <div class="cell"><div class="k">Reservation</div><div class="v" x-text="s.reservationStatus || '—'"></div></div>
+            <div class="cell"><div class="k">Dep. Terminal</div><div class="v" x-text="s.depTerminal || 'N/A'"></div></div>
+            <div class="cell"><div class="k">Arr. Terminal</div><div class="v" x-text="s.arrTerminal || 'N/A'"></div></div>
+            <div class="cell"><div class="k">Locator</div><div class="v" x-text="s.locator || 'N/A'"></div></div>
+            <div class="cell"><div class="k">Airline Ref</div><div class="v" x-text="s.airlineLocator || 'N/A'"></div></div>
+            <div class="cell"><div class="k">Reservation</div><div class="v" x-text="s.reservationStatus || 'N/A'"></div></div>
             <div class="cell" :class="s.ticketStatus === 'O' ? 'ok' : ''"><div class="k">Tkt St</div><div class="v" x-text="s.ticketStatus"></div></div>
           </div>
         </div>
       </template>
       <div class="legend"><b>Tkt St</b> O = Confirmed, X = Not confirmed &nbsp;·&nbsp; <b>NVB/NVA</b> Not Valid Before / Not Valid After &nbsp;·&nbsp; Each passenger may check in the baggage shown at no extra cost.</div>
 
-      <div class="sec"><span class="ic">{!! $icon['shield'] !!}</span>Before You Fly</div>
-      <div class="callout">
-        <div>
-          <div class="ch">Check in on time &amp; travel with the right documents</div>
-          <div class="cd">Arrive at the airport at least <b>3 hours</b> before departure for international flights, and re-confirm your schedule <b>48–72 hours</b> beforehand. Carry a valid passport, any required visas, and a copy of this itinerary. Names on your ticket must exactly match your passport.</div>
-        </div>
-      </div>
-
       <div class="sec"><span class="ic">{!! $icon['doc'] !!}</span>Terms &amp; Conditions</div>
       <ol class="terms">
-        <li>Positive photo identification is required at check-in and may be requested at any point during your journey.</li>
+        <li>Positive photo identification is required at check-in and may be requested at any point during your journey. Names on your ticket must exactly match your passport.</li>
         <li>Always re-check your flight schedule 48–72 hours prior to departure by calling the airport desk or the airline directly.</li>
         <li>Please reach the airport at least 3 hours before departure and check in on time. In case of any difficulty or delay at check-in, contact the airline help desk immediately.</li>
         <li>Keep a copy of your itinerary with you at all times and ensure you hold valid travel documents for every country on your route.</li>
-        <li>Direct flights may involve a &ldquo;ground elapse&rdquo; — a short stop at a foreign airport, usually for refuelling (approx. under an hour; de-boarding not required).</li>
+        <li>Direct flights may involve a &ldquo;ground elapse&rdquo;: a short stop at a foreign airport, usually for refuelling (approx. under an hour; de-boarding not required).</li>
         <li>For seating, meal requirements, or special assistance during the flight, kindly contact the airline directly (phone numbers available with us).</li>
         <li>For visas, transits, and travel documents, always confirm in good time with the relevant embassy or consulate. The agency and airline are not responsible in the absence of valid travel documents.</li>
-        <li>Please raise any question about your reservation, invoice, or payment <b>before</b> tickets are issued. All tickets are non-refundable, non-transferable, and non-changeable. For full booking conditions, visit <a :href="brand.conditionsUrl" x-text="brand.website + '/booking-conditions'"></a> or call your agent.</li>
+        <li>Please raise any question about your reservation, invoice, or payment <b>before</b> tickets are issued. All tickets are non-refundable, non-transferable, and non-changeable. For full booking conditions, visit <a :href="brand.conditionsUrl" x-text="brand.website + '/terms/'"></a> or call your agent.</li>
       </ol>
 
       <footer>
-        <div class="badges">
-          <div class="badge"><span class="mk round">ATOL</span><span x-text="brand.atolNo"></span></div>
-          <div class="badge"><span class="mk">IATA</span>Accredited</div>
-          <div class="badge"><span class="mk round">ABTA</span><span x-text="brand.abtaNo"></span></div>
-        </div>
-        <div class="foot-right">
-          <div class="visit">Book online at <a :href="brand.websiteUrl" x-text="brand.website"></a></div>
-          <div class="protected">Your trip is financially protected · Travel with confidence</div>
+        <div class="foot-inner">
+          <div class="foot-row">
+            <div class="badges">
+              <div class="badge-logo atol"><img src="{{ asset('images/atol-logo.png') }}" alt="ATOL Protected"></div>
+              <div class="badge-logo iata"><img src="{{ asset('images/iata-logo.png') }}" alt="IATA"></div>
+            </div>
+            <div class="pay">
+              <span class="pay-label">We Accept</span>
+              <span class="pay-chip visa">VISA</span>
+              <span class="pay-chip mc"><span class="mc-dots"><span></span><span></span></span></span>
+              <span class="pay-chip amex">AMEX</span>
+              <span class="pay-chip stripe">stripe</span>
+              <span class="pay-chip klarna">Klarna</span>
+              <span class="pay-chip clearpay">Clearpay</span>
+            </div>
+          </div>
+          <div class="foot-row">
+            <div class="protected">Your trip is financially protected · Travel with confidence</div>
+            <div class="visit">Book online at <a :href="brand.websiteUrl" x-text="brand.website"></a></div>
+          </div>
         </div>
       </footer>
     </div>
@@ -605,11 +607,11 @@ function eticketBuilder() {
     brand: {
       mainPhone: '020 3932 3459', waPhone: '07853 072479', supportEmail: 'info@travelorbit.co.uk',
       website: 'travelorbit.co.uk', websiteUrl: 'https://travelorbit.co.uk',
-      conditionsUrl: 'https://travelorbit.co.uk/booking-conditions', atolNo: '3517', abtaNo: 'P-7124',
+      conditionsUrl: 'https://travelorbit.co.uk/terms/',
     },
 
     bookingRef: '', airlineRef: '', issueDate: '', status: 'Issued',
-    agentName: '', agentPhone: '', agentWhatsapp: '', agentEmail: '', agentPhoto: '',
+    agentName: '', agentPhone: '', agentWhatsapp: '', agentEmail: '',
     passengers: [],
     segments: [],
 
@@ -622,13 +624,6 @@ function eticketBuilder() {
       const q = this.query.trim().toLowerCase();
       const list = q ? this.bookings.filter(b => b.label.toLowerCase().includes(q)) : this.bookings;
       return list.slice(0, 50);
-    },
-
-    get agentInitials() {
-      const name = (this.agentName || 'Travel Orbit').trim();
-      const parts = name.split(/\s+/).filter(Boolean);
-      const initials = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : name.slice(0, 2);
-      return initials.toUpperCase();
     },
 
     async pickBooking(b) {
@@ -645,7 +640,6 @@ function eticketBuilder() {
         this.agentPhone = data.agentPhone;
         this.agentWhatsapp = data.agentWhatsapp;
         this.agentEmail = data.agentEmail;
-        this.agentPhoto = data.agentPhoto || '';
         this.passengers = data.passengers.length ? data.passengers : [this.blankPassenger()];
         this.segments = data.segments.length ? data.segments : [this.blankSegment()];
         const first = data.segments[0];
@@ -683,7 +677,7 @@ function eticketBuilder() {
     resetAll() {
       if (!confirm('Clear the whole form?')) return;
       this.query = ''; this.selectedBooking = null; this.bookingRef = ''; this.airlineRef = ''; this.issueDate = ''; this.status = 'Issued';
-      this.agentName = ''; this.agentPhone = ''; this.agentWhatsapp = ''; this.agentEmail = ''; this.agentPhoto = '';
+      this.agentName = ''; this.agentPhone = ''; this.agentWhatsapp = ''; this.agentEmail = '';
       this.passengers = [this.blankPassenger()];
       this.segments = [this.blankSegment()];
     },
