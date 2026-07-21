@@ -763,6 +763,23 @@ class BookingShow extends Component
         }
     }
 
+    // Mirrors the blade's $canUploadDocuments gate (owner while pending/
+    // confirmed, or bookings.edit_any) so the Livewire actions can't be
+    // invoked directly once the UI would no longer show the upload control.
+    private function canManageDocuments(): bool
+    {
+        return Auth::user()->hasPermission('bookings.edit_any')
+            || (Auth::id() === $this->booking->user_id
+                && in_array($this->booking->booking_status, ['pending', 'confirmed']));
+    }
+
+    private function abortIfDocumentsLocked(): void
+    {
+        if (!$this->canManageDocuments()) {
+            abort(403, 'Documents cannot be modified at this booking\'s current stage.');
+        }
+    }
+
     public function getTotalPaidProperty(): float
     {
         return (float) $this->booking->paymentHistory()
@@ -1250,12 +1267,12 @@ class BookingShow extends Component
     }
 
     // ── Documents ──────────────────────────────────────────────────────
-    public function addDocument(): void { $this->abortIfViewer(); $this->newDocuments[] = null; $this->newDocumentTypes[] = ''; $this->logActivity('Added Document Upload', '', 'update'); }
-    public function removeDocument(int $i): void { $this->abortIfViewer(); unset($this->newDocuments[$i]); unset($this->newDocumentTypes[$i]); $this->newDocuments = array_values($this->newDocuments); $this->newDocumentTypes = array_values($this->newDocumentTypes); $this->logActivity('Removed Document Upload', '', 'update'); }
+    public function addDocument(): void { $this->abortIfDocumentsLocked(); $this->newDocuments[] = null; $this->newDocumentTypes[] = ''; $this->logActivity('Added Document Upload', '', 'update'); }
+    public function removeDocument(int $i): void { $this->abortIfDocumentsLocked(); unset($this->newDocuments[$i]); unset($this->newDocumentTypes[$i]); $this->newDocuments = array_values($this->newDocuments); $this->newDocumentTypes = array_values($this->newDocumentTypes); $this->logActivity('Removed Document Upload', '', 'update'); }
 
     public function saveDocument(int $i): void
     {
-        $this->abortIfViewer();
+        $this->abortIfDocumentsLocked();
         if (!isset($this->newDocuments[$i]) || !$this->newDocuments[$i]) {
             session()->flash('error', 'Please select a file first.');
             return;

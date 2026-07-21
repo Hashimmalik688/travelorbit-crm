@@ -81,6 +81,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports',             fn() => view('content.reports.index'))->name('reports');
         Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');
+        Route::get('/reports/payment-status', [DashboardController::class, 'paymentStatusReport'])->name('reports.payment-status');
     });
 
     // Agent Performance — users with data.view_all see everyone; others are scoped to

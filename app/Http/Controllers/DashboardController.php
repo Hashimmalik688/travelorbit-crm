@@ -37,23 +37,63 @@ class DashboardController extends Controller
 
     protected function issuedPaymentReport(string $status, string $title, string $subtitle)
     {
+        $data = $this->buildIssuedPaymentReportData($status, Auth::id());
+
+        return view('content.dashboard.issued-unpaid-report', array_merge($data, compact('title', 'subtitle')));
+    }
+
+    /**
+     * Admin/manager version of the Payment Plan / Payment Awaiting reports —
+     * not scoped to the current user, with report-type/date/agent filters on
+     * top of the existing booking-type filter.
+     */
+    public function paymentStatusReport()
+    {
+        $status = request('status', 'issued_payment_awaiting');
+        if (!in_array($status, ['issued_payment_awaiting', 'issued_payment_plan'])) {
+            $status = 'issued_payment_awaiting';
+        }
+
+        $titles = [
+            'issued_payment_awaiting' => ['Payment Awaiting', 'Issued bookings awaiting their outstanding balance.'],
+            'issued_payment_plan'     => ['Payment Plan', 'Issued bookings still being paid off in instalments.'],
+        ];
+        [$title, $subtitle] = $titles[$status];
+
+        $userId   = request('user_id') ? (int) request('user_id') : null;
+        $dateFrom = request('from') ?: null;
+        $dateTo   = request('to') ?: null;
+
+        $data = $this->buildIssuedPaymentReportData($status, $userId, $dateFrom, $dateTo);
+
+        // Only agents who actually have bookings show up in the filter — an
+        // empty dropdown of every user would just add noise.
+        $agents = \App\Models\User::whereHas('bookings')->orderBy('name')->get(['id', 'name']);
+
+        return view('content.dashboard.payment-status-report', array_merge($data, compact(
+            'title', 'subtitle', 'status', 'userId', 'dateFrom', 'dateTo', 'agents'
+        )));
+    }
+
+    protected function buildIssuedPaymentReportData(string $status, ?int $userId, ?string $dateFrom = null, ?string $dateTo = null): array
+    {
         $type = request('type');
+
+        $baseQuery = fn () => Booking::where('booking_status', $status)
+            ->when($userId, fn ($q) => $q->where('user_id', $userId))
+            ->when($dateFrom, fn ($q) => $q->whereDate('created_at', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->whereDate('created_at', '<=', $dateTo))
+            ->whereHas('payment');
 
         // Booking-type counts always reflect the FULL list (ignoring $type
         // itself) so switching the type filter doesn't hide how many bookings
         // exist in every other type.
-        $typeCounts = Booking::where('user_id', Auth::id())
-            ->where('booking_status', $status)
-            ->whereHas('payment')
-            ->get()
-            ->countBy('booking_type');
+        $typeCounts = $baseQuery()->get()->countBy('booking_type');
 
         // No balance filter — a booking stays in its payment-plan/awaiting status
         // even once fully paid, so settled bookings stay visible here (shown
         // with a "Settled" highlight) rather than silently disappearing.
-        $all = Booking::where('user_id', Auth::id())
-            ->where('booking_status', $status)
-            ->whereHas('payment')
+        $all = $baseQuery()
             ->when($type, fn ($q) => $q->where('booking_type', $type))
             ->with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
             ->get();
@@ -83,7 +123,7 @@ class DashboardController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        return view('content.dashboard.issued-unpaid-report', compact('bookings', 'title', 'subtitle', 'totals', 'type', 'typeCounts'));
+        return compact('bookings', 'totals', 'type', 'typeCounts');
     }
 
     /**
@@ -287,12 +327,16 @@ class DashboardController extends Controller
         $myFreshCount = $freshBookings->count();
 
         // ── ISSUED: net margin from issued bookings that are FULLY PAID, created this month ──
+        // "Fully paid" is checked against the live approved-payments ledger
+        // (Booking::totalReceived()), not booking_payments.balance_remaining —
+        // that column is a stale creation-time snapshot and doesn't reflect
+        // instalments/charges approved afterwards.
         $issuedBookings = Booking::where('user_id', $userId)
             ->whereIn('booking_status', $issuedStatuses)
             ->whereBetween('created_at', [$som, $eom])
-            ->whereHas('payment', fn ($q) => $q->where('balance_remaining', '<=', 0))
-            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
-            ->get();
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
+            ->get()
+            ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
         $myIssued = (float) $issuedBookings->sum($netMargin);
         $myIssuedCount = $issuedBookings->count();
 

@@ -62,15 +62,16 @@ class BookingPayment extends Model
      * The next date money is actually due: the earliest unpaid instalment date
      * for bookings on a payment plan, otherwise the plain due_date. Instalment
      * plans store their real schedule as JSON (payment_instalments), not on
-     * due_date — a booking on a plan usually has due_date = null. Once fully
-     * paid there's nothing left to be due, regardless of which path set it.
+     * due_date — a booking on a plan usually has due_date = null.
+     *
+     * Deliberately does NOT gate on balance_remaining here — that column is a
+     * stale creation-time snapshot, not kept in sync with the real approved-
+     * payments ledger (see Booking::totalReceived()). Every caller already
+     * checks the live ledger before calling this, so re-checking a stale
+     * column here only reintroduces the bug it's meant to avoid.
      */
     public function nextDueDate(): ?Carbon
     {
-        if ((float) $this->balance_remaining <= 0) {
-            return null;
-        }
-
         $instalments = $this->payment_instalments['instalments'] ?? null;
 
         if ($instalments) {

@@ -13,6 +13,7 @@
     $reports = [
       ['title'=>'Sales Report',      'desc'=>'Monthly and yearly booking revenue, margins and payment breakdown','icon'=>'ph ph-chart-bar',  'color'=>'#332E9E','bg'=>'rgba(51,46,158,.08)','url'=>route('reports.sales')],
       ['title'=>'Agent Performance', 'desc'=>'Bookings per agent, conversion rates and monthly targets',         'icon'=>'ph ph-trend-up',    'color'=>'#16A34A','bg'=>'rgba(22,163,74,.08)', 'url'=>route('reports.performance')],
+      ['title'=>'Payment Status',    'desc'=>'Payment Plan and Payment Awaiting bookings, filterable by agent and date','icon'=>'ph ph-hourglass', 'color'=>'#D97706','bg'=>'rgba(217,119,6,.08)', 'url'=>route('reports.payment-status')],
     ];
   @endphp
   @foreach($reports as $r)

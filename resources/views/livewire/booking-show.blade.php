@@ -66,6 +66,11 @@
   $btype      = $booking->booking_type ?? 'flight';
   $isPrivileged = Auth::user()->hasPermission('bookings.edit_any');
   $isAdmin    = $role === 'admin';
+  $isOwner    = Auth::id() === $booking->user_id;
+
+  // ── Documents: owner while pending/confirmed, or bookings.edit_any always —
+  // matches BookingShow::canManageDocuments() enforced server-side. ──
+  $canUploadDocuments = $isPrivileged || ($isOwner && in_array($booking->booking_status, ['pending', 'confirmed']));
 
   // ── Core form lock (booking info, passengers, flight, hotel sections) ──
   // Editable only when pending/confirmed, or by privileged roles always
@@ -1319,7 +1324,7 @@
           @endif
 
           {{-- Upload new documents --}}
-          @if(!$isLocked || $isPrivileged)
+          @if($canUploadDocuments)
           @foreach($newDocuments as $di => $nd)
             <div class="d-flex gap-2 align-items-center mb-2">
               <select wire:model="newDocumentTypes.{{ $di }}" class="form-control form-control-sm" style="font-size:0.816rem;border-radius:7px;width:120px;flex-shrink:0;">
