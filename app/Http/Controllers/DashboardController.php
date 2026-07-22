@@ -110,25 +110,27 @@ class DashboardController extends Controller
             foreach ($bookingSegments->values() as $si => $seg) {
                 $dep = $seg->departure_airport ? strtoupper($seg->departure_airport) : '?';
                 $arr = $seg->arrival_airport ? strtoupper($seg->arrival_airport) : '?';
-                $passenger = $passengerLabels[$si] ?? ('PNR ' . ($si + 1));
+                $passenger = $passengerLabels[$si] ?? ['tag' => 'PNR ' . ($si + 1), 'name' => null];
 
                 $allRows->push([
-                    'booking'   => $booking,
-                    'date'      => $seg->departure_date,
-                    'leg'       => 'Departure',
-                    'route'     => "{$dep} - {$arr}",
-                    'passenger' => $passenger,
-                    'airline'   => $seg->airline,
+                    'booking'       => $booking,
+                    'date'          => $seg->departure_date,
+                    'leg'           => 'Departure',
+                    'route'         => "{$dep} - {$arr}",
+                    'passenger_tag' => $passenger['tag'],
+                    'passenger_name'=> $passenger['name'],
+                    'airline'       => $seg->airline,
                 ]);
 
                 if (($seg->flight_type ?? 'return') !== 'one_way' && $seg->return_date) {
                     $allRows->push([
-                        'booking'   => $booking,
-                        'date'      => $seg->return_date,
-                        'leg'       => 'Return',
-                        'route'     => "{$arr} - {$dep}",
-                        'passenger' => $passenger,
-                        'airline'   => $seg->airline,
+                        'booking'       => $booking,
+                        'date'          => $seg->return_date,
+                        'leg'           => 'Return',
+                        'route'         => "{$arr} - {$dep}",
+                        'passenger_tag' => $passenger['tag'],
+                        'passenger_name'=> $passenger['name'],
+                        'airline'       => $seg->airline,
                     ]);
                 }
             }
@@ -148,7 +150,14 @@ class DashboardController extends Controller
             $rows = $rows->filter(fn ($r) => $r['date'] && $r['date']->lte(\Carbon\Carbon::parse($dateTo)));
         }
 
-        $sorted = $rows->sortBy('date')->values();
+        // Urgent upcoming first (soonest next), then recent past below (most
+        // recent first) as trailing context — a plain ascending sort would
+        // bury today's/tomorrow's departures under anything from the last
+        // few days.
+        $today = now()->startOfDay();
+        $upcoming = $rows->filter(fn ($r) => $r['date'] && $r['date']->gte($today))->sortBy('date');
+        $past = $rows->filter(fn ($r) => !$r['date'] || $r['date']->lt($today))->sortByDesc('date');
+        $sorted = $upcoming->concat($past)->values();
 
         $perPage = 20;
         $page = (int) request('page', 1);
@@ -176,12 +185,13 @@ class DashboardController extends Controller
     private function pnrPassengerLabels(Booking $booking): array
     {
         $typeLabels = ['adult' => 'Adult', 'gbe' => 'Youth', 'child' => 'Child', 'infant' => 'Infant'];
-        $counts = $booking->passengers->countBy('passenger_type');
+        $grouped = $booking->passengers->sortBy('id')->groupBy('passenger_type');
 
         $labels = [];
         foreach ($typeLabels as $type => $label) {
-            for ($i = 0; $i < ($counts[$type] ?? 0); $i++) {
-                $labels[] = "{$label} x " . ($i + 1);
+            foreach ($grouped->get($type, collect())->values() as $i => $passenger) {
+                $name = trim($passenger->full_name ?: trim(($passenger->first_name ?? '') . ' ' . ($passenger->last_name ?? '')));
+                $labels[] = ['tag' => "{$label} x " . ($i + 1), 'name' => $name !== '' ? $name : null];
             }
         }
 

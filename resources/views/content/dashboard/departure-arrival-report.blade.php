@@ -74,7 +74,10 @@
                         </td>
                         <td>{{ $row['route'] }}</td>
                         <td>
-                            <span style="font-size:0.792rem;font-weight:600;background:rgba(124,58,237,.08);color:#7C3AED;border-radius:8px;padding:2px 9px;">{{ $row['passenger'] }}</span>
+                            <span style="font-size:0.696rem;font-weight:700;background:rgba(124,58,237,.08);color:#7C3AED;border-radius:8px;padding:2px 8px;white-space:nowrap;">{{ $row['passenger_tag'] }}</span>
+                            @if($row['passenger_name'])
+                                <div style="font-size:0.828rem;color:#1E293B;margin-top:2px;">{{ $row['passenger_name'] }}</div>
+                            @endif
                         </td>
                         <td>{{ $row['airline'] ?: '—' }}</td>
                         <td>{{ $row['booking']->user->name ?? '—' }}</td>
