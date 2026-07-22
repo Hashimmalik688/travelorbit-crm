@@ -76,57 +76,38 @@
   @endforeach
 </div>
 
-{{-- ══ AGENT LEADERBOARD — today, split into selling vs. not yet ══ --}}
+{{-- ══ AGENT LEADERBOARD (live) + AGENTS PERFORMANCE ══ --}}
+<style>
+.neo-ap-wrap { background:#EAEEF3;border-radius:20px;box-shadow:8px 8px 16px #C4CBD6,-8px -8px 16px #FFFFFF;overflow:hidden;height:100%; }
+.neo-ap-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between; }
+.neo-ap-row {
+  display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;margin:0 16px 8px;
+  background:#EAEEF3;box-shadow:3px 3px 6px #C4CBD6,-3px -3px 6px #FFFFFF;
+}
+.neo-ap-count { font-size:0.72rem;font-weight:700;background:rgba(51,46,158,.08);color:#332E9E;border-radius:20px;padding:2px 9px;white-space:nowrap; }
+</style>
 <div class="row g-3">
-
-  <div class="col-12 oc-up d3">
-    @php
-      $sellingToday = $allAgents->where('today_bookings', '>', 0)->sortByDesc('today_bookings')->values();
-      $chillToday   = $allAgents->where('today_bookings', '=', 0)->sortBy('name')->values();
-      $colors = ['#332E9E','#D83F87','#D97706','#16A34A','#0EA5E9','#7C3AED','#DC2626','#F59E0B'];
-    @endphp
-    <div style="background:#fff;border-radius:14px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
-      <div class="px-3 pt-3 pb-2 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
-        <h6 class="fw-bold mb-0" style="font-size:0.912rem;color:#0F172A;">Agent Leaderboard</h6>
-        <span style="font-size:0.756rem;color:#475569;">{{ now()->format('d F Y') }}</span>
+  <div class="col-lg-7 oc-up d3">
+    @livewire('selling-board')
+  </div>
+  <div class="col-lg-5 oc-up d3">
+    <div class="neo-ap-wrap">
+      <div class="neo-ap-hdr">
+        <h6 class="fw-bold mb-0" style="font-size:0.912rem;color:#0F172A;">Agents Performance</h6>
+        <span style="font-size:0.696rem;font-weight:800;color:#7C3AED;background:rgba(124,58,237,.10);border-radius:20px;padding:2px 10px;">{{ $performanceLabel }}</span>
       </div>
-      <div class="row g-0">
-        <div class="col-md-6 px-3 py-3" style="border-right:1px solid rgba(51,46,158,.06);">
-          <div style="font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#16A34A;margin-bottom:8px;">Selling Today</div>
-          @forelse ($sellingToday as $idx => $ag)
-            @php
-              $initials = strtoupper(substr($ag->name,0,1).(strpos($ag->name,' ')!==false?substr($ag->name,strpos($ag->name,' ')+1,1):''));
-              $c = $colors[$idx % count($colors)];
-            @endphp
-            <div class="d-flex align-items-center gap-2 mb-2">
-              <div style="width:24px;height:24px;border-radius:50%;background:{{ $c }}18;color:{{ $c }};display:flex;align-items:center;justify-content:center;font-size:0.672rem;font-weight:800;flex-shrink:0;">{{ $initials }}</div>
-              <div class="flex-grow-1 min-width-0" style="font-size:0.84rem;font-weight:600;color:#1E293B;">{{ $ag->name }}</div>
-              <div style="font-size:0.816rem;font-weight:800;color:{{ $c }};">{{ $ag->today_bookings }}</div>
-            </div>
-          @empty
-            <div style="font-size:0.816rem;color:#94A3B8;">No sales yet today.</div>
-          @endforelse
+      @forelse ($agentsPerformance as $ap)
+        <div class="neo-ap-row">
+          <div class="flex-grow-1 min-width-0" style="font-size:0.84rem;font-weight:600;color:#1E293B;">{{ $ap->name }}</div>
+          <span class="neo-ap-count">{{ $ap->count }} booking{{ $ap->count !== 1 ? 's' : '' }}</span>
+          <div style="font-size:0.876rem;font-weight:800;color:{{ $ap->margin >= 0 ? '#16A34A' : '#DC2626' }};min-width:70px;text-align:right;">£{{ number_format($ap->margin, 0) }}</div>
         </div>
-        <div class="col-md-6 px-3 py-3">
-          <div style="font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin-bottom:8px;">😎 Chill Squad</div>
-          @forelse ($chillToday as $ag)
-            <span class="d-inline-block me-1 mb-2" style="font-size:0.792rem;color:#64748B;background:rgba(148,163,184,.10);border-radius:20px;padding:3px 11px;">{{ $ag->name }}</span>
-          @empty
-            <div style="font-size:0.816rem;color:#94A3B8;">Everyone's selling today 🔥</div>
-          @endforelse
-        </div>
-      </div>
+      @empty
+        <div class="px-4 pb-3" style="font-size:0.816rem;color:#94A3B8;">No agents yet.</div>
+      @endforelse
     </div>
   </div>
-
 </div>
-
-{{-- ══ AGENTS TODAY ══ --}}
-@if ($agentsToday->isNotEmpty())
-  <div class="oc-up d4 mt-4">
-    @include('content.dashboard.partials._agents-today', ['agents' => $agentsToday])
-  </div>
-@endif
 
 {{-- ══ RECENT BOOKINGS ══ --}}
 <style>
@@ -219,6 +200,47 @@ document.addEventListener('DOMContentLoaded', function () {
     requestAnimationFrame(run);
   });
 
+});
+
+// Selling Board FLIP animation — whenever the poll refreshes the component
+// and an agent's card ends up somewhere else on screen (moved from Chill
+// Squad to the Leaderboard, or just reordered), it glides there smoothly
+// instead of just popping into place. Keyed by data-agent-id, not DOM node
+// identity, so it works whether Livewire reuses or recreates the element.
+//
+// The single "morph" hook fires exactly once per component update, right
+// before morphdom's synchronous DOM mutation pass — so positions captured
+// here are a true "before" snapshot, and by the time our own
+// requestAnimationFrame callback runs (scheduled from inside this same
+// synchronous call), morphdom has already finished mutating the DOM,
+// giving us a reliable "after" snapshot too.
+document.addEventListener('livewire:init', () => {
+  Livewire.hook('morph', ({ component }) => {
+    const before = new Map();
+    component.el.querySelectorAll('[data-agent-id]').forEach(node => {
+      before.set(node.dataset.agentId, node.getBoundingClientRect());
+    });
+
+    requestAnimationFrame(() => {
+      component.el.querySelectorAll('[data-agent-id]').forEach(node => {
+        const old = before.get(node.dataset.agentId);
+        if (!old) return;
+        const now = node.getBoundingClientRect();
+        const dx = old.left - now.left;
+        const dy = old.top - now.top;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+
+        node.style.transition = 'none';
+        node.style.transform = `translate(${dx}px, ${dy}px)`;
+        node.style.boxShadow = '0 0 0 3px rgba(22,163,74,.35), 3px 3px 6px #C4CBD6, -3px -3px 6px #FFFFFF';
+        requestAnimationFrame(() => {
+          node.style.transition = 'transform 550ms cubic-bezier(.34,1.56,.64,1), box-shadow 550ms ease';
+          node.style.transform = 'translate(0,0)';
+          setTimeout(() => { node.style.boxShadow = ''; }, 620);
+        });
+      });
+    });
+  });
 });
 </script>
 @endsection

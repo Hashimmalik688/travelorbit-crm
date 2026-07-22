@@ -376,19 +376,39 @@ class DashboardController extends Controller
         );
         $outstandingCount = $outstandingBookings->count();
 
-        // Leaderboard: only roles that actually create bookings — admin is excluded
-        // (admins manage the system, they don't book). Scoped to today, not the
-        // month, so it's a live "who's selling right now" view.
-        $allAgents = \App\Models\User::whereIn('role', ['agent', 'operations', 'manager'])->withCount([
-            'bookings as today_bookings' => fn($q) => $q->whereDate('created_at', today())
-        ])->get();
+        // Agent Leaderboard / Chill Squad now lives in the SellingBoard Livewire
+        // component (polls on its own) — see resources/views/livewire/selling-board.blade.php.
 
-        // Agents Today: same section shown on the agent dashboard — every agent with
-        // their booking count for today, so managers/admins can see who's active.
-        $agentsToday = \App\Models\User::where('role', 'agent')
-            ->withCount(['bookings' => fn ($q) => $q->whereDate('created_at', today())])
-            ->orderBy('name')
-            ->get();
+        // Agents Performance: agent role only. Shows Fresh margin for the first
+        // 19 days of the month; from the 20th it switches to Issued margin —
+        // the commission-cycle cutoff — and everything naturally resets on the
+        // 1st since it's always scoped to "this month". Total booking count is
+        // always all bookings this month, regardless of status.
+        $performanceCutoffPassed = now()->day >= 20;
+
+        $agentsPerformance = \App\Models\User::where('role', 'agent')->orderBy('name')->get()
+            ->map(function ($agent) use ($startOfMonth, $endOfMonth, $deadStatuses, $issuedStatuses, $performanceCutoffPassed) {
+                $bookingsThisMonth = Booking::where('user_id', $agent->id)
+                    ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                    ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
+                    ->get();
+
+                if ($performanceCutoffPassed) {
+                    $relevant = $bookingsThisMonth->whereIn('booking_status', $issuedStatuses)
+                        ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
+                } else {
+                    $relevant = $bookingsThisMonth->whereNotIn('booking_status', $deadStatuses);
+                }
+
+                return (object) [
+                    'name'  => $agent->name,
+                    'margin' => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
+                    'count'  => $bookingsThisMonth->count(),
+                ];
+            })
+            ->sortByDesc('margin')
+            ->values();
+        $performanceLabel = $performanceCutoffPassed ? 'Issued Margin' : 'Fresh Margin';
 
         // Recent Bookings: the 5 most recent bookings company-wide, not a
         // date window — same eager-loads as Fresh so netMargin() doesn't
@@ -403,7 +423,7 @@ class DashboardController extends Controller
             'issuedMarginThisMonth', 'issuedCountThisMonth',
             'pendingMarginThisMonth', 'pendingCountThisMonth',
             'outstandingPayments', 'outstandingCount',
-            'allAgents', 'agentsToday', 'recentBookings'
+            'agentsPerformance', 'performanceLabel', 'recentBookings'
         ));
     }
 
