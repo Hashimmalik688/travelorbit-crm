@@ -26,6 +26,16 @@ class Booking extends Model
     const STATUS_ISSUED_PAYMENT_AWAITING  = 'issued_payment_awaiting';
     const STATUS_ISSUED_PAYMENT_PLAN      = 'issued_payment_plan';
 
+    // Once a booking reaches one of these, requesting/resolving a payment
+    // charge must never move it away from "issued" — see requestPaymentCharge()
+    // and PaymentChargeRequest's approve/reject/delete actions.
+    const ISSUED_STATUSES = [
+        self::STATUS_ISSUED,
+        self::STATUS_ISSUED_PAYMENT_AWAITING,
+        self::STATUS_ISSUED_PAYMENT_PLAN,
+        self::STATUS_INVOICED,
+    ];
+
     const STATUS_LABELS = [
         'pending'                 => 'Pending',
         'payment_charge_request'  => 'Pending - Payment Charge',

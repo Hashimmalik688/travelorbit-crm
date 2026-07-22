@@ -121,8 +121,12 @@
       $canApprovePayments  = false;
   }
 
-  // ── Request Payment Charge button: always available for viewers, follows canEditPayment otherwise ──
-  $canRequestChargeButton = $viewerOnly || $canEditPayment;
+  // ── Request Payment Charge button: always available for viewers, follows
+  // canEditPayment otherwise — but never while one is already outstanding,
+  // issued or not (the booking_status itself no longer reflects this for
+  // issued bookings, so this checks the payment-history ledger directly). ──
+  $hasPendingChargeRequest = $booking->paymentHistory->contains(fn($h) => $h->status === 'pending');
+  $canRequestChargeButton = ($viewerOnly || $canEditPayment) && !$hasPendingChargeRequest;
 
   $canEditBooking = $canEditCore && Auth::user()->can('update', $booking);
 @endphp
@@ -152,6 +156,13 @@
 <div style="background:{{ $stColors['bg'] }};padding:12px 20px;border-radius:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:10px;">
   <i class="ph {{ $stIcon }}" style="font-size:1.32rem;color:{{ $stColors['text'] }};opacity:.85;"></i>
   <span style="font-size:1.2rem;font-weight:800;color:{{ $stColors['text'] }};letter-spacing:.01em;">{{ $stLabel }}</span>
+  {{-- Issued bookings keep their status while a charge is pending — this badge
+       is the only visible sign one is outstanding (see requestPaymentCharge()). --}}
+  @if($hasPendingChargeRequest && $stStatus !== 'payment_charge_request')
+    <span style="font-size:0.744rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:rgba(0,0,0,.18);padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;">
+      <i class="ph ph-hourglass-medium"></i> Charge Requested
+    </span>
+  @endif
 </div>
 
 {{-- BOOKING CARD --}}
@@ -257,8 +268,8 @@
           <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Mobile','model'=>'booker_mobile','val'=>$booking->booker_mobile ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Landline','model'=>'booker_landline','val'=>$booking->booker_landline ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Email','model'=>'booker_email','val'=>$booking->booker_email ?? '','type'=>'email','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
-          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Address','model'=>'booker_address','val'=>$booking->booker_address ?? '','type'=>'textarea','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
-          <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
+          <div class="col-md-8">@include('livewire.partials.editable-field', ['label'=>'Address','model'=>'booker_address','val'=>$booking->booker_address ?? '','type'=>'textarea','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
         </div>
       </div>
     </div>
@@ -1232,15 +1243,21 @@
 
         {{-- PAYMENT HISTORY --}}
         <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
+          @php
+            // Declined charge requests already appear in the activity feed
+            // (see PaymentChargeRequest::appendBookingActivity) — listing them
+            // here too was redundant, so they're excluded from this panel.
+            $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->status === 'rejected');
+          @endphp
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span style="font-size:0.744rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;">Payment History</span>
-            @if($booking->paymentHistory?->isNotEmpty())
+            @if($visiblePaymentHistory?->isNotEmpty())
               <span style="font-size:0.816rem;font-weight:800;color:#16A34A;">Received &pound;{{ number_format($this->totalPaid, 2) }}</span>
             @endif
           </div>
-          @if($booking->paymentHistory?->isNotEmpty())
+          @if($visiblePaymentHistory?->isNotEmpty())
             @php $paymentNum = 0; @endphp
-            @foreach($booking->paymentHistory as $ph)
+            @foreach($visiblePaymentHistory as $ph)
               @php
                 $paymentNum++;
                 $status = $ph->status ?? 'pending';

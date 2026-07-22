@@ -82,9 +82,7 @@ class PaymentChargeRequest extends Component
         // Log to booking activity feed
         if ($booking) {
             $this->appendBookingActivity($booking, 'payment_approved', 'Payment Approved', $this->modalNote ?: '');
-            if ($booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
-                $booking->update(['booking_status' => Booking::STATUS_PENDING]);
-            }
+            $this->restoreBookingStatus($booking, $ph);
             $this->syncCcCharges($booking);
         }
 
@@ -111,9 +109,7 @@ class PaymentChargeRequest extends Component
         // Log to booking activity feed
         if ($booking) {
             $this->appendBookingActivity($booking, 'payment_rejected', 'Payment Declined', $this->modalNote);
-            if ($booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
-                $booking->update(['booking_status' => Booking::STATUS_PENDING]);
-            }
+            $this->restoreBookingStatus($booking, $ph);
             $this->syncCcCharges($booking);
         }
 
@@ -128,8 +124,8 @@ class PaymentChargeRequest extends Component
 
         AuditLogger::log(Auth::user(), $booking, 'payment_deleted', "Payment charge {$historyId} deleted");
 
-        if ($booking && $booking->booking_status === Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
-            $booking->update(['booking_status' => Booking::STATUS_PENDING]);
+        if ($booking) {
+            $this->restoreBookingStatus($booking, $ph);
         }
 
         $ph->delete();
@@ -139,6 +135,23 @@ class PaymentChargeRequest extends Component
         }
 
         session()->flash('success', 'Payment charge deleted.');
+    }
+
+    /**
+     * Restore whatever status the booking was in before this charge request —
+     * never hardcode "pending", since the booking may have been issued (or in
+     * any other status) when the charge was requested. No-op if the booking's
+     * status was never touched in the first place (issued bookings keep their
+     * status throughout the request/resolve cycle — see BookingShow::requestPaymentCharge()).
+     */
+    private function restoreBookingStatus(Booking $booking, BookingPaymentHistory $ph): void
+    {
+        if ($booking->booking_status !== Booking::STATUS_PAYMENT_CHARGE_REQUEST) {
+            return;
+        }
+
+        $restoreTo = $ph->payment_details['previous_booking_status'] ?? Booking::STATUS_PENDING;
+        $booking->update(['booking_status' => $restoreTo]);
     }
 
     private function appendBookingActivity(Booking $booking, string $action, string $label, string $detail): void

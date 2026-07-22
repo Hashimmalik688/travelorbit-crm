@@ -189,12 +189,21 @@ class BookingShow extends Component
         ]);
         $this->loadBookingData();
 
-        // If status is payment_charge_request but no pending charge requests exist, revert to pending
+        // Self-healing: if status is stuck on payment_charge_request but no
+        // pending charge requests remain (e.g. an approve/reject/delete that
+        // ran before this fix existed), restore whatever status the booking
+        // was in before the request — falling back to "pending" only for
+        // legacy records that predate previous_booking_status being recorded.
         if ($booking->booking_status === 'payment_charge_request') {
             $hasPending = $booking->paymentHistory->contains(fn($h) => $h->status === 'pending');
             if (!$hasPending) {
-                $booking->update(['booking_status' => 'pending']);
-                $this->bookingStatus = 'pending';
+                $restoreTo = $booking->paymentHistory
+                    ->sortByDesc('created_at')
+                    ->pluck('payment_details.previous_booking_status')
+                    ->filter()
+                    ->first() ?? 'pending';
+                $booking->update(['booking_status' => $restoreTo]);
+                $this->bookingStatus = $restoreTo;
             }
         }
 
@@ -1168,6 +1177,7 @@ class BookingShow extends Component
         if (!$ph) return;
 
         $amount = $ph->amount;
+        $previousStatus = $ph->payment_details['previous_booking_status'] ?? null;
         $ph->delete();
 
         AuditLogger::log(Auth::user(), $this->booking, 'payment_deleted', "Payment history #{$historyId} deleted (£" . number_format($amount, 2) . ')');
@@ -1179,8 +1189,9 @@ class BookingShow extends Component
         if ($this->booking->booking_status === 'payment_charge_request') {
             $hasPending = $this->booking->paymentHistory->contains(fn($h) => $h->status === 'pending');
             if (!$hasPending) {
-                $this->booking->update(['booking_status' => 'pending']);
-                $this->bookingStatus = 'pending';
+                $restoreTo = $previousStatus ?? 'pending';
+                $this->booking->update(['booking_status' => $restoreTo]);
+                $this->bookingStatus = $restoreTo;
             }
         }
 
@@ -1620,6 +1631,9 @@ class BookingShow extends Component
             [
                 'cc_charge'      => $ccAmountForThisCharge,
                 'cc_charge_rate' => $this->chargeCcRate ? (float)$this->chargeCcRate : null,
+                // So approve/reject/delete can restore the exact status this
+                // booking was in, instead of assuming "pending".
+                'previous_booking_status' => $this->booking->booking_status,
             ],
         );
 
@@ -1634,10 +1648,15 @@ class BookingShow extends Component
             'payment_details' => $paymentDetails,
         ]);
 
-        // Lock the form until accounts approves
-        $this->booking->update(['booking_status' => 'payment_charge_request']);
-        $this->booking->refresh();
-        $this->bookingStatus = 'payment_charge_request';
+        // Once issued, a booking must stay looking issued — the pending
+        // payment-history row above is itself the "charge requested" signal
+        // (surfaced as a badge), so only non-issued bookings move to the
+        // payment_charge_request status, same as before.
+        if (!in_array($this->booking->booking_status, Booking::ISSUED_STATUSES)) {
+            $this->booking->update(['booking_status' => 'payment_charge_request']);
+            $this->booking->refresh();
+            $this->bookingStatus = 'payment_charge_request';
+        }
 
         AuditLogger::log(Auth::user(), $this->booking, 'payment_requested', 'Payment charge of £' . number_format((float)$this->chargeAmount, 2) . ' requested via ' . $this->chargeMethod);
         $this->logActivity('Request Payment Charge', '£' . number_format((float)$this->chargeAmount, 2) . ' via ' . ucwords(str_replace('_', ' ', $this->chargeMethod)), 'update', bypassViewerCheck: true);
