@@ -268,11 +268,17 @@
           </div>
 
           <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Title','model'=>'booker_title','val'=>\App\Models\Booking::TITLES[$booking->booker_title] ?? $booking->booker_title ?? '','type'=>'select','options'=>[['value'=>'1','label'=>'Mr.'],['value'=>'2','label'=>'Ms.'],['value'=>'3','label'=>'Mrs.'],['value'=>'4','label'=>'Mstr'],['value'=>'5','label'=>'Miss'],['value'=>'6','label'=>'Dr.']],'locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
-          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'First Name','model'=>'booker_first_name','val'=>$booking->booker_first_name ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
-          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'Last Name','model'=>'booker_last_name','val'=>$booking->booker_last_name ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
+          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'First Name','model'=>'booker_first_name','val'=>$booking->booker_first_name ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing','valueColor'=>'#332E9E'])</div>
+          <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'Last Name','model'=>'booker_last_name','val'=>$booking->booker_last_name ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing','valueColor'=>'#332E9E'])</div>
+
+          <div class="col-12" style="margin:2px 0 6px;padding-top:10px;border-top:1px dashed rgba(51,46,158,.10);"></div>
+
           <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Mobile','model'=>'booker_mobile','val'=>$booking->booker_mobile ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-3">@include('livewire.partials.editable-field', ['label'=>'Landline','model'=>'booker_landline','val'=>$booking->booker_landline ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-6">@include('livewire.partials.editable-field', ['label'=>'Email','model'=>'booker_email','val'=>$booking->booker_email ?? '','type'=>'email','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
+
+          <div class="col-12" style="margin:2px 0 6px;padding-top:10px;border-top:1px dashed rgba(51,46,158,.10);"></div>
+
           <div class="col-md-8">@include('livewire.partials.editable-field', ['label'=>'Address','model'=>'booker_address','val'=>$booking->booker_address ?? '','type'=>'textarea','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Postcode','model'=>'booker_postcode','val'=>$booking->booker_postcode ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
         </div>

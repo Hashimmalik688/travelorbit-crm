@@ -14,6 +14,11 @@
   $usePhp = $phpEditing !== null;
   $editingExp = $editingVar ?? 'false';
   $fieldId = str_replace(['.','[',']'], ['-','',''], $model);
+  // Optional accent color for fields that should stand out from the rest of
+  // a grid (e.g. a caller's name) — only applied when the value isn't empty,
+  // so the placeholder still gets its normal muted color.
+  $valueColor = $valueColor ?? null;
+  $valueStyle = empty($val) ? 'color:#475569;' : ($valueColor ? "color:{$valueColor};font-weight:700;" : '');
 @endphp
 
 <div class="bv-field-row">
@@ -24,13 +29,13 @@
       @if($usePhp)
         @if(!$phpEditing)
         <div style="min-height:28px;display:flex;align-items:center;gap:6px;{{ $locked ? 'pointer-events:none;' : '' }}">
-          <span class="bv-value" style="word-break:break-word;{{ empty($val) ? 'color:#475569;' : '' }}">{{ $val ?: ($placeholder ?: '-') }}</span>
+          <span class="bv-value" style="word-break:break-word;{{ $valueStyle }}">{{ $val ?: ($placeholder ?: '-') }}</span>
           @if($locked)<span class="bv-edit-pencil locked" title="Read only"><i class="ph ph-lock-simple"></i></span>@endif
         </div>
         @endif
       @else
         <div x-show="!{{ $editingExp }}" style="min-height:28px;display:flex;align-items:center;gap:6px;{{ $locked ? 'pointer-events:none;' : '' }}">
-          <span class="bv-value" style="word-break:break-word;{{ empty($val) ? 'color:#475569;' : '' }}">{{ $val ?: ($placeholder ?: '-') }}</span>
+          <span class="bv-value" style="word-break:break-word;{{ $valueStyle }}">{{ $val ?: ($placeholder ?: '-') }}</span>
           @if($locked)<span class="bv-edit-pencil locked" title="Read only"><i class="ph ph-lock-simple"></i></span>@endif
         </div>
       @endif
