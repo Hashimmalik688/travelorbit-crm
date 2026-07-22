@@ -112,6 +112,51 @@
 
 </div>
 
+{{-- ══ RECENT BOOKINGS ══ --}}
+<div class="row g-3 mt-1">
+  <div class="col-12 oc-up d4">
+    <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
+      <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid rgba(51,46,158,.06);">
+        <h6 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Recent Bookings</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size:0.912rem;">
+          <thead>
+            <tr>
+              <th>Booking #</th>
+              <th>Agent</th>
+              <th>Route</th>
+              <th class="text-end">Margin</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse ($recentBookings as $rb)
+              @php
+                $rbRoute = ($rb->flightDetail && $rb->flightDetail->departure_airport && $rb->flightDetail->arrival_airport)
+                  ? strtoupper($rb->flightDetail->departure_airport) . ' - ' . strtoupper($rb->flightDetail->arrival_airport)
+                  : '—';
+                $rbMargin = $rb->netMargin();
+              @endphp
+              <tr>
+                <td><a href="{{ route('bookings.show', $rb->id) }}" class="fw-semibold">{{ $rb->booking_number }}</a></td>
+                <td>{{ $rb->user->name ?? '—' }}</td>
+                <td>{{ $rbRoute }}</td>
+                <td class="text-end fw-semibold {{ $rbMargin >= 0 ? 'text-success' : 'text-danger' }}">£{{ number_format($rbMargin, 2) }}</td>
+                <td>
+                  <span style="font-size:0.792rem;font-weight:600;background:rgba(51,46,158,.06);border:1px solid rgba(51,46,158,.12);color:#332E9E;border-radius:8px;padding:2px 9px;">{{ ucfirst($rb->booking_type ?? '—') }}</span>
+                </td>
+              </tr>
+            @empty
+              <tr><td colspan="5" class="text-center py-4" style="color:#475569;">No bookings yet.</td></tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 {{-- ══ AGENTS TODAY ══ --}}
 @if ($agentsToday->isNotEmpty())
   <div class="oc-up d5 mt-4">

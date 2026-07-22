@@ -74,6 +74,85 @@ class DashboardController extends Controller
         )));
     }
 
+    /**
+     * Departure/Arrival report — one row per flight segment (PNR), split into
+     * a Departure row and (for return trips) a separate Return row, so the
+     * report can answer "who's moving on date X" directly. There's no
+     * passenger-to-segment link anywhere in the schema (a booking's
+     * passengers and its segments are two independent lists), so passengers
+     * are shown as a count per row rather than named individuals — naming
+     * them would imply a per-person-per-leg truth the data doesn't have.
+     */
+    public function departureArrivalReport()
+    {
+        $type     = request('type');
+        $dateFrom = request('from') ?: null;
+        $dateTo   = request('to') ?: null;
+
+        $segments = \App\Models\BookingFlightDetail::with(['booking.user', 'booking.passengers'])
+            ->get()
+            ->filter(fn ($seg) => $seg->booking !== null);
+
+        $allRows = collect();
+        foreach ($segments as $seg) {
+            $booking = $seg->booking;
+            $dep = $seg->departure_airport ? strtoupper($seg->departure_airport) : '?';
+            $arr = $seg->arrival_airport ? strtoupper($seg->arrival_airport) : '?';
+
+            $allRows->push([
+                'booking'    => $booking,
+                'date'       => $seg->departure_date,
+                'leg'        => 'Departure',
+                'route'      => "{$dep} - {$arr}",
+                'pnr'        => $seg->pnr ?: $seg->locator,
+                'airline'    => $seg->airline,
+                'passengers' => $booking->passengers->count(),
+            ]);
+
+            if (($seg->flight_type ?? 'return') !== 'one_way' && $seg->return_date) {
+                $allRows->push([
+                    'booking'    => $booking,
+                    'date'       => $seg->return_date,
+                    'leg'        => 'Return',
+                    'route'      => "{$arr} - {$dep}",
+                    'pnr'        => $seg->pnr ?: $seg->locator,
+                    'airline'    => $seg->airline,
+                    'passengers' => $booking->passengers->count(),
+                ]);
+            }
+        }
+
+        // Type counts always reflect the full unfiltered list (ignoring $type
+        // itself) so switching the filter doesn't hide how many rows exist
+        // in every other type.
+        $typeCounts = $allRows->countBy(fn ($r) => $r['booking']->booking_type);
+
+        $rows = $type ? $allRows->filter(fn ($r) => $r['booking']->booking_type === $type) : $allRows;
+
+        if ($dateFrom) {
+            $rows = $rows->filter(fn ($r) => $r['date'] && $r['date']->gte(\Carbon\Carbon::parse($dateFrom)));
+        }
+        if ($dateTo) {
+            $rows = $rows->filter(fn ($r) => $r['date'] && $r['date']->lte(\Carbon\Carbon::parse($dateTo)));
+        }
+
+        $sorted = $rows->sortBy('date')->values();
+
+        $perPage = 20;
+        $page = (int) request('page', 1);
+        $rowsPage = new \Illuminate\Pagination\LengthAwarePaginator(
+            $sorted->forPage($page, $perPage),
+            $sorted->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        return view('content.dashboard.departure-arrival-report', compact(
+            'rowsPage', 'typeCounts', 'type', 'dateFrom', 'dateTo'
+        ));
+    }
+
     protected function buildIssuedPaymentReportData(string $status, ?int $userId, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         $type = request('type');
@@ -205,8 +284,16 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Recent Bookings: latest activity across the whole company, not
+        // scoped to this month — same eager-loads as Fresh so netMargin()
+        // doesn't trigger N+1 queries.
+        $recentBookings = Booking::with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->orderByDesc('created_at')
+            ->take(10)
+            ->get();
+
         return view('content.dashboard.dashboard', compact(
-            'freshMarginThisMonth', 'outstandingPayments', 'allAgents', 'agentsToday'
+            'freshMarginThisMonth', 'outstandingPayments', 'allAgents', 'agentsToday', 'recentBookings'
         ));
     }
 
