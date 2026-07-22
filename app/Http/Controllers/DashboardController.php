@@ -120,6 +120,7 @@ class DashboardController extends Controller
                     'passenger_tag' => $passenger['tag'],
                     'passenger_name'=> $passenger['name'],
                     'airline'       => $seg->airline,
+                    'urgency'       => $this->legUrgency($seg->departure_date),
                 ]);
 
                 if (($seg->flight_type ?? 'return') !== 'one_way' && $seg->return_date) {
@@ -131,6 +132,7 @@ class DashboardController extends Controller
                         'passenger_tag' => $passenger['tag'],
                         'passenger_name'=> $passenger['name'],
                         'airline'       => $seg->airline,
+                        'urgency'       => $this->legUrgency($seg->return_date),
                     ]);
                 }
             }
@@ -196,6 +198,39 @@ class DashboardController extends Controller
         }
 
         return $labels;
+    }
+
+    /**
+     * How urgent a leg is relative to today — same spirit as the due-date
+     * badge on the Payment Plan report ("3 days to go" / "2 days ago"), but
+     * with finer tiers (today/tomorrow/this week) since flight urgency needs
+     * sharper granularity than a payment due date does.
+     */
+    private function legUrgency(?\Carbon\Carbon $date): array
+    {
+        if (!$date) {
+            return ['label' => '—', 'tier' => 'none'];
+        }
+
+        $days = (int) floor(($date->copy()->startOfDay()->timestamp - now()->startOfDay()->timestamp) / 86400);
+
+        if ($days < 0) {
+            return ['label' => abs($days) . 'd ago', 'tier' => 'past'];
+        }
+        if ($days === 0) {
+            return ['label' => 'Today', 'tier' => 'today'];
+        }
+        if ($days === 1) {
+            return ['label' => 'Tomorrow', 'tier' => 'tomorrow'];
+        }
+        if ($days <= 3) {
+            return ['label' => "In {$days}d", 'tier' => 'soon'];
+        }
+        if ($days <= 7) {
+            return ['label' => "In {$days}d", 'tier' => 'week'];
+        }
+
+        return ['label' => "In {$days}d", 'tier' => 'later'];
     }
 
     protected function buildIssuedPaymentReportData(string $status, ?int $userId, ?string $dateFrom = null, ?string $dateTo = null): array
