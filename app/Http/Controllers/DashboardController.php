@@ -386,7 +386,9 @@ class DashboardController extends Controller
         // always all bookings this month, regardless of status.
         $performanceCutoffPassed = now()->day >= 20;
 
-        $agentsPerformance = \App\Models\User::where('role', 'agent')->orderBy('name')->get()
+        $agentsPerformance = \App\Models\User::where('role', 'agent')
+            ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())])
+            ->orderBy('name')->get()
             ->map(function ($agent) use ($startOfMonth, $endOfMonth, $deadStatuses, $issuedStatuses, $performanceCutoffPassed) {
                 $bookingsThisMonth = Booking::where('user_id', $agent->id)
                     ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
@@ -401,7 +403,9 @@ class DashboardController extends Controller
                 }
 
                 return (object) [
-                    'name'  => $agent->name,
+                    'name'             => $agent->name,
+                    'profile_photo_path' => $agent->profile_photo_path,
+                    'made_booking_today' => $agent->today_bookings > 0,
                     'margin' => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
                     'count'  => $bookingsThisMonth->count(),
                 ];

@@ -80,11 +80,13 @@
 <style>
 .neo-ap-wrap { background:#EAEEF3;border-radius:20px;box-shadow:8px 8px 16px #C4CBD6,-8px -8px 16px #FFFFFF;overflow:hidden;height:100%; }
 .neo-ap-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between; }
-.neo-ap-row {
-  display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;margin:0 16px 8px;
-  background:#EAEEF3;box-shadow:3px 3px 6px #C4CBD6,-3px -3px 6px #FFFFFF;
-}
-.neo-ap-count { font-size:0.72rem;font-weight:700;background:rgba(51,46,158,.08);color:#332E9E;border-radius:20px;padding:2px 9px;white-space:nowrap; }
+.neo-ap-grid { display:grid;grid-template-columns:repeat(auto-fill, 108px);justify-content:start;gap:12px;padding:4px 18px 18px; }
+.neo-ap-tile { border-radius:14px;background:#EAEEF3;box-shadow:4px 4px 8px #C4CBD6,-4px -4px 8px #FFFFFF;overflow:hidden; }
+.neo-ap-photo { aspect-ratio:3/4;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid transparent; }
+.neo-ap-dot { position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;border:2px solid #EAEEF3; }
+.neo-ap-name { font-size:0.792rem;font-weight:700;color:#1E293B;text-align:center;padding:5px 4px 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.neo-ap-margin { font-size:0.744rem;font-weight:800;text-align:center; }
+.neo-ap-count { font-size:0.648rem;font-weight:700;color:#64748B;text-align:center;padding-bottom:6px; }
 </style>
 <div class="row g-3">
   <div class="col-lg-7 oc-up d3">
@@ -96,15 +98,33 @@
         <h6 class="fw-bold mb-0" style="font-size:0.912rem;color:#0F172A;">Agents Performance</h6>
         <span style="font-size:0.696rem;font-weight:800;color:#7C3AED;background:rgba(124,58,237,.10);border-radius:20px;padding:2px 10px;">{{ $performanceLabel }}</span>
       </div>
-      @forelse ($agentsPerformance as $ap)
-        <div class="neo-ap-row">
-          <div class="flex-grow-1 min-width-0" style="font-size:0.84rem;font-weight:600;color:#1E293B;">{{ $ap->name }}</div>
-          <span class="neo-ap-count">{{ $ap->count }} booking{{ $ap->count !== 1 ? 's' : '' }}</span>
-          <div style="font-size:0.876rem;font-weight:800;color:{{ $ap->margin >= 0 ? '#16A34A' : '#DC2626' }};min-width:70px;text-align:right;">£{{ number_format($ap->margin, 0) }}</div>
-        </div>
-      @empty
-        <div class="px-4 pb-3" style="font-size:0.816rem;color:#94A3B8;">No agents yet.</div>
-      @endforelse
+      <div class="neo-ap-grid">
+        @forelse ($agentsPerformance as $ap)
+          @php
+            $apParts = explode(' ', $ap->name);
+            $apFirstName = $apParts[0];
+            $apInitials = strtoupper(mb_substr($apParts[0], 0, 1) . (count($apParts) > 1 ? mb_substr(end($apParts), 0, 1) : ''));
+            $apPhotoUrl = $ap->profile_photo_path ? asset('storage/' . $ap->profile_photo_path) : null;
+            $apActive = $ap->made_booking_today;
+            $apColor = $apActive ? '#10B981' : '#F43F5E';
+          @endphp
+          <div class="neo-ap-tile" title="{{ $ap->name }} — {{ $apActive ? 'made a booking today' : 'no bookings today' }}">
+            <div class="neo-ap-photo" style="border-color:{{ $apColor }};box-shadow:0 3px 10px {{ $apColor }}33;">
+              @if ($apPhotoUrl)
+                <img src="{{ $apPhotoUrl }}" alt="{{ $apFirstName }}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">
+              @else
+                <div style="font-size:1.32rem;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:.04em;">{{ $apInitials }}</div>
+              @endif
+              <span class="neo-ap-dot" style="background:{{ $apColor }};"></span>
+            </div>
+            <div class="neo-ap-name">{{ $apFirstName }}</div>
+            <div class="neo-ap-margin" style="color:{{ $ap->margin >= 0 ? '#16A34A' : '#DC2626' }};">£{{ number_format($ap->margin, 0) }}</div>
+            <div class="neo-ap-count">{{ $ap->count }} bkg{{ $ap->count !== 1 ? 's' : '' }}</div>
+          </div>
+        @empty
+          <div style="font-size:0.816rem;color:#94A3B8;">No agents yet.</div>
+        @endforelse
+      </div>
     </div>
   </div>
 </div>
