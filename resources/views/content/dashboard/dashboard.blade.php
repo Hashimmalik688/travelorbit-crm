@@ -129,20 +129,29 @@
 @endif
 
 {{-- ══ RECENT BOOKINGS ══ --}}
+<style>
+.neo-rb-wrap { background:#EAEEF3;border-radius:20px;box-shadow:8px 8px 16px #C4CBD6,-8px -8px 16px #FFFFFF;overflow:hidden; }
+.neo-rb-hdr { padding:18px 22px 14px;display:flex;align-items:center;justify-content:between; }
+.neo-rb-table thead th { background:transparent;border:none;color:#64748B;text-transform:uppercase;font-size:0.648rem;letter-spacing:.06em;font-weight:800;padding:6px 14px 12px;white-space:nowrap; }
+.neo-rb-table tbody td { border:none;border-top:1px solid rgba(255,255,255,.7);padding:11px 14px;background:transparent; }
+.neo-rb-table tbody tr:hover td { background:rgba(255,255,255,.45); }
+.neo-rb-badge { display:inline-block;font-size:0.684rem;font-weight:800;border-radius:8px;padding:3px 9px;box-shadow:inset 2px 2px 4px #C4CBD6,inset -2px -2px 4px #FFFFFF;white-space:nowrap; }
+.neo-rb-num { border:none;border-radius:8px;padding:3px 10px;font-weight:800;box-shadow:3px 3px 6px #C4CBD6,-3px -3px 6px #FFFFFF;background:#EAEEF3;color:#332E9E;text-decoration:none;display:inline-block; }
+</style>
 <div class="row g-3 mt-4">
   <div class="col-12 oc-up d5">
-    <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
-      <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
+    <div class="neo-rb-wrap">
+      <div class="neo-rb-hdr">
         <h6 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Recent Bookings</h6>
-        <span style="font-size:0.84rem;color:#475569;">5 most recent</span>
+        <span class="ms-auto" style="font-size:0.84rem;color:#475569;">5 most recent</span>
       </div>
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" style="font-size:0.912rem;">
+        <table class="table table-hover align-middle mb-0 neo-rb-table" style="font-size:0.9rem;">
           <thead>
             <tr>
+              <th>Booking #</th>
               <th>Date</th>
               <th>Customer</th>
-              <th>Booking #</th>
               <th>Agent</th>
               <th>Route</th>
               <th class="text-end">Margin</th>
@@ -159,20 +168,25 @@
                   : '—';
                 $rbMargin = $rb->netMargin();
                 $rbPlanLabels = ['full' => 'Full Payment', 'awaiting' => 'Payment Awaiting', 'payment_plan' => 'Payment Plan', 'dnpl' => 'DNPL'];
-                $rbPlan = $rbPlanLabels[$rb->payment->booking_plan ?? ''] ?? '—';
+                $rbPlanKey = $rb->payment->booking_plan ?? '';
+                $rbPlan = $rbPlanLabels[$rbPlanKey] ?? '—';
+                $rbPlanColors = ['full' => '#16A34A', 'awaiting' => '#D97706', 'payment_plan' => '#0EA5E9', 'dnpl' => '#7C3AED'];
+                $rbPlanColor = $rbPlanColors[$rbPlanKey] ?? '#94A3B8';
               @endphp
               <tr>
+                <td><a href="{{ route('bookings.show', $rb->id) }}" class="neo-rb-num">{{ $rb->booking_number }}</a></td>
                 <td style="color:#475569;">{{ $rb->created_at->format('d/m/Y') }}</td>
-                <td>{{ $rb->booker_name ?: '—' }}</td>
-                <td><a href="{{ route('bookings.show', $rb->id) }}" class="fw-semibold">{{ $rb->booking_number }}</a></td>
-                <td>{{ $rb->user->name ?? '—' }}</td>
-                <td>{{ $rbRoute }}</td>
+                <td style="color:#1E293B;font-weight:600;">{{ $rb->booker_name ?: '—' }}</td>
+                <td style="color:#334155;">{{ $rb->user->name ?? '—' }}</td>
+                <td style="color:#334155;">{{ $rbRoute }}</td>
                 <td class="text-end fw-semibold {{ $rbMargin >= 0 ? 'text-success' : 'text-danger' }}">£{{ number_format($rbMargin, 2) }}</td>
                 <td>
-                  <span style="font-size:0.792rem;font-weight:600;background:rgba(51,46,158,.06);border:1px solid rgba(51,46,158,.12);color:#332E9E;border-radius:8px;padding:2px 9px;">{{ ucfirst($rb->booking_type ?? '—') }}</span>
+                  <span class="neo-rb-badge" style="color:#332E9E;">{{ ucfirst($rb->booking_type ?? '—') }}</span>
                 </td>
-                <td>{{ $rbPlan }}</td>
-                <td>{{ $rb->flightDetail && $rb->flightDetail->airline ? strtoupper($rb->flightDetail->airline) : '—' }}</td>
+                <td>
+                  <span class="neo-rb-badge" style="color:{{ $rbPlanColor }};">{{ $rbPlan }}</span>
+                </td>
+                <td style="color:#334155;font-weight:600;">{{ $rb->flightDetail && $rb->flightDetail->airline ? strtoupper($rb->flightDetail->airline) : '—' }}</td>
               </tr>
             @empty
               <tr><td colspan="9" class="text-center py-4" style="color:#475569;">No bookings yet.</td></tr>
