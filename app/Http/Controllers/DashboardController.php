@@ -320,16 +320,39 @@ class DashboardController extends Controller
         $startOfMonth = now()->startOfMonth();
         $endOfMonth = now()->endOfMonth();
 
-        // Fresh margin: all net margin generated this month — issued or still
-        // pending — excluding only cancelled/refunded bookings (no margin
-        // earned). Same "Fresh" definition as the agent dashboard, just
-        // company-wide instead of scoped to one agent.
+        // Same Fresh/Issued/Pending split as the agent dashboard, just
+        // company-wide instead of scoped to one agent — Fresh is the whole
+        // month's margin, Issued and Pending are the two slices of it.
         $deadStatuses = ['cancelled', 'refund_queue'];
+        $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan', 'invoiced'];
+        $netMargin = fn (Booking $b) => $b->netMargin();
+
+        // ── FRESH: all margin generated this month, issued or still pending,
+        //    excluding only cancelled/refunded bookings. ──
         $freshBookings = Booking::whereNotIn('booking_status', $deadStatuses)
             ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
-        $freshMarginThisMonth = (float) $freshBookings->sum(fn (Booking $b) => $b->netMargin());
+        $freshMarginThisMonth = (float) $freshBookings->sum($netMargin);
+        $freshCountThisMonth  = $freshBookings->count();
+
+        // ── ISSUED: net margin from issued bookings that are FULLY PAID,
+        //    created this month. ──
+        $issuedBookingsThisMonth = Booking::whereIn('booking_status', $issuedStatuses)
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
+            ->get()
+            ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
+        $issuedMarginThisMonth = (float) $issuedBookingsThisMonth->sum($netMargin);
+        $issuedCountThisMonth  = $issuedBookingsThisMonth->count();
+
+        // ── PENDING: the not-yet-issued slice of Fresh, this month. ──
+        $pendingBookingsThisMonth = Booking::whereNotIn('booking_status', array_merge($issuedStatuses, $deadStatuses))
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->get();
+        $pendingMarginThisMonth = (float) $pendingBookingsThisMonth->sum($netMargin);
+        $pendingCountThisMonth  = $pendingBookingsThisMonth->count();
 
         // Outstanding balance is scoped to bookings that have actually been
         // issued and are still being paid off — Payment Awaiting / Payment
@@ -350,6 +373,7 @@ class DashboardController extends Controller
         $outstandingPayments = (float) $outstandingBookings->sum(
             fn (Booking $b) => max(0, $b->total_sale_price - $b->totalReceived())
         );
+        $outstandingCount = $outstandingBookings->count();
 
         // Leaderboard: only roles that actually create bookings — admin is excluded
         // (admins manage the system, they don't book).
@@ -364,18 +388,20 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Recent Bookings: everything created in the last 5 days, not a
-        // fixed row count — same eager-loads as Fresh so netMargin() doesn't
-        // trigger N+1 queries. Capped at 50 as a safety net against an
-        // unusually high-volume window blowing up the dashboard.
+        // Recent Bookings: the 5 most recent bookings company-wide, not a
+        // date window — same eager-loads as Fresh so netMargin() doesn't
+        // trigger N+1 queries.
         $recentBookings = Booking::with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
-            ->where('created_at', '>=', now()->subDays(5))
             ->orderByDesc('created_at')
-            ->take(50)
+            ->take(5)
             ->get();
 
         return view('content.dashboard.dashboard', compact(
-            'freshMarginThisMonth', 'outstandingPayments', 'allAgents', 'agentsToday', 'recentBookings'
+            'freshMarginThisMonth', 'freshCountThisMonth',
+            'issuedMarginThisMonth', 'issuedCountThisMonth',
+            'pendingMarginThisMonth', 'pendingCountThisMonth',
+            'outstandingPayments', 'outstandingCount',
+            'allAgents', 'agentsToday', 'recentBookings'
         ));
     }
 

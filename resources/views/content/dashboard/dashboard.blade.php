@@ -51,20 +51,23 @@
 <div class="row g-3 mb-4">
   @php
     $kpis = [
-      ['label'=>'Fresh Margin This Month', 'val'=>$freshMarginThisMonth, 'sub'=>now()->format('F Y'),  'color'=>'c-indigo','icon'=>'ph ph-trend-up',        'ibg'=>'rgba(51,46,158,.10)',  'ic'=>'#332E9E', 'fmt'=>'gbp'],
-      ['label'=>'Outstanding Balance', 'val'=>$outstandingPayments,   'sub'=>'across all bookings',   'color'=>'c-amber', 'icon'=>'ph ph-clock-countdown',   'ibg'=>'rgba(217,119,6,.10)',  'ic'=>'#D97706', 'fmt'=>'gbp'],
+      ['label'=>'Fresh This Month',    'val'=>$freshMarginThisMonth,   'count'=>$freshCountThisMonth,   'sub'=>now()->format('F Y'),  'color'=>'c-indigo','icon'=>'ph ph-trend-up',        'ibg'=>'rgba(51,46,158,.10)',  'ic'=>'#332E9E', 'fmt'=>'gbp'],
+      ['label'=>'Issued This Month',   'val'=>$issuedMarginThisMonth,  'count'=>$issuedCountThisMonth,  'sub'=>'margin issued & fully paid', 'color'=>'c-green', 'icon'=>'ph ph-check-circle',  'ibg'=>'rgba(22,163,74,.10)',  'ic'=>'#16A34A', 'fmt'=>'gbp'],
+      ['label'=>'Pending This Month',  'val'=>$pendingMarginThisMonth, 'count'=>$pendingCountThisMonth, 'sub'=>'not yet issued',       'color'=>'c-amber', 'icon'=>'ph ph-clock-countdown', 'ibg'=>'rgba(217,119,6,.10)',  'ic'=>'#D97706', 'fmt'=>'gbp'],
+      ['label'=>'Outstanding Balance', 'val'=>$outstandingPayments,    'count'=>$outstandingCount,      'sub'=>'across all bookings',  'color'=>'c-rose',  'icon'=>'ph ph-warning-circle',  'ibg'=>'rgba(220,38,38,.10)',  'ic'=>'#DC2626', 'fmt'=>'gbp'],
     ];
   @endphp
   @foreach ($kpis as $si => $k)
-    <div class="col-md-6 oc-up d{{ $si + 1 }}">
+    <div class="col-md-3 oc-up d{{ $si + 1 }}">
       <div class="oc-card {{ $k['color'] }}">
         <div class="d-flex align-items-start justify-content-between mb-3">
           <div style="width:40px;height:40px;border-radius:11px;background:{{ $k['ibg'] }};display:flex;align-items:center;justify-content:center;">
             <i class="{{ $k['icon'] }}" style="font-size:1.32rem;color:{{ $k['ic'] }};"></i>
           </div>
+          <span style="font-size:0.72rem;font-weight:800;background:{{ $k['ibg'] }};color:{{ $k['ic'] }};border-radius:20px;padding:2px 9px;">{{ $k['count'] }} booking{{ $k['count'] !== 1 ? 's' : '' }}</span>
         </div>
         <div class="oc-lbl">{{ $k['label'] }}</div>
-        <div class="oc-val" data-target="{{ $k['val'] }}" data-fmt="{{ $k['fmt'] }}">
+        <div class="oc-val" data-target="{{ $k['val'] }}" data-fmt="{{ $k['fmt'] }}" style="font-size:1.56rem;">
           {{ $k['fmt'] === 'gbp' ? '£'.number_format($k['val'],0) : $k['val'] }}
         </div>
         <div class="oc-sub">{{ $k['sub'] }}</div>
@@ -112,13 +115,20 @@
 
 </div>
 
+{{-- ══ AGENTS TODAY ══ --}}
+@if ($agentsToday->isNotEmpty())
+  <div class="oc-up d4 mt-4">
+    @include('content.dashboard.partials._agents-today', ['agents' => $agentsToday])
+  </div>
+@endif
+
 {{-- ══ RECENT BOOKINGS ══ --}}
-<div class="row g-3 mt-1">
-  <div class="col-12 oc-up d4">
+<div class="row g-3 mt-4">
+  <div class="col-12 oc-up d5">
     <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
       <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
         <h6 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Recent Bookings</h6>
-        <span style="font-size:0.84rem;color:#475569;">Last 5 days</span>
+        <span style="font-size:0.84rem;color:#475569;">5 most recent</span>
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" style="font-size:0.912rem;">
@@ -157,13 +167,6 @@
     </div>
   </div>
 </div>
-
-{{-- ══ AGENTS TODAY ══ --}}
-@if ($agentsToday->isNotEmpty())
-  <div class="oc-up d5 mt-4">
-    @include('content.dashboard.partials._agents-today', ['agents' => $agentsToday])
-  </div>
-@endif
 
 @endsection
 
