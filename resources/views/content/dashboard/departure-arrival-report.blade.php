@@ -76,7 +76,7 @@
 
     <div class="mb-4">
         <h1 style="font-size:1.55rem;font-weight:800;color:#0F172A;letter-spacing:-.03em;">Departure/Arrival Report</h1>
-        <p class="mb-0" style="font-size:0.936rem;color:#475569;">Every flight leg across all bookings — one row per departure, and per return if the segment is a round trip. Defaults to the last 5 days plus everything upcoming, soonest first.</p>
+        <p class="mb-0" style="font-size:0.936rem;color:#475569;">Every flight leg across all bookings — one row per departure, and per return if the segment is a round trip. Defaults to the last 5 days plus the next 7, soonest first.</p>
     </div>
 
     {{-- ══ Date filters ══ --}}

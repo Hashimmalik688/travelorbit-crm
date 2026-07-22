@@ -87,13 +87,14 @@ class DashboardController extends Controller
     {
         $type = request('type');
 
-        // Default view (no date filter touched yet) is "recent + urgently
-        // upcoming": from 5 days ago onward, open-ended into the future so
-        // nothing due soon gets cut off. Explicit from/to (even left blank)
-        // always wins over the default.
+        // Default view (no date filter touched yet) is a genuine urgency
+        // window: 5 days of recent past for context, 7 days of upcoming —
+        // not open-ended, otherwise legs months out clutter what's supposed
+        // to be an "act on this now" list. Explicit from/to (even left
+        // blank) always wins over the default.
         $hasDateFilter = request()->has('from') || request()->has('to');
         $dateFrom = $hasDateFilter ? (request('from') ?: null) : now()->subDays(5)->toDateString();
-        $dateTo   = request('to') ?: null;
+        $dateTo   = $hasDateFilter ? (request('to') ?: null) : now()->addDays(7)->toDateString();
 
         $segments = \App\Models\BookingFlightDetail::with(['booking.user', 'booking.passengers'])
             ->orderBy('booking_id')
