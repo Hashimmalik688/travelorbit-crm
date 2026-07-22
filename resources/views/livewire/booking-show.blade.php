@@ -258,25 +258,15 @@
         @endif
       </div>
       <div class="bv-section-body">
-        @php
-          $bookerFullName = trim(($booking->booker_first_name ?? '') . ' ' . ($booking->booker_last_name ?? ''));
-          $bookerTitleLabel = \App\Models\Booking::TITLES[$booking->booker_title ?? ''] ?? '';
-          $bookerInitials = strtoupper(substr($booking->booker_first_name ?? '', 0, 1) . substr($booking->booker_last_name ?? '', 0, 1));
-        @endphp
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(51,46,158,.08);">
-          <div style="width:40px;height:40px;border-radius:50%;background:rgba(51,46,158,.10);display:flex;align-items:center;justify-content:center;font-size:0.96rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $bookerInitials ?: '?' }}</div>
-          <div style="min-width:0;">
-            <div style="font-size:1.14rem;font-weight:800;color:#0F172A;letter-spacing:-.01em;line-height:1.2;">{{ $bookerFullName ? trim($bookerTitleLabel . ' ' . $bookerFullName) : 'No caller name set' }}</div>
-            <div style="font-size:0.816rem;color:#475569;display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:2px;">
-              @if($booking->booker_mobile)<span><i class="ph ph-phone" style="margin-right:3px;"></i>{{ $booking->booker_mobile }}</span>@endif
-              @if($booking->booker_email)<span><i class="ph ph-envelope-simple" style="margin-right:3px;"></i>{{ $booking->booker_email }}</span>@endif
-            </div>
-          </div>
-        </div>
         <div class="row g-2">
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Source','model'=>'lead_source','val'=>$leadLabels[$booking->lead_source ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_source ?? '')),'type'=>'select','options'=>[['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google']],'locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Nature','model'=>'lead_nature','val'=>$natureLabels[$booking->lead_nature ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_nature ?? '')),'type'=>'select','options'=>[['value'=>'new_booking','label'=>'New Booking'],['value'=>'date_change','label'=>'Date Change'],['value'=>'refund_booking','label'=>'Refund Booking'],['value'=>'previous_booking','label'=>'Previous Booking']],'locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Booking Type','model'=>'booking_type','val'=>ucfirst($booking->booking_type ?? ''),'type'=>'select','options'=>[['value'=>'flight','label'=>'Flight'],['value'=>'hotel','label'=>'Hotel'],['value'=>'holiday','label'=>'Holidays'],['value'=>'umrah','label'=>'Umrah'],['value'=>'visa','label'=>'Visa'],['value'=>'transfers','label'=>'Transfers'],['value'=>'excursion','label'=>'Excursion']],'locked'=>!$canEditBookingType,'editingVar'=>'sectionEditing'])</div>
+
+          <div class="col-12" style="margin:4px 0 8px;padding-top:10px;border-top:1px dashed rgba(51,46,158,.14);">
+            <span style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Caller Details</span>
+          </div>
+
           <div class="col-md-2">@include('livewire.partials.editable-field', ['label'=>'Title','model'=>'booker_title','val'=>\App\Models\Booking::TITLES[$booking->booker_title] ?? $booking->booker_title ?? '','type'=>'select','options'=>[['value'=>'1','label'=>'Mr.'],['value'=>'2','label'=>'Ms.'],['value'=>'3','label'=>'Mrs.'],['value'=>'4','label'=>'Mstr'],['value'=>'5','label'=>'Miss'],['value'=>'6','label'=>'Dr.']],'locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'First Name','model'=>'booker_first_name','val'=>$booking->booker_first_name ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-5">@include('livewire.partials.editable-field', ['label'=>'Last Name','model'=>'booker_last_name','val'=>$booking->booker_last_name ?? '','locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
