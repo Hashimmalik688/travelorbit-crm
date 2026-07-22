@@ -172,14 +172,19 @@ class DashboardController extends Controller
             ->get();
         $freshMarginThisMonth = (float) $freshBookings->sum(fn (Booking $b) => $b->netMargin());
 
-        // Outstanding balance must come from the approved-payments ledger (the same
-        // source as BookingShow's "Balance Due"), NOT booking_payments.balance_remaining,
-        // which is a stale creation-time snapshot that is never updated as payments
-        // are recorded — that snapshot inflates the figure by every payment taken
-        // since the booking was created. We pre-filter on the snapshot only to bound
-        // the set of candidate bookings (it is a superset of anything still owing),
-        // then compute the real remaining per booking.
-        $outstandingBookings = Booking::whereHas('payment', fn ($q) => $q->where('balance_remaining', '>', 0))
+        // Outstanding balance is scoped to bookings that have actually been
+        // issued and are still being paid off — Payment Awaiting / Payment
+        // Plan — not bookings that simply haven't been issued yet.
+        //
+        // The remaining amount itself must come from the approved-payments
+        // ledger (the same source as BookingShow's "Balance Due"), NOT
+        // booking_payments.balance_remaining — that's a stale creation-time
+        // snapshot never updated as payments are recorded, so it can read 0
+        // on a booking that's still genuinely owed money.
+        $outstandingBookings = Booking::whereIn('booking_status', [
+                Booking::STATUS_ISSUED_PAYMENT_AWAITING,
+                Booking::STATUS_ISSUED_PAYMENT_PLAN,
+            ])
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
             ->get();
 
