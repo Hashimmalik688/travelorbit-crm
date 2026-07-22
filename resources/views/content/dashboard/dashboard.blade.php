@@ -140,11 +140,15 @@
         <table class="table table-hover align-middle mb-0" style="font-size:0.912rem;">
           <thead>
             <tr>
+              <th>Date</th>
+              <th>Customer</th>
               <th>Booking #</th>
               <th>Agent</th>
               <th>Route</th>
               <th class="text-end">Margin</th>
               <th>Type</th>
+              <th>Plan Type</th>
+              <th>Airline</th>
             </tr>
           </thead>
           <tbody>
@@ -154,8 +158,12 @@
                   ? strtoupper($rb->flightDetail->departure_airport) . ' - ' . strtoupper($rb->flightDetail->arrival_airport)
                   : '—';
                 $rbMargin = $rb->netMargin();
+                $rbPlanLabels = ['full' => 'Full Payment', 'awaiting' => 'Payment Awaiting', 'payment_plan' => 'Payment Plan', 'dnpl' => 'DNPL'];
+                $rbPlan = $rbPlanLabels[$rb->payment->booking_plan ?? ''] ?? '—';
               @endphp
               <tr>
+                <td style="color:#475569;">{{ $rb->created_at->format('d/m/Y') }}</td>
+                <td>{{ $rb->booker_name ?: '—' }}</td>
                 <td><a href="{{ route('bookings.show', $rb->id) }}" class="fw-semibold">{{ $rb->booking_number }}</a></td>
                 <td>{{ $rb->user->name ?? '—' }}</td>
                 <td>{{ $rbRoute }}</td>
@@ -163,9 +171,11 @@
                 <td>
                   <span style="font-size:0.792rem;font-weight:600;background:rgba(51,46,158,.06);border:1px solid rgba(51,46,158,.12);color:#332E9E;border-radius:8px;padding:2px 9px;">{{ ucfirst($rb->booking_type ?? '—') }}</span>
                 </td>
+                <td>{{ $rbPlan }}</td>
+                <td>{{ $rb->flightDetail && $rb->flightDetail->airline ? strtoupper($rb->flightDetail->airline) : '—' }}</td>
               </tr>
             @empty
-              <tr><td colspan="5" class="text-center py-4" style="color:#475569;">No bookings yet.</td></tr>
+              <tr><td colspan="9" class="text-center py-4" style="color:#475569;">No bookings yet.</td></tr>
             @endforelse
           </tbody>
         </table>

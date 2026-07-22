@@ -1,11 +1,11 @@
 @extends('layouts/contentNavbarLayout')
-@section('title', 'Payment Status — ' . $title)
+@section('title', 'Plan Report — ' . $title)
 
 @section('content')
 <div class="to-issued-report">
 <div class="to-page-header">
     <div class="to-page-header-left">
-        <h1 class="mt-1">Payment Status</h1>
+        <h1 class="mt-1">Plan Report</h1>
         <p class="mb-0" style="font-size:0.984rem;color:#334155;">{{ $subtitle }}</p>
     </div>
 </div>
