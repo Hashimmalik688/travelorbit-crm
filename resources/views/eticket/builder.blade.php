@@ -46,7 +46,7 @@
     font-size:12.5px;background:#fff;color:var(--ink)}
   .field input:focus,.field select:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 2px rgba(51,46,143,.12)}
 
-  .pax-card,.seg-card{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:#fff;position:relative}
+  .pax-card{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:#fff;position:relative}
   .card-remove{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:6px;border:none;
     background:rgba(220,38,38,.08);color:#dc2626;cursor:pointer;font-size:12px;line-height:1}
   .add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1.5px dashed var(--indigo);
@@ -159,45 +159,37 @@
   table.pax .tkt{font-variant-numeric:tabular-nums;font-weight:700;color:var(--indigo)}
   .empty-note{font-size:11.5px;color:var(--faint);font-style:italic;padding:8px 2px}
 
-  .flight{border:1px solid var(--line);border-radius:8px;margin-bottom:18px;overflow:hidden}
-  .flight .top{height:3px;background:var(--indigo)}
-  .fhead{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px dashed var(--line)}
-  .fhead .tag{font-family:'Manrope';font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--faint)}
-  .fhead .rt{font-family:'Manrope';font-weight:800;font-size:13.5px;color:var(--ink)}
-  .fhead .rt .ar{color:var(--faint);font-weight:600;margin:0 4px}
-  .fhead .cabin{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
-    color:var(--indigo);background:rgba(91,86,214,.10);border-radius:5px;padding:3px 11px}
-  .fhead .ret{font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--magenta);
-    background:rgba(221,107,163,.12);border-radius:5px;padding:3px 11px}
+  /* Flight itinerary — paste/drop placeholder replaces the old typed-fields
+     grid: agents crop the confirmation/GDS screenshot and paste it straight
+     onto the ticket instead of retyping every flight detail. */
+  .itin-drop{border:2px dashed rgba(91,86,214,.35);border-radius:12px;
+    background:linear-gradient(180deg,var(--mist),#fff);padding:38px 28px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
+    text-align:center;cursor:pointer;transition:border-color .15s,background .15s;min-height:170px}
+  .itin-drop:hover,.itin-drop:focus,.itin-drop.drag{outline:none;border-color:var(--indigo);background:rgba(91,86,214,.06)}
+  .itin-drop .idi{width:46px;height:46px;border-radius:12px;background:rgba(91,86,214,.10);color:var(--indigo);
+    display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+  .itin-drop .idi svg{width:22px;height:22px}
+  .itin-drop .idt{font-family:'Manrope';font-weight:800;font-size:14px;color:var(--ink)}
+  .itin-drop .ids{font-size:11.5px;color:var(--sub);max-width:380px;line-height:1.55}
+  .itin-drop .ids b{color:var(--ink)}
+  .itin-drop .idk{font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--indigo);
+    background:rgba(91,86,214,.10);border-radius:5px;padding:4px 10px;margin-top:3px}
 
-  .froute{display:grid;grid-template-columns:100px 1fr 110px 1fr;gap:12px;align-items:center;padding:22px 20px}
-  .fcarrier{display:flex;flex-direction:column;gap:2px}
-  .fcarrier .code{width:38px;height:38px;border-radius:7px;display:flex;align-items:center;justify-content:center;
-    font-family:'Manrope';font-size:14px;font-weight:800;color:#fff;background:var(--indigo)}
-  .fcarrier .no{font-size:10px;color:var(--sub);font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
+  .itin-list{display:flex;flex-direction:column;gap:14px}
 
-  .endp .code2{font-family:'Manrope';font-size:24px;font-weight:800;color:var(--ink);line-height:1}
-  .endp .tm{font-family:'Manrope';font-size:14px;font-weight:800;color:var(--ink);margin-top:5px;font-variant-numeric:tabular-nums}
-  .endp .tm .plus{font-size:9px;color:var(--orange);font-weight:800;vertical-align:super;margin-left:2px}
-  .endp .dt{font-size:10px;color:var(--sub);font-weight:600;margin-top:3px}
-  .endp.arr{text-align:right}
+  .itin-image{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);
+    background:var(--mist);box-shadow:0 2px 10px rgba(60,50,120,.08)}
+  .itin-image img{display:block;width:100%;height:auto}
+  .itin-controls{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+  .itin-controls button{border:none;border-radius:6px;background:rgba(43,48,64,.72);color:#fff;font-size:10.5px;
+    font-weight:700;padding:6px 11px;cursor:pointer;backdrop-filter:blur(2px)}
+  .itin-controls button:hover{background:rgba(43,48,64,.92)}
 
-  .fmid{display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .fmid .dur{font-family:'Manrope';font-size:10.5px;color:var(--indigo);font-weight:800}
-  .fmid .line{position:relative;width:100%;height:1px;margin:7px 0;background:var(--line)}
-  .fmid .line::before,.fmid .line::after{content:"";position:absolute;top:50%;width:5px;height:5px;border-radius:50%;
-    transform:translateY(-50%);background:var(--indigo)}
-  .fmid .line::before{left:-1px} .fmid .line::after{right:-1px;background:var(--faint)}
-
-  .fmeta{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--mist)}
-  .fmeta .cell{padding:12px 14px;border-right:1px solid var(--line);border-top:1px solid var(--line);min-width:0}
-  .fmeta .cell:nth-child(4n){border-right:none}
-  .fmeta .cell:nth-child(-n+4){border-top:none}
-  .fmeta .k{font-family:'Manrope';font-size:7.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--faint)}
-  .fmeta .v{font-size:11px;font-weight:700;color:var(--ink);margin-top:2px;font-variant-numeric:tabular-nums;word-break:break-word}
-  .fmeta .cell.ok .v{color:var(--green)}
-  .legend{font-size:9.5px;color:var(--faint);margin:9px 1px 0;line-height:1.6}
-  .legend b{color:var(--sub);font-weight:700}
+  .itin-add{border:1.5px dashed rgba(91,86,214,.35);border-radius:10px;padding:14px;text-align:center;
+    font-size:11.5px;font-weight:700;color:var(--indigo);cursor:pointer;background:var(--mist);
+    transition:border-color .15s,background .15s}
+  .itin-add:hover,.itin-add:focus,.itin-add.drag{outline:none;border-color:var(--indigo);background:rgba(91,86,214,.06)}
 
   ol.terms{list-style:none;counter-reset:t;padding:0;margin:0}
   ol.terms li{counter-increment:t;position:relative;padding:0 0 15px 32px;font-size:11.5px;line-height:1.65;color:#333952}
@@ -269,7 +261,10 @@
     .panel{max-height:none !important;overflow:visible !important}
     .sheet{margin:0;box-shadow:none;width:auto}
     .sheet::before{display:none}
-    .flight,.agent,.header-block,footer,table.pax tr{break-inside:avoid;page-break-inside:avoid}
+    .itin-controls,.itin-add{display:none !important}
+    .itin-drop .idk{display:none}
+    .itin-image{border:none;border-radius:0;background:none;box-shadow:none}
+    .agent,.header-block,footer,table.pax tr,.itin-image{break-inside:avoid;page-break-inside:avoid}
     .sec{break-after:avoid;page-break-after:avoid}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
@@ -289,13 +284,14 @@
     'plane'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-1 0-1.3.4l-.7.9c-.4.4-.2 1.1.3 1.3L9 11l-2 3H4l-1 1.5 3.5 1.5 1.5 3.5L9 19v-3l3-2 2.1 6.2c.2.5.9.7 1.3.3l.9-.7c.4-.3.5-.8.4-1.3z"/></svg>',
     'shield'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
     'doc'      => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>',
+    'image'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
     'globe'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
     'award'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/></svg>',
     'lock'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
     'apple'    => '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.7 12.7c0-3 2.4-4.4 2.5-4.5-1.4-2-3.5-2.3-4.2-2.3-1.8-.2-3.5 1-4.4 1-.9 0-2.3-1-3.8-1-1.9 0-3.7 1.1-4.7 2.9-2 3.5-.5 8.6 1.4 11.5 1 1.4 2.1 3 3.6 2.9 1.4-.1 2-.9 3.7-.9s2.2.9 3.7.9c1.5 0 2.5-1.4 3.5-2.8.9-1.3 1.4-2.7 1.4-2.7-1.7-.6-2.7-2.3-2.7-4.2z"/><path d="M13.9 4.2c.8-1 1.4-2.4 1.2-3.7-1.2 0-2.6.8-3.5 1.8-.7.8-1.4 2.2-1.2 3.6 1.4.1 2.7-.7 3.5-1.7z"/></svg>',
   ];
 @endphp
-<body x-data="eticketBuilder()">
+<body x-data="eticketBuilder()" @paste.window="onItinPaste($event)">
 
 <div class="shell">
   <!-- ================= LEFT: FORM ================= -->
@@ -384,69 +380,6 @@
       <button type="button" class="add-btn" @click="addPassenger()">+ Add Passenger</button>
     </div>
 
-    <div class="fieldset">
-      <h3>{!! $icon['plane'] !!}Flight Segments <span class="cnt" x-text="segments.length"></span></h3>
-      <template x-for="(s, i) in segments" :key="i">
-        <div class="seg-card">
-          <button type="button" class="card-remove" @click="removeSegment(i)" x-show="segments.length > 1">✕</button>
-          <div class="frow c3">
-            <div class="field"><label>Airline (code)</label><input type="text" x-model="s.airline" maxlength="3" placeholder="UM"></div>
-            <div class="field"><label>Flight #</label><input type="text" x-model="s.flightNumber" placeholder="UM 725"></div>
-            <div class="field"><label>Cabin</label>
-              <select x-model="s.cabin"><option value="">None</option><option>Economy</option><option>Premium Economy</option><option>Business</option><option>First Class</option></select>
-            </div>
-          </div>
-          <div class="frow">
-            <div class="field"><label>Dep. Airport</label><input type="text" x-model="s.departureAirport" placeholder="LGW"></div>
-            <div class="field"><label>Arr. Airport</label><input type="text" x-model="s.arrivalAirport" placeholder="HRE"></div>
-          </div>
-          <div class="frow c3">
-            <div class="field"><label>Dep. Date</label><input type="date" x-model="s.departureDate"></div>
-            <div class="field"><label>Dep. Time</label><input type="text" x-model="s.departureTime" placeholder="18:20"></div>
-            <div class="field"><label>Dep. Terminal</label><input type="text" x-model="s.depTerminal"></div>
-          </div>
-          <div class="frow c3">
-            <div class="field"><label>Arrival</label>
-              <select x-model.number="s.arrivalNextDay"><option :value="false">Same Day</option><option :value="true">+1 Day</option></select>
-            </div>
-            <div class="field"><label>Arr. Time</label><input type="text" x-model="s.arrivalTime" placeholder="05:50"></div>
-            <div class="field"><label>Arr. Terminal</label><input type="text" x-model="s.arrTerminal"></div>
-          </div>
-          <div class="frow c3">
-            <div class="field"><label>Flight Type</label>
-              <select x-model="s.flightType"><option value="return">Return</option><option value="one_way">One Way</option></select>
-            </div>
-            <div class="field"><label>Return Date</label><input type="date" x-model="s.returnDate"></div>
-            <div class="field"><label>Duration</label><input type="text" x-model="s.duration" placeholder="10h 30m"></div>
-          </div>
-          <div class="frow c3">
-            <div class="field"><label>Rez. Class</label><input type="text" x-model="s.rezClass" placeholder="V"></div>
-            <div class="field"><label>Fare Basis</label><input type="text" x-model="s.fareBasis" placeholder="VLSPRT"></div>
-            <div class="field"><label>Seat</label><input type="text" x-model="s.seat" placeholder="24A · 24B"></div>
-          </div>
-          <div class="frow">
-            <div class="field"><label>NVB</label><input type="text" x-model="s.nvb" placeholder="01AUG26"></div>
-            <div class="field"><label>NVA</label><input type="text" x-model="s.nva" placeholder="01AUG27"></div>
-          </div>
-          <div class="frow c1">
-            <div class="field"><label>Baggage Allowance</label><input type="text" x-model="s.baggage" placeholder="2 x 23kg + 7kg cabin"></div>
-          </div>
-          <div class="frow">
-            <div class="field"><label>Locator</label><input type="text" x-model="s.locator"></div>
-            <div class="field"><label>Airline Ref (segment)</label><input type="text" x-model="s.airlineLocator"></div>
-          </div>
-          <div class="frow">
-            <div class="field"><label>Reservation</label>
-              <select x-model="s.reservationStatus"><option value="">None</option><option>Confirmed</option><option>Ticketed</option><option>Pending</option><option>On Hold</option><option>Cancelled</option></select>
-            </div>
-            <div class="field"><label>Tkt St</label>
-              <select x-model="s.ticketStatus"><option value="O">O (OK)</option><option value="X">X (Not OK)</option></select>
-            </div>
-          </div>
-        </div>
-      </template>
-      <button type="button" class="add-btn" @click="addSegment()">+ Add Flight Segment</button>
-    </div>
   </div>
 
   <!-- ================= RIGHT: LIVE PREVIEW ================= -->
@@ -496,65 +429,53 @@
               <td x-text="String(i+1).padStart(2,'0')"></td>
               <td><span class="pname" x-text="p.name || 'N/A'"></span><span class="ptype" x-text="p.type"></span></td>
               <td class="tkt" x-text="p.eticket || 'N/A'"></td>
-              <td x-text="(segments[0] && segments[0].baggage) || 'Confirm with airline'"></td>
+              <td x-text="'Confirm with airline'"></td>
               <td class="tkt" x-text="p.airlineRef || 'N/A'"></td>
             </tr>
           </template>
         </tbody>
       </table>
 
-      <div class="sec"><span class="ic">{!! $icon['plane'] !!}</span>Flight Itinerary <span class="n" x-text="segments.length + ' ' + (segments.length === 1 ? 'Segment' : 'Segments')"></span></div>
-      <template x-for="(s, i) in segments" :key="i">
-        <div class="flight">
-          <div class="top"></div>
-          <div class="fhead">
-            <span class="tag" x-text="'Flight ' + (i+1)"></span>
-            <span class="rt">
-              <span x-text="(s.departureAirport || 'N/A').toUpperCase()"></span>
-              <span class="ar">→</span>
-              <span x-text="(s.arrivalAirport || 'N/A').toUpperCase()"></span>
-            </span>
-            <span class="ret" x-show="s.flightType === 'return' && s.returnDate" x-text="'Return ' + fmtDate(s.returnDate)"></span>
-          </div>
-          <div class="froute">
-            <div class="fcarrier">
-              <div class="code" x-text="(s.airline || 'N/A').toUpperCase()"></div>
-              <div class="no" x-text="s.flightNumber"></div>
+      <div class="sec"><span class="ic">{!! $icon['plane'] !!}</span>Flight Itinerary
+        <span class="n" x-show="itineraryImages.length" x-text="itineraryImages.length + ' ' + (itineraryImages.length === 1 ? 'Image' : 'Images')"></span>
+      </div>
+
+      <input type="file" accept="image/*" multiple x-ref="itinFile" style="display:none" @change="onItinFile($event)">
+
+      <template x-if="itineraryImages.length === 0">
+        <div class="itin-drop" :class="{drag: dragging}" tabindex="0" role="button"
+             @click="$refs.itinFile.click()"
+             @keydown.enter="$refs.itinFile.click()"
+             @dragover.prevent="dragging = true"
+             @dragleave.prevent="dragging = false"
+             @drop.prevent="onItinDrop($event)">
+          <div class="idi">{!! $icon['image'] !!}</div>
+          <div class="idt">Paste your flight itinerary screenshot here</div>
+          <div class="ids">Press <b>Ctrl+V</b> anywhere on this page to paste a copied screenshot — or drag &amp; drop / click here to upload an image. Add as many as you need (e.g. outbound + return) — crop each straight from the airline confirmation or GDS.</div>
+          <span class="idk">Ctrl+V to Paste</span>
+        </div>
+      </template>
+
+      <template x-if="itineraryImages.length > 0">
+        <div class="itin-list">
+          <template x-for="(img, i) in itineraryImages" :key="i">
+            <div class="itin-image">
+              <img :src="img" alt="Flight itinerary screenshot">
+              <div class="itin-controls">
+                <button type="button" @click="removeItinImage(i)">Remove</button>
+              </div>
             </div>
-            <div class="endp dep">
-              <div class="code2" x-text="(s.departureAirport || 'N/A').toUpperCase()"></div>
-              <div class="tm" x-text="s.departureTime || 'N/A'"></div>
-              <div class="dt" x-text="fmtDate(s.departureDate) || 'N/A'"></div>
-            </div>
-            <div class="fmid">
-              <span class="dur" x-text="s.duration"></span>
-              <span class="line"></span>
-            </div>
-            <div class="endp arr">
-              <div class="code2" x-text="(s.arrivalAirport || 'N/A').toUpperCase()"></div>
-              <div class="tm"><span x-text="s.arrivalTime || 'N/A'"></span><span class="plus" x-show="s.arrivalNextDay">+1</span></div>
-              <div class="dt" x-text="arrivalDate(s) || 'N/A'"></div>
-            </div>
-          </div>
-          <div class="fmeta">
-            <div class="cell"><div class="k">Cabin</div><div class="v" x-text="s.cabin || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Flight Type</div><div class="v" x-text="s.flightType === 'one_way' ? 'One Way' : 'Return'"></div></div>
-            <div class="cell"><div class="k">Rez. Class</div><div class="v" x-text="s.rezClass || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Fare Basis</div><div class="v" x-text="s.fareBasis || 'N/A'"></div></div>
-            <div class="cell"><div class="k">NVB</div><div class="v" x-text="s.nvb || 'N/A'"></div></div>
-            <div class="cell"><div class="k">NVA</div><div class="v" x-text="s.nva || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Seat</div><div class="v" x-text="s.seat || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Baggage</div><div class="v" x-text="s.baggage || 'Confirm with airline'"></div></div>
-            <div class="cell"><div class="k">Dep. Terminal</div><div class="v" x-text="s.depTerminal || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Arr. Terminal</div><div class="v" x-text="s.arrTerminal || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Locator</div><div class="v" x-text="s.locator || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Airline Ref</div><div class="v" x-text="s.airlineLocator || 'N/A'"></div></div>
-            <div class="cell"><div class="k">Reservation</div><div class="v" x-text="s.reservationStatus || 'N/A'"></div></div>
-            <div class="cell" :class="s.ticketStatus === 'O' ? 'ok' : ''"><div class="k">Tkt St</div><div class="v" x-text="s.ticketStatus"></div></div>
+          </template>
+          <div class="itin-add" :class="{drag: dragging}" tabindex="0" role="button"
+               @click="$refs.itinFile.click()"
+               @keydown.enter="$refs.itinFile.click()"
+               @dragover.prevent="dragging = true"
+               @dragleave.prevent="dragging = false"
+               @drop.prevent="onItinDrop($event)">
+            + Add another screenshot — click, drag &amp; drop, or press Ctrl+V
           </div>
         </div>
       </template>
-      <div class="legend"><b>Tkt St</b> O = Confirmed, X = Not confirmed &nbsp;·&nbsp; <b>NVB/NVA</b> Not Valid Before / Not Valid After &nbsp;·&nbsp; Each passenger may check in the baggage shown at no extra cost.</div>
 
       <div class="sec"><span class="ic">{!! $icon['doc'] !!}</span>Terms &amp; Conditions</div>
       <ol class="terms">
@@ -613,11 +534,11 @@ function eticketBuilder() {
     bookingRef: '', airlineRef: '', issueDate: '', status: 'Issued',
     agentName: '', agentPhone: '', agentWhatsapp: '', agentEmail: '',
     passengers: [],
-    segments: [],
+    itineraryImages: [],
+    dragging: false,
 
     init() {
       this.passengers = [this.blankPassenger()];
-      this.segments = [this.blankSegment()];
     },
 
     get filteredBookings() {
@@ -641,7 +562,6 @@ function eticketBuilder() {
         this.agentWhatsapp = data.agentWhatsapp;
         this.agentEmail = data.agentEmail;
         this.passengers = data.passengers.length ? data.passengers : [this.blankPassenger()];
-        this.segments = data.segments.length ? data.segments : [this.blankSegment()];
         const first = data.segments[0];
         this.airlineRef = first ? (first.airlineLocator || (first.locator || '').split('/')[0].trim()) : '';
         this.selectedBooking = { ref: data.bookingRef, customer: data.customerName || 'Unnamed' };
@@ -662,40 +582,41 @@ function eticketBuilder() {
     addPassenger() { this.passengers.push(this.blankPassenger()); },
     removePassenger(i) { this.passengers.splice(i, 1); },
 
-    blankSegment() {
-      return {
-        airline: '', flightNumber: '', cabin: '', flightType: 'return',
-        departureAirport: '', arrivalAirport: '', departureDate: '', departureTime: '', depTerminal: '',
-        returnDate: '', arrivalTime: '', arrTerminal: '', arrivalNextDay: false,
-        duration: '', seat: '', baggage: '', rezClass: '', fareBasis: '', nvb: '', nva: '',
-        locator: '', airlineLocator: '', reservationStatus: '', ticketStatus: 'O',
-      };
-    },
-    addSegment() { this.segments.push(this.blankSegment()); },
-    removeSegment(i) { this.segments.splice(i, 1); },
-
     resetAll() {
       if (!confirm('Clear the whole form?')) return;
       this.query = ''; this.selectedBooking = null; this.bookingRef = ''; this.airlineRef = ''; this.issueDate = ''; this.status = 'Issued';
       this.agentName = ''; this.agentPhone = ''; this.agentWhatsapp = ''; this.agentEmail = '';
       this.passengers = [this.blankPassenger()];
-      this.segments = [this.blankSegment()];
+      this.itineraryImages = [];
     },
 
-    fmtDate(iso) {
-      if (!iso) return '';
-      const parts = iso.split('-');
-      if (parts.length !== 3) return iso;
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return `${parts[2]} ${months[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+    onItinFile(e) {
+      Array.from(e.target.files || []).forEach(f => this.readItinFile(f));
+      e.target.value = '';
     },
-    arrivalDate(seg) {
-      if (!seg.departureDate) return '';
-      if (!seg.arrivalNextDay) return this.fmtDate(seg.departureDate);
-      const d = new Date(seg.departureDate + 'T00:00:00');
-      d.setDate(d.getDate() + 1);
-      return this.fmtDate(d.toISOString().slice(0, 10));
+    onItinDrop(e) {
+      this.dragging = false;
+      Array.from(e.dataTransfer.files || []).forEach(f => this.readItinFile(f));
     },
+    onItinPaste(e) {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      let handled = false;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) { this.readItinFile(file); handled = true; }
+        }
+      }
+      if (handled) e.preventDefault();
+    },
+    readItinFile(file) {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => { this.itineraryImages.push(reader.result); };
+      reader.readAsDataURL(file);
+    },
+    removeItinImage(i) { this.itineraryImages.splice(i, 1); },
 
     print() { window.print(); },
   };
