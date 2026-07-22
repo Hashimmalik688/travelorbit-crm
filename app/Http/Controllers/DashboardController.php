@@ -85,40 +85,52 @@ class DashboardController extends Controller
      */
     public function departureArrivalReport()
     {
-        $type     = request('type');
-        $dateFrom = request('from') ?: null;
+        $type = request('type');
+
+        // Default view (no date filter touched yet) is "recent + urgently
+        // upcoming": from 5 days ago onward, open-ended into the future so
+        // nothing due soon gets cut off. Explicit from/to (even left blank)
+        // always wins over the default.
+        $hasDateFilter = request()->has('from') || request()->has('to');
+        $dateFrom = $hasDateFilter ? (request('from') ?: null) : now()->subDays(5)->toDateString();
         $dateTo   = request('to') ?: null;
 
         $segments = \App\Models\BookingFlightDetail::with(['booking.user', 'booking.passengers'])
+            ->orderBy('booking_id')
+            ->orderBy('id')
             ->get()
-            ->filter(fn ($seg) => $seg->booking !== null);
+            ->filter(fn ($seg) => $seg->booking !== null)
+            ->groupBy('booking_id');
 
         $allRows = collect();
-        foreach ($segments as $seg) {
-            $booking = $seg->booking;
-            $dep = $seg->departure_airport ? strtoupper($seg->departure_airport) : '?';
-            $arr = $seg->arrival_airport ? strtoupper($seg->arrival_airport) : '?';
+        foreach ($segments as $bookingSegments) {
+            $booking = $bookingSegments->first()->booking;
+            $passengerLabels = $this->pnrPassengerLabels($booking);
 
-            $allRows->push([
-                'booking'    => $booking,
-                'date'       => $seg->departure_date,
-                'leg'        => 'Departure',
-                'route'      => "{$dep} - {$arr}",
-                'pnr'        => $seg->pnr ?: $seg->locator,
-                'airline'    => $seg->airline,
-                'passengers' => $booking->passengers->count(),
-            ]);
+            foreach ($bookingSegments->values() as $si => $seg) {
+                $dep = $seg->departure_airport ? strtoupper($seg->departure_airport) : '?';
+                $arr = $seg->arrival_airport ? strtoupper($seg->arrival_airport) : '?';
+                $passenger = $passengerLabels[$si] ?? ('PNR ' . ($si + 1));
 
-            if (($seg->flight_type ?? 'return') !== 'one_way' && $seg->return_date) {
                 $allRows->push([
-                    'booking'    => $booking,
-                    'date'       => $seg->return_date,
-                    'leg'        => 'Return',
-                    'route'      => "{$arr} - {$dep}",
-                    'pnr'        => $seg->pnr ?: $seg->locator,
-                    'airline'    => $seg->airline,
-                    'passengers' => $booking->passengers->count(),
+                    'booking'   => $booking,
+                    'date'      => $seg->departure_date,
+                    'leg'       => 'Departure',
+                    'route'     => "{$dep} - {$arr}",
+                    'passenger' => $passenger,
+                    'airline'   => $seg->airline,
                 ]);
+
+                if (($seg->flight_type ?? 'return') !== 'one_way' && $seg->return_date) {
+                    $allRows->push([
+                        'booking'   => $booking,
+                        'date'      => $seg->return_date,
+                        'leg'       => 'Return',
+                        'route'     => "{$arr} - {$dep}",
+                        'passenger' => $passenger,
+                        'airline'   => $seg->airline,
+                    ]);
+                }
             }
         }
 
@@ -151,6 +163,29 @@ class DashboardController extends Controller
         return view('content.dashboard.departure-arrival-report', compact(
             'rowsPage', 'typeCounts', 'type', 'dateFrom', 'dateTo'
         ));
+    }
+
+    /**
+     * Mirrors BookingShow::getPnrLabel() — the booking page itself labels
+     * each PNR block by position ("Adult x 1", "Adult x 2", ...), the Nth
+     * passenger (adult, then youth/gbe, then child, then infant) matching
+     * the Nth flight segment in creation order. There's no FK behind this —
+     * it's a positional convention — but it's the one the app already uses,
+     * so the report follows it rather than inventing a different scheme.
+     */
+    private function pnrPassengerLabels(Booking $booking): array
+    {
+        $typeLabels = ['adult' => 'Adult', 'gbe' => 'Youth', 'child' => 'Child', 'infant' => 'Infant'];
+        $counts = $booking->passengers->countBy('passenger_type');
+
+        $labels = [];
+        foreach ($typeLabels as $type => $label) {
+            for ($i = 0; $i < ($counts[$type] ?? 0); $i++) {
+                $labels[] = "{$label} x " . ($i + 1);
+            }
+        }
+
+        return $labels;
     }
 
     protected function buildIssuedPaymentReportData(string $status, ?int $userId, ?string $dateFrom = null, ?string $dateTo = null): array

@@ -5,7 +5,7 @@
 <div class="to-page-header">
     <div class="to-page-header-left">
         <h1 class="mt-1">Departure/Arrival Report</h1>
-        <p class="mb-0" style="font-size:0.984rem;color:#334155;">Every flight leg across all bookings — one row per departure, and per return if the segment is a round trip.</p>
+        <p class="mb-0" style="font-size:0.984rem;color:#334155;">Every flight leg across all bookings — one row per departure, and per return if the segment is a round trip. Defaults to the last 5 days plus everything upcoming, soonest first.</p>
     </div>
 </div>
 
@@ -58,9 +58,8 @@
                     <th>Date</th>
                     <th>Leg</th>
                     <th>Route</th>
-                    <th>PNR</th>
+                    <th>Passenger</th>
                     <th>Airline</th>
-                    <th class="text-end">Pax</th>
                     <th>Agent</th>
                     <th>Type</th>
                 </tr>
@@ -74,9 +73,10 @@
                             <span style="font-size:0.744rem;font-weight:700;padding:2px 8px;border-radius:10px;{{ $row['leg'] === 'Departure' ? 'color:#332E9E;background:rgba(51,46,158,.08);' : 'color:#0EA5E9;background:rgba(14,165,233,.08);' }}">{{ $row['leg'] }}</span>
                         </td>
                         <td>{{ $row['route'] }}</td>
-                        <td>{{ $row['pnr'] ?: '—' }}</td>
+                        <td>
+                            <span style="font-size:0.792rem;font-weight:600;background:rgba(124,58,237,.08);color:#7C3AED;border-radius:8px;padding:2px 9px;">{{ $row['passenger'] }}</span>
+                        </td>
                         <td>{{ $row['airline'] ?: '—' }}</td>
-                        <td class="text-end">{{ $row['passengers'] }}</td>
                         <td>{{ $row['booking']->user->name ?? '—' }}</td>
                         <td>
                             <span style="font-size:0.792rem;font-weight:600;background:rgba(51,46,158,.06);border:1px solid rgba(51,46,158,.12);color:#332E9E;border-radius:8px;padding:2px 9px;">{{ ucfirst($row['booking']->booking_type ?? '—') }}</span>
@@ -84,7 +84,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9">
+                        <td colspan="8">
                             <div class="to-empty">
                                 <div class="to-empty-icon"><i class="ph ph-airplane-tilt"></i></div>
                                 <h5>Nothing here</h5>
