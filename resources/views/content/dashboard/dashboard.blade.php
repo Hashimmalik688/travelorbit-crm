@@ -116,8 +116,9 @@
 <div class="row g-3 mt-1">
   <div class="col-12 oc-up d4">
     <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
-      <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid rgba(51,46,158,.06);">
+      <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
         <h6 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Recent Bookings</h6>
+        <span style="font-size:0.84rem;color:#475569;">Last 5 days</span>
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" style="font-size:0.912rem;">

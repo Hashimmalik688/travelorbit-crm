@@ -284,12 +284,14 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Recent Bookings: latest activity across the whole company, not
-        // scoped to this month — same eager-loads as Fresh so netMargin()
-        // doesn't trigger N+1 queries.
+        // Recent Bookings: everything created in the last 5 days, not a
+        // fixed row count — same eager-loads as Fresh so netMargin() doesn't
+        // trigger N+1 queries. Capped at 50 as a safety net against an
+        // unusually high-volume window blowing up the dashboard.
         $recentBookings = Booking::with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->where('created_at', '>=', now()->subDays(5))
             ->orderByDesc('created_at')
-            ->take(10)
+            ->take(50)
             ->get();
 
         return view('content.dashboard.dashboard', compact(
