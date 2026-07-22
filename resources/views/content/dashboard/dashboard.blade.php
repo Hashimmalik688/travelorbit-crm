@@ -76,39 +76,45 @@
   @endforeach
 </div>
 
-{{-- ══ AGENT LEADERBOARD ══ --}}
+{{-- ══ AGENT LEADERBOARD — today, split into selling vs. not yet ══ --}}
 <div class="row g-3">
 
   <div class="col-12 oc-up d3">
-    <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
-      <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
-        <h6 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Agent Leaderboard</h6>
-        <span style="font-size:0.84rem;color:#475569;">{{ now()->format('F Y') }}</span>
+    @php
+      $sellingToday = $allAgents->where('today_bookings', '>', 0)->sortByDesc('today_bookings')->values();
+      $chillToday   = $allAgents->where('today_bookings', '=', 0)->sortBy('name')->values();
+      $colors = ['#332E9E','#D83F87','#D97706','#16A34A','#0EA5E9','#7C3AED','#DC2626','#F59E0B'];
+    @endphp
+    <div style="background:#fff;border-radius:14px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
+      <div class="px-3 pt-3 pb-2 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
+        <h6 class="fw-bold mb-0" style="font-size:0.912rem;color:#0F172A;">Agent Leaderboard</h6>
+        <span style="font-size:0.756rem;color:#475569;">{{ now()->format('d F Y') }}</span>
       </div>
-      <div class="px-4 py-3">
-        @forelse ($allAgents->sortByDesc('month_bookings')->take(8) as $idx => $ag)
-          @php
-            $initials = strtoupper(substr($ag->name,0,1).(strpos($ag->name,' ')!==false?substr($ag->name,strpos($ag->name,' ')+1,1):''));
-            $pct = $allAgents->max('month_bookings') > 0 ? round(($ag->month_bookings/$allAgents->max('month_bookings'))*100) : 0;
-            $colors = ['#332E9E','#D83F87','#D97706','#16A34A','#0EA5E9','#7C3AED','#DC2626','#F59E0B'];
-            $c = $colors[$idx % count($colors)];
-          @endphp
-          <div class="ag-row">
-            <div style="width:34px;height:34px;border-radius:50%;background:{{ $c }}18;color:{{ $c }};display:flex;align-items:center;justify-content:center;font-size:0.816rem;font-weight:800;flex-shrink:0;">{{ $initials }}</div>
-            <div class="flex-grow-1 min-width-0">
-              <div class="fw-semibold" style="font-size:0.936rem;color:#1E293B;">{{ $ag->name }}</div>
-              <div style="height:4px;background:rgba(51,46,158,.07);border-radius:20px;margin-top:4px;overflow:hidden;">
-                <div style="height:100%;width:{{ $pct }}%;background:{{ $c }};border-radius:20px;transition:width .8s;"></div>
-              </div>
+      <div class="row g-0">
+        <div class="col-md-6 px-3 py-3" style="border-right:1px solid rgba(51,46,158,.06);">
+          <div style="font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#16A34A;margin-bottom:8px;">Selling Today</div>
+          @forelse ($sellingToday as $idx => $ag)
+            @php
+              $initials = strtoupper(substr($ag->name,0,1).(strpos($ag->name,' ')!==false?substr($ag->name,strpos($ag->name,' ')+1,1):''));
+              $c = $colors[$idx % count($colors)];
+            @endphp
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div style="width:24px;height:24px;border-radius:50%;background:{{ $c }}18;color:{{ $c }};display:flex;align-items:center;justify-content:center;font-size:0.672rem;font-weight:800;flex-shrink:0;">{{ $initials }}</div>
+              <div class="flex-grow-1 min-width-0" style="font-size:0.84rem;font-weight:600;color:#1E293B;">{{ $ag->name }}</div>
+              <div style="font-size:0.816rem;font-weight:800;color:{{ $c }};">{{ $ag->today_bookings }}</div>
             </div>
-            <div class="text-end flex-shrink-0">
-              <div class="fw-bold" style="font-size:1.056rem;color:{{ $c }};">{{ $ag->month_bookings }}</div>
-              <div style="font-size:0.744rem;color:#475569;">bookings</div>
-            </div>
-          </div>
-        @empty
-          <div class="text-center py-4" style="color:#475569;font-size:0.9rem;">No agent data this month.</div>
-        @endforelse
+          @empty
+            <div style="font-size:0.816rem;color:#94A3B8;">No sales yet today.</div>
+          @endforelse
+        </div>
+        <div class="col-md-6 px-3 py-3">
+          <div style="font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;margin-bottom:8px;">😎 Chill Squad</div>
+          @forelse ($chillToday as $ag)
+            <span class="d-inline-block me-1 mb-2" style="font-size:0.792rem;color:#64748B;background:rgba(148,163,184,.10);border-radius:20px;padding:3px 11px;">{{ $ag->name }}</span>
+          @empty
+            <div style="font-size:0.816rem;color:#94A3B8;">Everyone's selling today 🔥</div>
+          @endforelse
+        </div>
       </div>
     </div>
   </div>

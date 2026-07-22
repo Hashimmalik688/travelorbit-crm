@@ -377,9 +377,10 @@ class DashboardController extends Controller
         $outstandingCount = $outstandingBookings->count();
 
         // Leaderboard: only roles that actually create bookings — admin is excluded
-        // (admins manage the system, they don't book).
+        // (admins manage the system, they don't book). Scoped to today, not the
+        // month, so it's a live "who's selling right now" view.
         $allAgents = \App\Models\User::whereIn('role', ['agent', 'operations', 'manager'])->withCount([
-            'bookings as month_bookings' => fn($q) => $q->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            'bookings as today_bookings' => fn($q) => $q->whereDate('created_at', today())
         ])->get();
 
         // Agents Today: same section shown on the agent dashboard — every agent with
