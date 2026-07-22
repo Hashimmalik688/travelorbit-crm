@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\BookingPayment;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -162,28 +161,16 @@ class DashboardController extends Controller
         $startOfMonth = now()->startOfMonth();
         $endOfMonth = now()->endOfMonth();
 
-        $totalBookings = Booking::whereBetween('created_at', [$startOfMonth, $endOfMonth])->count();
-
-        $totalSale = (float) DB::table('booking_flight_details')
-            ->join('bookings', 'bookings.id', '=', 'booking_flight_details.booking_id')
-            ->whereBetween('bookings.created_at', [$startOfMonth, $endOfMonth])
-            ->whereNull('bookings.deleted_at')
-            ->sum('booking_flight_details.selling_price');
-
-        $totalSale += (float) DB::table('booking_hotels')
-            ->join('bookings', 'bookings.id', '=', 'booking_hotels.booking_id')
-            ->whereBetween('bookings.created_at', [$startOfMonth, $endOfMonth])
-            ->whereNull('bookings.deleted_at')
-            ->sum('booking_hotels.selling_price');
-
-        $totalCost = (float) DB::table('booking_flight_costs')
-            ->join('bookings', 'bookings.id', '=', 'booking_flight_costs.booking_id')
-            ->whereBetween('bookings.created_at', [$startOfMonth, $endOfMonth])
-            ->whereNull('bookings.deleted_at')
-            ->selectRaw('SUM(cost * quantity) as total')
-            ->value('total');
-
-        $totalRevenue = $totalSale - $totalCost;
+        // Fresh margin: all net margin generated this month — issued or still
+        // pending — excluding only cancelled/refunded bookings (no margin
+        // earned). Same "Fresh" definition as the agent dashboard, just
+        // company-wide instead of scoped to one agent.
+        $deadStatuses = ['cancelled', 'refund_queue'];
+        $freshBookings = Booking::whereNotIn('booking_status', $deadStatuses)
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+            ->get();
+        $freshMarginThisMonth = (float) $freshBookings->sum(fn (Booking $b) => $b->netMargin());
 
         // Outstanding balance must come from the approved-payments ledger (the same
         // source as BookingShow's "Balance Due"), NOT booking_payments.balance_remaining,
@@ -200,40 +187,6 @@ class DashboardController extends Controller
             fn (Booking $b) => max(0, $b->total_sale_price - $b->totalReceived())
         );
 
-        $overduePaymentsCount = $outstandingBookings->filter(
-            fn (Booking $b) => ($b->total_sale_price - $b->totalReceived()) > 0
-                && $b->payment?->due_date
-                && $b->payment->due_date->isPast()
-        )->count();
-
-        $bookingsByStatus = Booking::select('booking_status', DB::raw('count(*) as total'))
-            ->groupBy('booking_status')
-            ->pluck('total', 'booking_status')
-            ->toArray();
-
-        $pendingCount    = $bookingsByStatus['pending']   ?? 0;
-        $confirmedCount  = $bookingsByStatus['confirmed'] ?? 0;
-        $issuedCount     = $bookingsByStatus['issued']    ?? 0;
-        $issuanceQueue   = $bookingsByStatus['issuance_queue'] ?? 0;
-        $ticketInProcess = $bookingsByStatus['ticket_in_process'] ?? 0;
-        $invoicedCount   = $bookingsByStatus['invoiced'] ?? 0;
-
-        $topAgents = Booking::select('user_id', DB::raw('count(*) as total'))
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-            ->groupBy('user_id')
-            ->orderByDesc('total')
-            ->with('user')
-            ->take(5)
-            ->get();
-
-        $last7DaysBookings = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->toDateString();
-            $last7DaysBookings[] = Booking::whereDate('created_at', $date)->count();
-        }
-
-        $cancelledCount = $bookingsByStatus['cancelled'] ?? 0;
-
         // Leaderboard: only roles that actually create bookings — admin is excluded
         // (admins manage the system, they don't book).
         $allAgents = \App\Models\User::whereIn('role', ['agent', 'operations', 'manager'])->withCount([
@@ -248,10 +201,7 @@ class DashboardController extends Controller
             ->get();
 
         return view('content.dashboard.dashboard', compact(
-            'totalBookings', 'totalRevenue', 'outstandingPayments',
-            'overduePaymentsCount', 'pendingCount', 'confirmedCount',
-            'issuedCount', 'issuanceQueue', 'ticketInProcess', 'invoicedCount',
-            'cancelledCount', 'topAgents', 'last7DaysBookings', 'allAgents', 'agentsToday'
+            'freshMarginThisMonth', 'outstandingPayments', 'allAgents', 'agentsToday'
         ));
     }
 

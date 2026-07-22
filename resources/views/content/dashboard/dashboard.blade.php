@@ -26,11 +26,6 @@
 .oc-val{ font-size:2rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1 }
 .oc-lbl{ font-size:0.744rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:4px }
 .oc-sub{ font-size:0.852rem;color:#475569;margin-top:4px }
-/* Workflow pipeline */
-.wf-step{ flex:1;text-align:center;padding:14px 8px;border-radius:12px;border:1px solid rgba(51,46,158,.07);background:#fff;transition:transform .15s,box-shadow .15s;cursor:default }
-.wf-step:hover{ transform:translateY(-2px);box-shadow:0 4px 14px rgba(51,46,158,.08) }
-.wf-step-val{ font-size:1.8rem;font-weight:800;letter-spacing:-.03em;color:#0F172A;line-height:1 }
-.wf-step-lbl{ font-size:0.744rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:4px }
 /* Agent table */
 .ag-row{ display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid rgba(51,46,158,.06);margin-bottom:7px;transition:background .12s }
 .ag-row:hover{ background:#F8FAFF;border-color:rgba(51,46,158,.12) }
@@ -52,50 +47,16 @@
   </div>
 </div>
 
-{{-- ══ WORKFLOW PIPELINE ══ --}}
-<div class="oc-up d2 mb-4" style="background:linear-gradient(135deg,rgba(255,255,255,0.7) 0%,rgba(248,250,252,0.6) 100%);border-radius:16px;padding:20px 24px;border:1px solid rgba(51,46,158,0.08);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(51,46,158,0.06);">
-  <div class="d-flex align-items-center gap-2 mb-3">
-    <span class="fw-bold" style="font-size:1.008rem;color:#0F172A;">Booking Pipeline</span>
-    <span style="font-size:0.816rem;color:#475569;">live status across all bookings</span>
-  </div>
-  <div class="d-flex gap-2">
-    @php
-      $pipeline = [
-        ['label'=>'Pending',           'val'=>$pendingCount,    'color'=>'#332E9E','bg'=>'rgba(51,46,158,.10)',  'icon'=>'ph-clock'],
-        ['label'=>'Issuance Queue',    'val'=>$issuanceQueue,   'color'=>'#D97706','bg'=>'rgba(217,119,6,.10)',  'icon'=>'ph-ticket'],
-        ['label'=>'Ticket in Process', 'val'=>$ticketInProcess, 'color'=>'#0EA5E9','bg'=>'rgba(14,165,233,.10)', 'icon'=>'ph-airplane-takeoff'],
-        ['label'=>'Invoiced',          'val'=>$invoicedCount,   'color'=>'#16A34A','bg'=>'rgba(22,163,74,.10)',  'icon'=>'ph-receipt'],
-        ['label'=>'Confirmed',         'val'=>$confirmedCount,  'color'=>'#7C3AED','bg'=>'rgba(124,58,237,.10)', 'icon'=>'ph-check-circle'],
-        ['label'=>'Cancelled',         'val'=>$cancelledCount,  'color'=>'#DC2626','bg'=>'rgba(220,38,38,.10)', 'icon'=>'ph-x-circle'],
-      ];
-    @endphp
-    @foreach ($pipeline as $pi => $pw)
-      <div class="wf-step oc-up" style="animation-delay:{{ 0.05 + $pi * 0.04 }}s;background:linear-gradient(135deg,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0.75) 100%);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
-        <div style="width:34px;height:34px;border-radius:10px;background:{{ $pw['bg'] }};margin:0 auto 10px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-          <i class="ph {{ $pw['icon'] }}" style="font-size:1.26rem;color:{{ $pw['color'] }};"></i>
-        </div>
-        <div class="wf-step-val" style="color:{{ $pw['color'] }};">{{ $pw['val'] }}</div>
-        <div class="wf-step-lbl" style="color:{{ $pw['color'] }};">{{ $pw['label'] }}</div>
-      </div>
-      @if (!$loop->last)
-        <div class="d-flex align-items-center flex-shrink-0" style="color:#64748B;font-size:1.02rem;margin-top:14px;"><i class="ph ph-caret-right"></i></div>
-      @endif
-    @endforeach
-  </div>
-</div>
-
 {{-- ══ KPI CARDS ══ --}}
 <div class="row g-3 mb-4">
   @php
     $kpis = [
-      ['label'=>'Bookings This Month', 'val'=>$totalBookings,         'sub'=>now()->format('F Y'),    'color'=>'c-indigo','icon'=>'ph ph-calendar-dots',    'ibg'=>'rgba(51,46,158,.10)',  'ic'=>'#332E9E', 'fmt'=>'num'],
-      ['label'=>'Revenue This Month',  'val'=>$totalRevenue,          'sub'=>'total margin',          'color'=>'c-green', 'icon'=>'ph ph-currency-pound',    'ibg'=>'rgba(22,163,74,.10)',  'ic'=>'#16A34A', 'fmt'=>'gbp'],
+      ['label'=>'Fresh Margin This Month', 'val'=>$freshMarginThisMonth, 'sub'=>now()->format('F Y'),  'color'=>'c-indigo','icon'=>'ph ph-trend-up',        'ibg'=>'rgba(51,46,158,.10)',  'ic'=>'#332E9E', 'fmt'=>'gbp'],
       ['label'=>'Outstanding Balance', 'val'=>$outstandingPayments,   'sub'=>'across all bookings',   'color'=>'c-amber', 'icon'=>'ph ph-clock-countdown',   'ibg'=>'rgba(217,119,6,.10)',  'ic'=>'#D97706', 'fmt'=>'gbp'],
-      ['label'=>'Overdue Payments',    'val'=>$overduePaymentsCount,  'sub'=>$overduePaymentsCount===0?'All clear':'past due date','color'=>'c-rose','icon'=>'ph ph-warning-circle','ibg'=>'rgba(220,38,38,.10)','ic'=>'#DC2626','fmt'=>'num'],
     ];
   @endphp
   @foreach ($kpis as $si => $k)
-    <div class="col-md-3 oc-up d{{ $si + 1 }}">
+    <div class="col-md-6 oc-up d{{ $si + 1 }}">
       <div class="oc-card {{ $k['color'] }}">
         <div class="d-flex align-items-start justify-content-between mb-3">
           <div style="width:40px;height:40px;border-radius:11px;background:{{ $k['ibg'] }};display:flex;align-items:center;justify-content:center;">
@@ -112,11 +73,10 @@
   @endforeach
 </div>
 
-{{-- ══ MAIN 2-COL ══ --}}
+{{-- ══ AGENT LEADERBOARD ══ --}}
 <div class="row g-3">
 
-  {{-- Agent Leaderboard --}}
-  <div class="col-lg-5 oc-up d3">
+  <div class="col-12 oc-up d3">
     <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);overflow:hidden;">
       <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
         <h6 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Agent Leaderboard</h6>
@@ -150,38 +110,6 @@
     </div>
   </div>
 
-  {{-- Right: Status donut + 7-day sparkline --}}
-  <div class="col-lg-7 oc-up d4">
-    <div class="row g-3 h-100">
-
-      {{-- Donut --}}
-      <div class="col-md-5">
-        <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);padding:20px 18px;height:100%;">
-          <h6 class="fw-bold mb-3" style="font-size:0.984rem;color:#0F172A;">Status Breakdown</h6>
-          <div id="oc-donut" style="height:180px;"></div>
-          <div class="d-flex flex-column gap-1 mt-2">
-            @foreach ([['Pending',$pendingCount,'#332E9E'],['Confirmed',$confirmedCount,'#7C3AED'],['Invoiced',$invoicedCount,'#16A34A'],['Issuance Q.',$issuanceQueue,'#D97706']] as [$l,$v,$c])
-              <div class="d-flex align-items-center justify-content-between" style="font-size:0.864rem;">
-                <span class="d-flex align-items-center gap-2"><span style="width:8px;height:8px;border-radius:50%;background:{{ $c }};display:inline-block;"></span>{{ $l }}</span>
-                <span class="fw-semibold" style="color:#374151;">{{ $v }}</span>
-              </div>
-            @endforeach
-          </div>
-        </div>
-      </div>
-
-      {{-- 7-day trend --}}
-      <div class="col-md-7">
-        <div style="background:#fff;border-radius:16px;border:1px solid rgba(51,46,158,.08);padding:20px 18px;height:100%;">
-          <h6 class="fw-bold mb-1" style="font-size:0.984rem;color:#0F172A;">7-Day Bookings</h6>
-          <div style="font-size:0.84rem;color:#475569;margin-bottom:12px;">{{ now()->subDays(6)->format('d M') }} - {{ now()->format('d M') }}</div>
-          <div id="oc-spark" style="height:160px;"></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
 </div>
 
 {{-- ══ AGENTS TODAY ══ --}}
@@ -194,7 +122,6 @@
 @endsection
 
 @section('page-script')
-<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -212,34 +139,6 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     requestAnimationFrame(run);
   });
-
-  // Donut
-  new ApexCharts(document.getElementById('oc-donut'), {
-    chart:{ type:'donut', height:180, animations:{enabled:true,speed:600} },
-    series:[ {{ $pendingCount }}, {{ $confirmedCount }}, {{ $invoicedCount }}, {{ $issuanceQueue }}, {{ $ticketInProcess }} ],
-    labels:['Pending','Confirmed','Invoiced','Issuance Q.','In Process'],
-    colors:['#332E9E','#7C3AED','#16A34A','#D97706','#0EA5E9'],
-    dataLabels:{enabled:false}, legend:{show:false}, stroke:{width:0},
-    plotOptions:{ pie:{ donut:{ size:'72%', labels:{ show:true, total:{ show:true, label:'Total', fontSize:'11px', color:'#94A3B8', fontWeight:600, formatter:w=>w.globals.seriesTotals.reduce((a,b)=>a+b,0) } } } } },
-    tooltip:{ y:{formatter:v=>v+' bookings'} }
-  }).render();
-
-  // 7-day bar
-  @php
-    $labels7 = [];
-    for ($i = 6; $i >= 0; $i--) $labels7[] = now()->subDays($i)->format('D d');
-  @endphp
-  new ApexCharts(document.getElementById('oc-spark'), {
-    chart:{ type:'bar', height:160, toolbar:{show:false}, animations:{enabled:true,speed:600} },
-    series:[{ name:'Bookings', data:@json($last7DaysBookings) }],
-    colors:['#332E9E'],
-    plotOptions:{ bar:{ columnWidth:'55%', borderRadius:4 } },
-    xaxis:{ categories:@json($labels7), labels:{ style:{fontSize:'10px',colors:'#94A3B8'} }, axisBorder:{show:false}, axisTicks:{show:false} },
-    yaxis:{ labels:{show:false} },
-    grid:{ show:false },
-    dataLabels:{ enabled:false },
-    tooltip:{ y:{formatter:v=>v+' bookings'} }
-  }).render();
 
 });
 </script>
