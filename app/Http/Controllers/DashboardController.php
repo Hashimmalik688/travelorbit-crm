@@ -90,11 +90,11 @@ class DashboardController extends Controller
         // Default view (no date filter touched yet) is a genuine urgency
         // window: 5 days of recent past for context, 7 days of upcoming —
         // not open-ended, otherwise legs months out clutter what's supposed
-        // to be an "act on this now" list. Explicit from/to (even left
-        // blank) always wins over the default.
-        $hasDateFilter = request()->has('from') || request()->has('to');
-        $dateFrom = $hasDateFilter ? (request('from') ?: null) : now()->subDays(5)->toDateString();
-        $dateTo   = $hasDateFilter ? (request('to') ?: null) : now()->addDays(7)->toDateString();
+        // to be an "act on this now" list. from/to default independently —
+        // a URL/link that only sets one (e.g. an old bookmark with just
+        // ?from=...) must not silently drop the default on the other side.
+        $dateFrom = request()->has('from') ? (request('from') ?: null) : now()->subDays(5)->toDateString();
+        $dateTo   = request()->has('to')   ? (request('to') ?: null)   : now()->addDays(7)->toDateString();
 
         $segments = \App\Models\BookingFlightDetail::with(['booking.user', 'booking.passengers'])
             ->orderBy('booking_id')
