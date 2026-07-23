@@ -134,16 +134,29 @@
   @endforeach
 </div>
 
+{{-- ══ AGENT LEADERBOARD (live) ══ --}}
+{{-- Same live board as the Operations Centre: who has sold today vs who
+     hasn't. Counts only — it carries no margin, so it is safe for agents. --}}
+<div class="row g-3 mb-3">
+  <div class="col-12 ad-up d3">
+    @livewire('selling-board')
+  </div>
+</div>
+
 {{-- ══ MAIN 2-COL: Agent Wall + Calendar — moved up, right under the KPIs ══ --}}
 <div class="row g-3 mb-3">
 
   {{-- ── Left column: Agent Wall ── --}}
   <div class="col-lg-8">
 
-    {{-- Agent Wall --}}
-    @if ($allAgents->isNotEmpty())
-      @include('content.dashboard.partials._agents-today', ['agents' => $allAgents])
-    @endif
+    {{-- Same Agents Performance wall as the Operations Centre, but margin is
+         hidden here unless the viewer can see everyone's data — an agent sees
+         colleagues' photos and booking counts, never their margins. --}}
+    @include('content.dashboard.partials._agents-performance', [
+      'agentsPerformance' => $agentsPerformance,
+      'performanceLabel'  => $performanceLabel,
+      'showMargin'        => $showPerformanceMargin,
+    ])
   </div>
 
   {{-- ── Right column: Calendar ── --}}

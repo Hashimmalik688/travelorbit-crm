@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
-use App\Models\BookingPayment;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -13,7 +12,6 @@ class DashboardController extends Controller
         return $this->agentDashboard();
     }
 
-    public function accountsDashboardPage()  { return $this->accountsDashboard(); }
     public function issuanceDashboardPage()  { return $this->issuanceDashboard(); }
 
     public function paymentPlanReport()
@@ -310,7 +308,7 @@ class DashboardController extends Controller
 
         return match ($user?->role) {
             'agent', 'operations' => $this->agentDashboard(),
-            'accounts'            => $this->accountsDashboard(),
+            'accounts'            => redirect()->route('payments'),
             'issuance'            => $this->issuanceDashboard(),
             default               => $this->adminDashboard(),
         };
@@ -379,40 +377,9 @@ class DashboardController extends Controller
         // Agent Leaderboard / Chill Squad now lives in the SellingBoard Livewire
         // component (polls on its own) — see resources/views/livewire/selling-board.blade.php.
 
-        // Agents Performance: agent role only. Shows Fresh margin for the first
-        // 19 days of the month; from the 20th it switches to Issued margin —
-        // the commission-cycle cutoff — and everything naturally resets on the
-        // 1st since it's always scoped to "this month". Total booking count is
-        // always all bookings this month, regardless of status.
-        $performanceCutoffPassed = now()->day >= 20;
-
-        $agentsPerformance = \App\Models\User::where('role', 'agent')
-            ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())])
-            ->orderBy('name')->get()
-            ->map(function ($agent) use ($startOfMonth, $endOfMonth, $deadStatuses, $issuedStatuses, $performanceCutoffPassed) {
-                $bookingsThisMonth = Booking::where('user_id', $agent->id)
-                    ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-                    ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
-                    ->get();
-
-                if ($performanceCutoffPassed) {
-                    $relevant = $bookingsThisMonth->whereIn('booking_status', $issuedStatuses)
-                        ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
-                } else {
-                    $relevant = $bookingsThisMonth->whereNotIn('booking_status', $deadStatuses);
-                }
-
-                return (object) [
-                    'name'             => $agent->name,
-                    'profile_photo_path' => $agent->profile_photo_path,
-                    'made_booking_today' => $agent->today_bookings > 0,
-                    'margin' => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
-                    'count'  => $bookingsThisMonth->count(),
-                ];
-            })
-            ->sortByDesc('margin')
-            ->values();
-        $performanceLabel = $performanceCutoffPassed ? 'Issued Margin' : 'Fresh Margin';
+        $perf = $this->agentsPerformanceData(true);
+        $agentsPerformance = $perf['agentsPerformance'];
+        $performanceLabel  = $perf['performanceLabel'];
 
         // Recent Bookings: the 5 most recent bookings company-wide, not a
         // date window — same eager-loads as Fresh so netMargin() doesn't
@@ -431,30 +398,6 @@ class DashboardController extends Controller
         ));
     }
 
-    protected function accountsDashboard()
-    {
-        $now = now();
-        $som = $now->copy()->startOfMonth();
-        $eom = $now->copy()->endOfMonth();
-
-        $ticketsInProcess = Booking::where('booking_status', 'ticket_in_process')->count();
-        $readyToInvoice   = Booking::where('booking_status', 'issued')->count();
-        $invoicedToday    = Booking::where('booking_status', 'invoiced')->whereDate('invoiced_at', today())->count();
-        $invoicedMonth    = Booking::where('booking_status', 'invoiced')->whereBetween('invoiced_at', [$som, $eom])->count();
-        $outstandingTotal = BookingPayment::where('balance_remaining', '>', 0)->sum('balance_remaining');
-
-        $issueQueueBookings = Booking::where('booking_status', 'ticket_in_process')
-            ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
-
-        $invoiceQueueBookings = Booking::where('booking_status', 'issued')
-            ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
-
-        return view('content.dashboard.accounts-dashboard', compact(
-            'ticketsInProcess', 'readyToInvoice', 'invoicedToday', 'invoicedMonth',
-            'outstandingTotal', 'issueQueueBookings', 'invoiceQueueBookings'
-        ));
-    }
-
     protected function issuanceDashboard()
     {
         $inQueue   = Booking::where('booking_status', 'issuance_queue')->count();
@@ -467,6 +410,61 @@ class DashboardController extends Controller
         return view('content.dashboard.issuance-dashboard', compact(
             'inQueue', 'doneToday', 'queueBookings'
         ));
+    }
+
+    /**
+     * Agents Performance widget data — every agent-role user with their photo,
+     * today-activity flag, this-month booking count and commission-window
+     * margin. Shared by the admin Operations Centre and the agent dashboard.
+     *
+     * Fresh margin for the first 19 days of the month; from the 20th it
+     * switches to Issued margin (the commission-cycle cutoff). Always scoped
+     * to "this month", so it resets naturally on the 1st.
+     *
+     * $showMargin also drives the SORT, not just the display: agents must not
+     * see each other's margins, and ordering the tiles by margin would leak
+     * the same ranking the hidden number carries. When margin is hidden the
+     * wall is ordered by booking count instead.
+     */
+    protected function agentsPerformanceData(bool $showMargin): array
+    {
+        $startOfMonth = now()->startOfMonth();
+        $endOfMonth   = now()->endOfMonth();
+        $deadStatuses   = ['cancelled', 'refund_queue'];
+        $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan', 'invoiced'];
+        $cutoffPassed   = now()->day >= 20;
+
+        $agentsPerformance = \App\Models\User::where('role', 'agent')
+            ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())])
+            ->orderBy('name')->get()
+            ->map(function ($agent) use ($startOfMonth, $endOfMonth, $deadStatuses, $issuedStatuses, $cutoffPassed) {
+                $bookingsThisMonth = Booking::where('user_id', $agent->id)
+                    ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                    ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
+                    ->get();
+
+                if ($cutoffPassed) {
+                    $relevant = $bookingsThisMonth->whereIn('booking_status', $issuedStatuses)
+                        ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
+                } else {
+                    $relevant = $bookingsThisMonth->whereNotIn('booking_status', $deadStatuses);
+                }
+
+                return (object) [
+                    'name'               => $agent->name,
+                    'profile_photo_path' => $agent->profile_photo_path,
+                    'made_booking_today' => $agent->today_bookings > 0,
+                    'margin'             => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
+                    'count'              => $bookingsThisMonth->count(),
+                ];
+            })
+            ->sortByDesc($showMargin ? 'margin' : 'count')
+            ->values();
+
+        return [
+            'agentsPerformance' => $agentsPerformance,
+            'performanceLabel'  => $cutoffPassed ? 'Issued Margin' : 'Fresh Margin',
+        ];
     }
 
     protected function agentDashboard()
@@ -589,13 +587,24 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Agents Performance on this dashboard: an agent may see their own
+        // margin in the KPIs above, but not their colleagues'. Gate on
+        // data.view_all (the "see everyone's data" permission) so a manager
+        // landing here still gets the full picture while an agent sees only
+        // names, photos and booking counts. The flag drives the sort too —
+        // see agentsPerformanceData().
+        $showPerformanceMargin = Auth::user()->canViewAllData();
+        $perf = $this->agentsPerformanceData($showPerformanceMargin);
+        $agentsPerformance = $perf['agentsPerformance'];
+        $performanceLabel  = $perf['performanceLabel'];
+
         return view('content.dashboard.agent-dashboard', compact(
             'myTotalBookings', 'myTodayBookings',
             'myFresh', 'myIssued', 'myPending', 'myPendingAllTime',
             'myFreshCount', 'myIssuedCount', 'myPendingCount', 'myPendingAllTimeCount',
             'calendarDays', 'allMonthData',
             'pendingTabBookings', 'pendingTypeCounts', 'pendingTypeFilter',
-            'allAgents'
+            'allAgents', 'agentsPerformance', 'performanceLabel', 'showPerformanceMargin'
         ));
     }
 }

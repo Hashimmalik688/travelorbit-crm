@@ -137,7 +137,7 @@ class User extends Authenticatable
     {
         return match($this->role) {
             'agent'      => route('agent.dashboard'),
-            'accounts'   => route('accounts.dashboard'),
+            'accounts'   => route('payments'),
             'issuance'   => route('issuance.dashboard'),
             'manager',
             'admin'      => route('dashboard'),
