@@ -392,9 +392,8 @@ class DashboardController extends Controller
         // component (polls on its own) — see resources/views/livewire/selling-board.blade.php.
 
         $perf = $this->agentsPerformanceData(true);
-        $agentsPerformance  = $perf['agentsPerformance'];
-        $performanceLabel   = $perf['performanceLabel'];
-        $performanceSortKey = $perf['performanceSortKey'];
+        $agentsPerformance = $perf['agentsPerformance'];
+        $performanceLabel  = $perf['performanceLabel'];
 
         // Recent Bookings: the 5 most recent bookings company-wide, not a
         // date window — same eager-loads as Fresh so netMargin() doesn't
@@ -409,7 +408,7 @@ class DashboardController extends Controller
             'issuedMarginThisMonth', 'issuedCountThisMonth',
             'pendingMarginThisMonth', 'pendingCountThisMonth',
             'outstandingPayments', 'outstandingCount',
-            'agentsPerformance', 'performanceLabel', 'performanceSortKey', 'recentBookings'
+            'agentsPerformance', 'performanceLabel', 'recentBookings'
         ));
     }
 
@@ -472,22 +471,18 @@ class DashboardController extends Controller
                     'margin'             => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
                     'count'              => $bookingsThisMonth->count(),
                 ];
-            });
-
-        // Rank by whatever is actually meaningful. Margin is the natural
-        // ranking when it is shown AND somebody has earned some — but from the
-        // 20th the figure switches to Issued margin, which is £0 for everyone
-        // until bookings are fully paid. Ranking (and crowning) on an all-zero
-        // column would order the wall arbitrarily and leave nobody as top
-        // seller, so fall back to booking count in that case.
-        $sortKey = ($showMargin && $agentsPerformance->max('margin') > 0) ? 'margin' : 'count';
-
-        $agentsPerformance = $agentsPerformance->sortByDesc($sortKey)->values();
+            })
+            // It's a competition on volume: most bookings this month comes top,
+            // regardless of margin. Ranking never uses margin, which also means
+            // the order can't leak margin to agents who aren't shown it.
+            // Equal counts are broken by name so the order is stable rather
+            // than shuffling between requests.
+            ->sort(fn ($a, $b) => ($b->count <=> $a->count) ?: strcasecmp($a->name, $b->name))
+            ->values();
 
         return [
-            'agentsPerformance'   => $agentsPerformance,
-            'performanceLabel'    => $cutoffPassed ? 'Issued Margin' : 'Fresh Margin',
-            'performanceSortKey'  => $sortKey,
+            'agentsPerformance' => $agentsPerformance,
+            'performanceLabel'  => $cutoffPassed ? 'Issued Margin' : 'Fresh Margin',
         ];
     }
 
@@ -619,9 +614,8 @@ class DashboardController extends Controller
         // see agentsPerformanceData().
         $showPerformanceMargin = Auth::user()->canViewAllData();
         $perf = $this->agentsPerformanceData($showPerformanceMargin);
-        $agentsPerformance  = $perf['agentsPerformance'];
-        $performanceLabel   = $perf['performanceLabel'];
-        $performanceSortKey = $perf['performanceSortKey'];
+        $agentsPerformance = $perf['agentsPerformance'];
+        $performanceLabel  = $perf['performanceLabel'];
 
         return view('content.dashboard.agent-dashboard', compact(
             'myTotalBookings', 'myTodayBookings',
@@ -629,7 +623,7 @@ class DashboardController extends Controller
             'myFreshCount', 'myIssuedCount', 'myPendingCount', 'myPendingAllTimeCount',
             'calendarDays', 'allMonthData',
             'pendingTabBookings', 'pendingTypeCounts', 'pendingTypeFilter',
-            'allAgents', 'agentsPerformance', 'performanceLabel', 'performanceSortKey', 'showPerformanceMargin'
+            'allAgents', 'agentsPerformance', 'performanceLabel', 'showPerformanceMargin'
         ));
     }
 }

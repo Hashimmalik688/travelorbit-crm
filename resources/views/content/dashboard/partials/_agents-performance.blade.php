@@ -30,17 +30,23 @@
 .neo-ap-metric { font-size:0.72rem;font-weight:800;padding:0 4px 7px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px; }
 /* Booking count reads as a number, not a footnote. The ticket glyph carries
    the meaning so the word "bookings" isn't needed on a 92px tile. */
-.neo-ap-count { display:inline-flex;align-items:center;gap:3px;font-size:0.78rem;font-weight:800;color:#334155;background:var(--to-subtle);border:1px solid var(--to-border);border-radius:20px;padding:1px 7px; }
-.neo-ap-count i { font-size:0.78rem;color:#94A3B8; }
+.neo-ap-count { display:inline-flex;align-items:center;gap:3px;font-size:0.78rem;font-weight:800;color:var(--to-indigo);background:rgba(79,70,229,.10);border:1px solid rgba(79,70,229,.22);border-radius:20px;padding:1px 7px; }
+.neo-ap-count i { font-size:0.78rem;color:var(--to-indigo);opacity:.7; }
 /* Count-only variant (margin hidden) gets the full weight to itself. */
 .neo-ap-count.is-solo { font-size:0.9rem;padding:2px 10px; }
 
 /* Top seller. The green/red ring already encodes today-activity, so the
-   crown gets its own gold halo rather than fighting for the border. */
-.neo-ap-tile.is-top { box-shadow:0 0 0 3px rgba(245,158,11,.38); }
+   crown gets its own gold halo rather than fighting for the border.
+   NOTE: .neo-ap-tile sets overflow:hidden, so the crown must sit fully
+   INSIDE the photo — a negative offset gets clipped to a sliver. */
+.neo-ap-tile.is-top { box-shadow:0 0 0 3px rgba(245,158,11,.45); }
 .neo-ap-crown {
-  position:absolute;top:-2px;left:4px;font-size:0.95rem;line-height:1;
-  filter:drop-shadow(0 1px 2px rgba(15,23,42,.35));
+  position:absolute;top:5px;left:5px;z-index:2;
+  width:23px;height:23px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.92rem;line-height:1;
+  background:#FFFFFF;
+  box-shadow:0 1px 5px rgba(15,23,42,.35);
   animation:neoCrownPop .45s cubic-bezier(.34,1.56,.64,1) both;
 }
 @keyframes neoCrownPop { from{transform:translateY(-6px) rotate(-14deg);opacity:0} to{transform:none;opacity:1} }
@@ -56,21 +62,16 @@
     @endif
   </div>
   @php
-    // Crown must follow the SAME key the controller ranked by, so the crown is
-    // always on the leading tile. That key is margin only when margin is both
-    // shown and non-zero; otherwise it is booking count (see
-    // agentsPerformanceData). Ties are all crowned — picking one arbitrarily
-    // would be a lie. Nobody is crowned when the top value is zero: a crown
-    // for no sales is just noise.
-    $apSortKey  = $performanceSortKey ?? ($showMargin ? 'margin' : 'count');
-    $apTopValue = $agentsPerformance->max($apSortKey) ?? 0;
+    // It's a booking-count competition — the crown goes to whoever has the most
+    // bookings this month, matching the order the controller sorted by. Margin
+    // never enters into it. Ties are all crowned, since picking one arbitrarily
+    // would be a lie. Nobody is crowned at zero: a crown for no sales is noise.
+    $apTopValue = $agentsPerformance->max('count') ?? 0;
   @endphp
   <div class="neo-ap-grid">
     @forelse ($agentsPerformance as $ap)
       @php
-        $apIsTop = $apTopValue > 0 && ($apSortKey === 'margin'
-            ? abs($ap->margin - $apTopValue) < 0.005   // float-safe
-            : $ap->count === $apTopValue);
+        $apIsTop = $apTopValue > 0 && $ap->count === $apTopValue;
         $apParts     = explode(' ', $ap->name);
         $apFirstName = $apParts[0];
         $apInitials  = strtoupper(mb_substr($apParts[0], 0, 1) . (count($apParts) > 1 ? mb_substr(end($apParts), 0, 1) : ''));
