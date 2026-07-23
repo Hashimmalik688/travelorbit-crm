@@ -81,14 +81,16 @@
 
 {{-- ══ AGENT LEADERBOARD (live) + AGENTS PERFORMANCE ══ --}}
 <style>
-.neo-ap-wrap { background:#EAEEF3;border-radius:20px;box-shadow:8px 8px 16px #C4CBD6,-8px -8px 16px #FFFFFF;overflow:hidden;height:100%; }
-.neo-ap-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between; }
+/* Class names are historical (neo-*); these surfaces are now FLAT to match
+   the single white card language in layouts/sections/design-v5.blade.php. */
+.neo-ap-wrap { background:#FFFFFF;border:1px solid var(--to-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden;height:100%; }
+.neo-ap-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--to-border); }
 {{-- Compact vertical tiles — small square avatar + name + one metric line —
      so a wall of ~50 agents stays a tidy grid rather than a long column. --}}
 .neo-ap-grid { display:grid;grid-template-columns:repeat(auto-fill, minmax(84px,1fr));gap:10px;padding:4px 18px 18px; }
-.neo-ap-tile { border-radius:14px;background:#EAEEF3;box-shadow:4px 4px 8px #C4CBD6,-4px -4px 8px #FFFFFF;padding:10px 6px 8px;text-align:center; }
+.neo-ap-tile { border-radius:10px;background:var(--to-page);border:1px solid var(--to-border);box-shadow:none;padding:10px 6px 8px;text-align:center; }
 .neo-ap-photo { width:52px;height:52px;margin:0 auto;border-radius:50%;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid transparent; }
-.neo-ap-dot { position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;border:2px solid #EAEEF3; }
+.neo-ap-dot { position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--to-page); }
 .neo-ap-name { font-size:0.75rem;font-weight:700;color:#1E293B;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .neo-ap-metric { font-size:0.72rem;font-weight:800;margin-top:1px;white-space:nowrap; }
 .neo-ap-metric small { font-weight:700;color:#94A3B8; }
@@ -135,13 +137,17 @@
 
 {{-- ══ RECENT BOOKINGS ══ --}}
 <style>
-.neo-rb-wrap { background:#EAEEF3;border-radius:20px;box-shadow:8px 8px 16px #C4CBD6,-8px -8px 16px #FFFFFF;overflow:hidden; }
-.neo-rb-hdr { padding:18px 22px 14px;display:flex;align-items:center;justify-content:between; }
-.neo-rb-table thead th { background:transparent;border:none;color:#64748B;text-transform:uppercase;font-size:0.648rem;letter-spacing:.06em;font-weight:800;padding:6px 14px 12px;white-space:nowrap; }
-.neo-rb-table tbody td { border:none;border-top:1px solid rgba(255,255,255,.7);padding:11px 14px;background:transparent; }
-.neo-rb-table tbody tr:hover td { background:rgba(255,255,255,.45); }
-.neo-rb-badge { display:inline-block;font-size:0.684rem;font-weight:800;border-radius:8px;padding:3px 9px;box-shadow:inset 2px 2px 4px #C4CBD6,inset -2px -2px 4px #FFFFFF;white-space:nowrap; }
-.neo-rb-num { border:none;border-radius:8px;padding:3px 10px;font-weight:800;box-shadow:3px 3px 6px #C4CBD6,-3px -3px 6px #FFFFFF;background:#EAEEF3;color:#332E9E;text-decoration:none;display:inline-block; }
+/* Class names are historical (neo-*); these surfaces are now FLAT. The table
+   uses the same header/divider treatment as every other table in the CRM:
+   a heavier rule under the header, hairlines between rows. */
+.neo-rb-wrap { background:#FFFFFF;border:1px solid var(--to-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden; }
+.neo-rb-hdr { padding:18px 22px 14px;display:flex;align-items:center;justify-content:between;border-bottom:1px solid var(--to-border); }
+.neo-rb-table thead th { background:transparent;border:none;border-bottom:2px solid #CBD5E1;color:#64748B;text-transform:uppercase;font-size:0.648rem;letter-spacing:.06em;font-weight:800;padding:10px 14px;white-space:nowrap; }
+.neo-rb-table tbody td { border:none;border-bottom:1px solid var(--to-border);padding:11px 14px;background:transparent; }
+.neo-rb-table tbody tr:last-child td { border-bottom:none; }
+.neo-rb-table tbody tr:hover td { background:rgba(79,70,229,0.045); }
+.neo-rb-badge { display:inline-block;font-size:0.684rem;font-weight:800;border-radius:8px;padding:3px 9px;background:var(--to-subtle);border:1px solid var(--to-border);box-shadow:none;white-space:nowrap; }
+.neo-rb-num { border:1px solid var(--to-border);border-radius:8px;padding:3px 10px;font-weight:800;box-shadow:none;background:var(--to-subtle);color:var(--to-indigo);text-decoration:none;display:inline-block; }
 </style>
 <div class="row g-3 mt-4">
   <div class="col-12 oc-up d5">
@@ -256,7 +262,7 @@ document.addEventListener('livewire:init', () => {
 
         node.style.transition = 'none';
         node.style.transform = `translate(${dx}px, ${dy}px)`;
-        node.style.boxShadow = '0 0 0 3px rgba(22,163,74,.35), 3px 3px 6px #C4CBD6, -3px -3px 6px #FFFFFF';
+        node.style.boxShadow = '0 0 0 3px rgba(22,163,74,.35), 0 1px 2px rgba(15,23,42,0.04)';
         requestAnimationFrame(() => {
           node.style.transition = 'transform 550ms cubic-bezier(.34,1.56,.64,1), box-shadow 550ms ease';
           node.style.transform = 'translate(0,0)';

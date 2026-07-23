@@ -1,18 +1,21 @@
 <div wire:poll.8s="$refresh">
 <style>
-.neo-sb-wrap { background:#EAEEF3;border-radius:20px;box-shadow:8px 8px 16px #C4CBD6,-8px -8px 16px #FFFFFF;overflow:hidden;height:100%; }
-.neo-sb-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between; }
+/* Class names are historical (neo-*); these surfaces are now FLAT to match
+   the single white card language in layouts/sections/design-v5.blade.php.
+   Geometry is unchanged — only fill, border and shadow. */
+.neo-sb-wrap { background:#FFFFFF;border:1px solid var(--to-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden;height:100%; }
+.neo-sb-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--to-border); }
 .neo-sb-col { padding:14px 18px 18px; }
 .neo-sb-label { font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px; }
 .neo-sb-row {
-  display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;margin-bottom:8px;
-  background:#EAEEF3;box-shadow:3px 3px 6px #C4CBD6,-3px -3px 6px #FFFFFF;
+  display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;margin-bottom:8px;
+  background:var(--to-page);border:1px solid var(--to-border);box-shadow:none;
 }
 .neo-sb-avatar { width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.696rem;font-weight:800;flex-shrink:0; }
 .neo-sb-count { font-size:0.84rem;font-weight:800; }
 .neo-sb-chip {
-  display:inline-block;font-size:0.792rem;color:#64748B;background:#EAEEF3;border-radius:20px;padding:5px 13px;margin:0 6px 8px 0;
-  box-shadow:inset 2px 2px 4px #C4CBD6,inset -2px -2px 4px #FFFFFF;
+  display:inline-block;font-size:0.792rem;color:#475569;background:var(--to-subtle);border:1px solid var(--to-border);
+  border-radius:20px;padding:5px 13px;margin:0 6px 8px 0;box-shadow:none;
 }
 .neo-sb-empty { font-size:0.816rem;color:#94A3B8; }
 </style>

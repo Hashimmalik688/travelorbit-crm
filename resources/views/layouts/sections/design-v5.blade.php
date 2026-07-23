@@ -24,18 +24,27 @@
   flattens the base — solid surfaces, visible hairlines, restrained
   shadow, no blur, no gradient fills.
 
-  WHY NO GLOBAL NEOMORPHIC UTILITIES HERE
-  ---------------------------------------
-  An earlier draft defined .neo-raised/.neo-inset/.neo-chip globally.
-  Review proved they would be dead code: the only markup using those
-  names (departure-arrival-report, dashboard, selling-board) defines
-  them in its own page-level <style>, which renders in the BODY and so
-  beats any layout-level rule. Worse, #F8FAFC cannot render
-  neomorphism at all — a #FFFFFF highlight is invisible against it,
-  making the effect a plain bottom-right drop shadow. Those dashboards
-  already use a working #EAEEF3/#C4CBD6 triad on their own ground.
-  So neomorphism stays where it demonstrably works — scoped to those
-  sections — and the base below stays flat. One language per surface.
+  NO NEOMORPHISM ANYWHERE — ONE FLAT SURFACE
+  ------------------------------------------
+  Two earlier attempts failed and are recorded here so they are not
+  retried. (1) Defining .neo-raised/.neo-inset/.neo-chip globally: dead
+  code, because the pages using those names define them in their own
+  page-level <style>, which renders in the BODY and beats any
+  layout-level rule. (2) Keeping the dashboards' #EAEEF3/#C4CBD6
+  neomorphic grounds while flattening everything else: that left grey
+  slabs sitting on a white page as the loudest thing on screen, so the
+  flattening read as "nothing changed".
+
+  Note also that v4's glassmorphism was largely theoretical: translucent
+  white (alpha .75-.9) over a #F8FAFC page composites to ~#FDFEFE, and
+  the 16px blur had nothing behind it to blur. Removing it changes
+  almost nothing on its own — the visible win is that cards now have a
+  real #E2E8F0 edge instead of an invisible white one.
+
+  So: one flat white card language everywhere, and the neo-* class names
+  that survive in dashboard.blade.php, selling-board.blade.php and
+  departure-arrival-report.blade.php are historical only — those rules
+  are now flat and carry a comment saying so.
 
   OUT OF SCOPE (deliberately untouched)
   -------------------------------------

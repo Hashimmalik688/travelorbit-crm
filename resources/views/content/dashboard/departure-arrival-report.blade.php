@@ -3,76 +3,77 @@
 
 @section('content')
 <style>
-/* Scoped to .neo-page, NOT :root — this <style> renders in the body, so a
-   :root block here would override the document's tokens for the whole page
-   and silently repaint anything else that reads --neo-*. Keeping it on the
-   wrapper means the neomorphic ground cannot escape this section. */
-.neo-page {
-  --neo-bg: #EAEEF3;
-  --neo-light: #FFFFFF;
-  --neo-dark: #C4CBD6;
-  background: var(--neo-bg); border-radius: 28px; padding: 28px;
-}
+/* Class names are historical (neo-*); every surface here is now FLAT, matching
+   the single white card language in layouts/sections/design-v5.blade.php.
+   Geometry (padding, radius, layout) is preserved — only fill, border and
+   shadow changed, so nothing reflows. */
+.neo-page { background: transparent; padding: 0; }
 .neo-raised {
-  background: var(--neo-bg);
-  border-radius: 20px;
-  border: none;
-  box-shadow: 8px 8px 16px var(--neo-dark), -8px -8px 16px var(--neo-light);
+  background: #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid var(--to-border);
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
 }
 .neo-inset {
-  background: var(--neo-bg);
-  border-radius: 12px;
-  border: none;
-  box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light);
+  background: var(--to-page);
+  border-radius: 10px;
+  border: 1px solid var(--to-border);
+  box-shadow: none;
 }
+/* #CBD5E1 keeps the field boundary at 3:1 (WCAG 1.4.11); #E2E8F0 on white
+   is only 1.23:1 and these inputs sit on a white card. */
 .neo-input {
-  background: var(--neo-bg) !important;
-  border: none !important;
-  border-radius: 12px !important;
-  box-shadow: inset 3px 3px 6px var(--neo-dark), inset -3px -3px 6px var(--neo-light) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
   padding: 8px 12px !important;
 }
-.neo-input:focus { box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light), 0 0 0 3px rgba(51,46,158,.12) !important; }
+.neo-input:focus { border-color: var(--to-indigo) !important; box-shadow: 0 0 0 3px rgba(79,70,229,.12) !important; }
 .neo-btn {
-  border: none;
-  border-radius: 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   padding: 8px 18px;
   font-weight: 700;
   font-size: 0.876rem;
   cursor: pointer;
-  transition: box-shadow .12s, transform .12s;
-  background: var(--neo-bg);
-  box-shadow: 5px 5px 10px var(--neo-dark), -5px -5px 10px var(--neo-light);
+  transition: background-color .12s, border-color .12s;
+  background: var(--to-indigo);
+  color: #fff;
+  box-shadow: none;
 }
-.neo-btn:active { box-shadow: inset 3px 3px 6px var(--neo-dark), inset -3px -3px 6px var(--neo-light); transform: translateY(1px); }
-.neo-btn.neo-primary { color: #332E9E; }
-.neo-btn.neo-ghost { color: #475569; }
+.neo-btn:hover { background: #4338CA; color: #fff; }
+.neo-btn.neo-primary { background: var(--to-indigo); color: #fff; }
+.neo-btn.neo-ghost { background: var(--to-subtle); border-color: var(--to-border); color: var(--to-slate); }
+.neo-btn.neo-ghost:hover { background: #E8EDF3; color: var(--to-slate); }
 .neo-chip {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 0.816rem; font-weight: 700; border-radius: 20px; padding: 6px 14px;
-  background: var(--neo-bg); box-shadow: 4px 4px 8px var(--neo-dark), -4px -4px 8px var(--neo-light);
-  text-decoration: none; color: #475569; transition: box-shadow .12s;
+  background: var(--to-subtle); border: 1px solid var(--to-border); box-shadow: none;
+  text-decoration: none; color: #475569; transition: background-color .12s, border-color .12s;
 }
-.neo-chip.active { box-shadow: inset 3px 3px 6px var(--neo-dark), inset -3px -3px 6px var(--neo-light); color: #332E9E; }
-.neo-table-wrap { background: var(--neo-bg); border-radius: 20px; box-shadow: 8px 8px 16px var(--neo-dark), -8px -8px 16px var(--neo-light); overflow: hidden; }
+.neo-chip:hover { background: #E8EDF3; color: var(--to-slate); }
+.neo-chip.active { background: var(--to-indigo); border-color: var(--to-indigo); color: #fff; box-shadow: none; }
+.neo-table-wrap { background: #FFFFFF; border: 1px solid var(--to-border); border-radius: 14px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); overflow: hidden; }
 .neo-table thead th {
-  background: transparent; border: none; color: #64748B; text-transform: uppercase;
-  font-size: 0.696rem; letter-spacing: .07em; font-weight: 800; padding: 16px 14px 10px;
+  background: transparent; border: none; border-bottom: 2px solid #CBD5E1; color: #64748B; text-transform: uppercase;
+  font-size: 0.696rem; letter-spacing: .07em; font-weight: 800; padding: 14px 14px 10px;
 }
-.neo-table tbody td { border: none; border-top: 1px solid rgba(255,255,255,.6); padding: 12px 14px; background: transparent; }
-.neo-table tbody tr:hover td { background: rgba(255,255,255,.35); }
+.neo-table tbody td { border: none; border-bottom: 1px solid var(--to-border); padding: 12px 14px; background: transparent; }
+.neo-table tbody tr:last-child td { border-bottom: none; }
+.neo-table tbody tr:hover td { background: rgba(79,70,229,0.045); }
 .neo-badge {
-  display: inline-block; font-size: 0.72rem; font-weight: 800; border-radius: 10px; padding: 3px 10px;
-  box-shadow: 3px 3px 6px var(--neo-dark), -3px -3px 6px var(--neo-light);
+  display: inline-block; font-size: 0.72rem; font-weight: 800; border-radius: 8px; padding: 3px 10px;
+  background: var(--to-subtle); border: 1px solid var(--to-border); box-shadow: none;
 }
-.neo-badge.neo-inset-badge { box-shadow: inset 2px 2px 4px var(--neo-dark), inset -2px -2px 4px var(--neo-light); }
+.neo-badge.neo-inset-badge { background: var(--to-subtle); border: 1px solid var(--to-border); box-shadow: none; }
 .neo-pagination .pagination { justify-content: center; }
 .neo-pagination .page-link {
-  background: var(--neo-bg) !important; border: none !important; color: #475569 !important;
-  box-shadow: 3px 3px 6px var(--neo-dark), -3px -3px 6px var(--neo-light); border-radius: 10px !important; margin: 0 3px;
+  background: #FFFFFF !important; border: 1px solid var(--to-border) !important; color: var(--to-slate) !important;
+  box-shadow: none; border-radius: 10px !important; margin: 0 3px;
 }
 .neo-pagination .page-item.active .page-link {
-  color: #332E9E !important; box-shadow: inset 2px 2px 4px var(--neo-dark), inset -2px -2px 4px var(--neo-light) !important;
+  background: var(--to-indigo) !important; border-color: var(--to-indigo) !important; color: #fff !important; box-shadow: none !important;
 }
 </style>
 
