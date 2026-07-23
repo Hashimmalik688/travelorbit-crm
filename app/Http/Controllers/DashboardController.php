@@ -12,6 +12,8 @@ class DashboardController extends Controller
         return $this->agentDashboard();
     }
 
+    public function accountsDashboardPage() { return $this->accountsDashboard(); }
+
     public function issuanceDashboardPage()  { return $this->issuanceDashboard(); }
 
     public function paymentPlanReport()
@@ -308,10 +310,22 @@ class DashboardController extends Controller
 
         return match ($user?->role) {
             'agent', 'operations' => $this->agentDashboard(),
-            'accounts'            => redirect()->route('payments'),
+            'accounts'            => $this->accountsDashboard(),
             'issuance'            => $this->issuanceDashboard(),
             default               => $this->adminDashboard(),
         };
+    }
+
+    protected function accountsDashboard()
+    {
+        $issueQueueBookings = Booking::where('booking_status', 'ticket_in_process')
+            ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
+        $invoiceQueueBookings = Booking::where('booking_status', 'issued')
+            ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
+
+        return view('content.dashboard.accounts-dashboard', compact(
+            'issueQueueBookings', 'invoiceQueueBookings'
+        ));
     }
 
     protected function adminDashboard()
@@ -378,8 +392,9 @@ class DashboardController extends Controller
         // component (polls on its own) — see resources/views/livewire/selling-board.blade.php.
 
         $perf = $this->agentsPerformanceData(true);
-        $agentsPerformance = $perf['agentsPerformance'];
-        $performanceLabel  = $perf['performanceLabel'];
+        $agentsPerformance  = $perf['agentsPerformance'];
+        $performanceLabel   = $perf['performanceLabel'];
+        $performanceSortKey = $perf['performanceSortKey'];
 
         // Recent Bookings: the 5 most recent bookings company-wide, not a
         // date window — same eager-loads as Fresh so netMargin() doesn't
@@ -394,7 +409,7 @@ class DashboardController extends Controller
             'issuedMarginThisMonth', 'issuedCountThisMonth',
             'pendingMarginThisMonth', 'pendingCountThisMonth',
             'outstandingPayments', 'outstandingCount',
-            'agentsPerformance', 'performanceLabel', 'recentBookings'
+            'agentsPerformance', 'performanceLabel', 'performanceSortKey', 'recentBookings'
         ));
     }
 
@@ -457,13 +472,22 @@ class DashboardController extends Controller
                     'margin'             => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
                     'count'              => $bookingsThisMonth->count(),
                 ];
-            })
-            ->sortByDesc($showMargin ? 'margin' : 'count')
-            ->values();
+            });
+
+        // Rank by whatever is actually meaningful. Margin is the natural
+        // ranking when it is shown AND somebody has earned some — but from the
+        // 20th the figure switches to Issued margin, which is £0 for everyone
+        // until bookings are fully paid. Ranking (and crowning) on an all-zero
+        // column would order the wall arbitrarily and leave nobody as top
+        // seller, so fall back to booking count in that case.
+        $sortKey = ($showMargin && $agentsPerformance->max('margin') > 0) ? 'margin' : 'count';
+
+        $agentsPerformance = $agentsPerformance->sortByDesc($sortKey)->values();
 
         return [
-            'agentsPerformance' => $agentsPerformance,
-            'performanceLabel'  => $cutoffPassed ? 'Issued Margin' : 'Fresh Margin',
+            'agentsPerformance'   => $agentsPerformance,
+            'performanceLabel'    => $cutoffPassed ? 'Issued Margin' : 'Fresh Margin',
+            'performanceSortKey'  => $sortKey,
         ];
     }
 
@@ -595,8 +619,9 @@ class DashboardController extends Controller
         // see agentsPerformanceData().
         $showPerformanceMargin = Auth::user()->canViewAllData();
         $perf = $this->agentsPerformanceData($showPerformanceMargin);
-        $agentsPerformance = $perf['agentsPerformance'];
-        $performanceLabel  = $perf['performanceLabel'];
+        $agentsPerformance  = $perf['agentsPerformance'];
+        $performanceLabel   = $perf['performanceLabel'];
+        $performanceSortKey = $perf['performanceSortKey'];
 
         return view('content.dashboard.agent-dashboard', compact(
             'myTotalBookings', 'myTodayBookings',
@@ -604,7 +629,7 @@ class DashboardController extends Controller
             'myFreshCount', 'myIssuedCount', 'myPendingCount', 'myPendingAllTimeCount',
             'calendarDays', 'allMonthData',
             'pendingTabBookings', 'pendingTypeCounts', 'pendingTypeFilter',
-            'allAgents', 'agentsPerformance', 'performanceLabel', 'showPerformanceMargin'
+            'allAgents', 'agentsPerformance', 'performanceLabel', 'performanceSortKey', 'showPerformanceMargin'
         ));
     }
 }

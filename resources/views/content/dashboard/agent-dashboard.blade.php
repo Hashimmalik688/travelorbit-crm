@@ -155,6 +155,7 @@
     @include('content.dashboard.partials._agents-performance', [
       'agentsPerformance' => $agentsPerformance,
       'performanceLabel'  => $performanceLabel,
+      'performanceSortKey'=> $performanceSortKey,
       'showMargin'        => $showPerformanceMargin,
     ])
   </div>

@@ -27,8 +27,24 @@
 .neo-ap-photo { width:100%;aspect-ratio:3/4;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden; }
 .neo-ap-dot { position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;border:2px solid #FFFFFF; }
 .neo-ap-name { font-size:0.75rem;font-weight:700;color:#1E293B;padding:6px 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.neo-ap-metric { font-size:0.72rem;font-weight:800;padding:0 4px 7px;white-space:nowrap; }
-.neo-ap-metric small { font-weight:700;color:#94A3B8; }
+.neo-ap-metric { font-size:0.72rem;font-weight:800;padding:0 4px 7px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px; }
+/* Booking count reads as a number, not a footnote. The ticket glyph carries
+   the meaning so the word "bookings" isn't needed on a 92px tile. */
+.neo-ap-count { display:inline-flex;align-items:center;gap:3px;font-size:0.78rem;font-weight:800;color:#334155;background:var(--to-subtle);border:1px solid var(--to-border);border-radius:20px;padding:1px 7px; }
+.neo-ap-count i { font-size:0.78rem;color:#94A3B8; }
+/* Count-only variant (margin hidden) gets the full weight to itself. */
+.neo-ap-count.is-solo { font-size:0.9rem;padding:2px 10px; }
+
+/* Top seller. The green/red ring already encodes today-activity, so the
+   crown gets its own gold halo rather than fighting for the border. */
+.neo-ap-tile.is-top { box-shadow:0 0 0 3px rgba(245,158,11,.38); }
+.neo-ap-crown {
+  position:absolute;top:-2px;left:4px;font-size:0.95rem;line-height:1;
+  filter:drop-shadow(0 1px 2px rgba(15,23,42,.35));
+  animation:neoCrownPop .45s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes neoCrownPop { from{transform:translateY(-6px) rotate(-14deg);opacity:0} to{transform:none;opacity:1} }
+@media (prefers-reduced-motion: reduce) { .neo-ap-crown { animation:none; } }
 </style>
 <div class="neo-ap-wrap">
   <div class="neo-ap-hdr">
@@ -39,9 +55,22 @@
       <span style="font-size:0.696rem;font-weight:800;color:#475569;background:var(--to-subtle);border-radius:20px;padding:2px 10px;">{{ now()->format('F Y') }}</span>
     @endif
   </div>
+  @php
+    // Crown must follow the SAME key the controller ranked by, so the crown is
+    // always on the leading tile. That key is margin only when margin is both
+    // shown and non-zero; otherwise it is booking count (see
+    // agentsPerformanceData). Ties are all crowned — picking one arbitrarily
+    // would be a lie. Nobody is crowned when the top value is zero: a crown
+    // for no sales is just noise.
+    $apSortKey  = $performanceSortKey ?? ($showMargin ? 'margin' : 'count');
+    $apTopValue = $agentsPerformance->max($apSortKey) ?? 0;
+  @endphp
   <div class="neo-ap-grid">
     @forelse ($agentsPerformance as $ap)
       @php
+        $apIsTop = $apTopValue > 0 && ($apSortKey === 'margin'
+            ? abs($ap->margin - $apTopValue) < 0.005   // float-safe
+            : $ap->count === $apTopValue);
         $apParts     = explode(' ', $ap->name);
         $apFirstName = $apParts[0];
         $apInitials  = strtoupper(mb_substr($apParts[0], 0, 1) . (count($apParts) > 1 ? mb_substr(end($apParts), 0, 1) : ''));
@@ -50,22 +79,31 @@
         $apColor     = $apActive ? '#10B981' : '#F43F5E';
         $apBookings  = $ap->count . ' booking' . ($ap->count !== 1 ? 's' : '') . ' this month';
         $apTitle     = $ap->name . ' — ' . ($apActive ? 'made a booking today' : 'no bookings today') . ' · '
-                     . ($showMargin ? '£' . number_format($ap->margin, 0) . ' margin, ' . $apBookings : $apBookings);
+                     . ($showMargin ? '£' . number_format($ap->margin, 0) . ' margin, ' . $apBookings : $apBookings)
+                     . ($apIsTop ? ' · top seller this month' : '');
       @endphp
-      <div class="neo-ap-tile" style="border-color:{{ $apColor }};" title="{{ $apTitle }}">
+      <div class="neo-ap-tile{{ $apIsTop ? ' is-top' : '' }}" style="border-color:{{ $apColor }};" title="{{ $apTitle }}">
         <div class="neo-ap-photo">
           @if ($apPhotoUrl)
             <img src="{{ $apPhotoUrl }}" alt="{{ $apFirstName }}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">
           @else
             <div style="font-size:1.32rem;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:.03em;">{{ $apInitials }}</div>
           @endif
+          @if ($apIsTop)
+            <span class="neo-ap-crown" aria-label="Top seller" role="img">👑</span>
+          @endif
           <span class="neo-ap-dot" style="background:{{ $apColor }};"></span>
         </div>
         <div class="neo-ap-name">{{ $apFirstName }}</div>
         @if ($showMargin)
-          <div class="neo-ap-metric" style="color:{{ $ap->margin >= 0 ? '#16A34A' : '#DC2626' }};">£{{ number_format($ap->margin, 0) }} <small>· {{ $ap->count }}</small></div>
+          <div class="neo-ap-metric" style="color:{{ $ap->margin >= 0 ? '#16A34A' : '#DC2626' }};">
+            £{{ number_format($ap->margin, 0) }}
+            <span class="neo-ap-count"><i class="ph ph-ticket"></i>{{ $ap->count }}</span>
+          </div>
         @else
-          <div class="neo-ap-metric" style="color:#475569;">{{ $ap->count }} <small>bkg{{ $ap->count !== 1 ? 's' : '' }}</small></div>
+          <div class="neo-ap-metric">
+            <span class="neo-ap-count is-solo"><i class="ph ph-ticket"></i>{{ $ap->count }}</span>
+          </div>
         @endif
       </div>
     @empty
