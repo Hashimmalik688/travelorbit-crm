@@ -3,12 +3,16 @@
 
 @section('content')
 <style>
-:root {
+/* Scoped to .neo-page, NOT :root — this <style> renders in the body, so a
+   :root block here would override the document's tokens for the whole page
+   and silently repaint anything else that reads --neo-*. Keeping it on the
+   wrapper means the neomorphic ground cannot escape this section. */
+.neo-page {
   --neo-bg: #EAEEF3;
   --neo-light: #FFFFFF;
   --neo-dark: #C4CBD6;
+  background: var(--neo-bg); border-radius: 28px; padding: 28px;
 }
-.neo-page { background: var(--neo-bg); border-radius: 28px; padding: 28px; }
 .neo-raised {
   background: var(--neo-bg);
   border-radius: 20px;

@@ -14,8 +14,11 @@
 .oc-up{ animation:fadeUp .4s ease both }
 .oc-up.d1{animation-delay:.04s}.oc-up.d2{animation-delay:.08s}.oc-up.d3{animation-delay:.12s}
 .oc-up.d4{animation-delay:.16s}.oc-up.d5{animation-delay:.20s}.oc-up.d6{animation-delay:.24s}
-.oc-card{ border-radius:16px;padding:22px 24px;background:linear-gradient(135deg,rgba(255,255,255,0.95) 0%,rgba(255,255,255,0.85) 100%);border:1px solid rgba(255,255,255,0.5);box-shadow:0 4px 24px rgba(51,46,158,0.08),0 1px 3px rgba(0,0,0,0.04);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px) }
-.oc-card:hover{ transform:translateY(-2px);box-shadow:0 8px 24px rgba(51,46,158,.10) }
+/* Flat to match the v5 card language (layouts/sections/design-v5.blade.php).
+   Hover changes shadow only — a KPI row that lifts under the cursor fights
+   the calm the rest of the page now has. */
+.oc-card{ border-radius:14px;padding:22px 24px;background:#FFFFFF;border:1px solid var(--to-border);box-shadow:0 1px 2px rgba(15,23,42,0.04);transition:box-shadow .12s ease;position:relative;overflow:hidden }
+.oc-card:hover{ box-shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04) }
 .oc-card::after{ content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0 }
 .oc-card.c-indigo::after{background:linear-gradient(90deg,#332E9E,#6366F1)}
 .oc-card.c-green::after {background:linear-gradient(90deg,#16A34A,#4ADE80)}

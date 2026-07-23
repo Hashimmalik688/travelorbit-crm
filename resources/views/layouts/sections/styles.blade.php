@@ -22,5 +22,9 @@
 @vite(['resources/css/app.css'])
 <!-- END: app CSS-->
 
+{{-- Design System v5 — minimal base. Must stay AFTER the app.css @vite
+     link so it wins on cascade order. Delete this line to revert. --}}
+@include('layouts.sections.design-v5')
+
 <!-- Livewire Styles -->
 @livewireStyles
