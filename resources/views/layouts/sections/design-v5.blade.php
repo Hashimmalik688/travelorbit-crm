@@ -251,4 +251,13 @@
 @media (prefers-reduced-motion: reduce) {
   .card, .to-stat, .btn { transition: none; }
 }
+
+/* ── Sidebar user photo ───────────────────────────────────────────
+   The 32px avatar in app.css was too small to actually recognise a
+   face. Overridden here rather than at source: app.css only reaches
+   the browser through a Vite rebuild, which would also ship unrelated
+   font-size changes. The size below is the avatar box only — it does
+   not alter any text in the app. */
+.sb-uc-avatar { width: 44px !important; height: 44px !important; border-radius: 12px !important; }
+.sb-uc-initials { font-size: 1.02rem; }
 </style>

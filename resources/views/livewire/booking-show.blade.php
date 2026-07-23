@@ -68,9 +68,11 @@
   $isAdmin    = $role === 'admin';
   $isOwner    = Auth::id() === $booking->user_id;
 
-  // ── Documents: owner while pending/confirmed, or bookings.edit_any always —
-  // matches BookingShow::canManageDocuments() enforced server-side. ──
-  $canUploadDocuments = $isPrivileged || ($isOwner && in_array($booking->booking_status, ['pending', 'confirmed']));
+  // ── Documents: never locked by workflow stage. The owner (or anyone with
+  // bookings.edit_any) can attach documents at ANY status — e-tickets,
+  // invoices and vouchers are attached precisely after issuance. Matches
+  // BookingShow::canManageDocuments() enforced server-side. ──
+  $canUploadDocuments = $isPrivileged || $isOwner;
 
   // ── Core form lock (booking info, passengers, flight, hotel sections) ──
   // Editable only when pending/confirmed, or by privileged roles always
@@ -141,7 +143,7 @@
   $typeIcons = ['flight'=>'ph-airplane','hotel'=>'ph-buildings','holiday'=>'ph-island','umrah'=>'ph-mosque','visa'=>'ph-identification-card','transfers'=>'ph-van','excursion'=>'ph-binoculars'];
   $typeIcon  = $typeIcons[$booking->booking_type ?? ''] ?? 'ph-ticket';
   $fd = $booking->flightDetail;
-  $leadLabels = ['to_returning'=>'TO Returning','to_referral'=>'TO Referral','referral_client'=>'Referral Client','returning_client'=>'Returning Client','fb'=>'Facebook','wa'=>'WhatsApp','email'=>'Email','diaspora_group'=>'Diaspora Group','instagram'=>'Instagram','tiktok'=>'TikTok','website'=>'Website','google'=>'Google'];
+  $leadLabels = ['to_returning'=>'TO Returning','to_referral'=>'TO Referral','referral_client'=>'Referral Client','returning_client'=>'Returning Client','fb'=>'Facebook','wa'=>'WhatsApp','email'=>'Email','diaspora_group'=>'Diaspora Group','instagram'=>'Instagram','tiktok'=>'TikTok','website'=>'Website','google'=>'Google','personal'=>'Personal'];
   $natureLabels = ['new_booking'=>'New Booking','date_change'=>'Date Change','refund_booking'=>'Refund Booking','previous_booking'=>'Previous Booking'];
   // Status → next action config
   $statusFlow = [
@@ -259,7 +261,7 @@
       </div>
       <div class="bv-section-body">
         <div class="row g-2">
-          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Source','model'=>'lead_source','val'=>$leadLabels[$booking->lead_source ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_source ?? '')),'type'=>'select','options'=>[['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google']],'locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
+          <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Source','model'=>'lead_source','val'=>$leadLabels[$booking->lead_source ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_source ?? '')),'type'=>'select','options'=>[['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google'],['value'=>'personal','label'=>'Personal']],'locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Lead Nature','model'=>'lead_nature','val'=>$natureLabels[$booking->lead_nature ?? ''] ?? ucfirst(str_replace('_',' ',$booking->lead_nature ?? '')),'type'=>'select','options'=>[['value'=>'new_booking','label'=>'New Booking'],['value'=>'date_change','label'=>'Date Change'],['value'=>'refund_booking','label'=>'Refund Booking'],['value'=>'previous_booking','label'=>'Previous Booking']],'locked'=>!$isPrivileged,'editingVar'=>'sectionEditing'])</div>
           <div class="col-md-4">@include('livewire.partials.editable-field', ['label'=>'Booking Type','model'=>'booking_type','val'=>ucfirst($booking->booking_type ?? ''),'type'=>'select','options'=>[['value'=>'flight','label'=>'Flight'],['value'=>'hotel','label'=>'Hotel'],['value'=>'holiday','label'=>'Holidays'],['value'=>'umrah','label'=>'Umrah'],['value'=>'visa','label'=>'Visa'],['value'=>'transfers','label'=>'Transfers'],['value'=>'excursion','label'=>'Excursion']],'locked'=>!$canEditBookingType,'editingVar'=>'sectionEditing'])</div>
 
@@ -716,7 +718,17 @@
         <h2 style="color:#fff;">Comments</h2>
         <span class="ms-auto" style="font-size:0.768rem;color:rgba(255,255,255,.45);">{{ count($activityLog) }} event{{ count($activityLog)!==1?'s':'' }}</span>
       </div>
-      <div class="bv-section-body" style="max-height:460px;overflow-y:auto;padding:14px 16px 8px;">
+      {{-- The feed runs oldest→newest, so the latest sits at the bottom. Open
+           pinned to the bottom (chat-style) and stay pinned as new entries land,
+           unless the reader has scrolled up into the history. --}}
+      <div class="bv-section-body" style="max-height:460px;overflow-y:auto;padding:14px 16px 8px;"
+        x-data="{ stick: true }"
+        x-init="
+          $nextTick(() => { $el.scrollTop = $el.scrollHeight });
+          new MutationObserver(() => { if (stick) $el.scrollTop = $el.scrollHeight })
+            .observe($el, { childList: true, subtree: true });
+        "
+        @scroll="stick = ($el.scrollHeight - $el.scrollTop - $el.clientHeight) < 40">
         @if(empty($activityLog))
           <p style="color:#475569;font-size:0.864rem;padding:4px 0;">No activity yet.</p>
         @else
@@ -725,22 +737,23 @@
               $c = $entry['color'] ?? $this->getActivityColorConfig($entry['action'] ?? '', $entry['type'] ?? 'info');
               $isFullRow = !empty($c['full_row']);
             @endphp
-            <div x-data="{ open: false, text: '' }" style="display:flex;gap:0;">
+            @php $grouped = ($entry['group_count'] ?? 1) > 1; @endphp
+            <div x-data="{ open: false, text: '', grp: false }" style="display:flex;gap:0;">
               {{-- Rail column: avatar circle + connecting line --}}
-              <div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0;">
+              <div style="display:flex;flex-direction:column;align-items:center;width:46px;flex-shrink:0;">
                 @if(!empty($entry['avatar_url']))
                   <img src="{{ $entry['avatar_url'] }}" alt="{{ $entry['avatar_initials'] ?? '?' }}"
-                    style="width:{{ $isFullRow ? '30px' : '24px' }};height:{{ $isFullRow ? '30px' : '24px' }};border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid {{ $c['border'] }};box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">
+                    style="width:{{ $isFullRow ? '38px' : '32px' }};height:{{ $isFullRow ? '38px' : '32px' }};border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid {{ $c['border'] }};box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">
                 @else
-                  <div style="width:{{ $isFullRow ? '30px' : '24px' }};height:{{ $isFullRow ? '30px' : '24px' }};border-radius:50%;background:{{ $c['border'] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:{{ $isFullRow ? '.63rem' : '.52rem' }};font-weight:800;color:#fff;box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">{{ $entry['avatar_initials'] ?? '?' }}</div>
+                  <div style="width:{{ $isFullRow ? '38px' : '32px' }};height:{{ $isFullRow ? '38px' : '32px' }};border-radius:50%;background:{{ $c['border'] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:{{ $isFullRow ? '.8rem' : '.7rem' }};font-weight:800;color:#fff;box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">{{ $entry['avatar_initials'] ?? '?' }}</div>
                 @endif
                 @if(!$loop->last)
-                  <div style="width:2px;flex:1;min-height:10px;background:linear-gradient(to bottom,{{ $c['border'] }}28,rgba(51,46,158,.06));margin-top:3px;"></div>
+                  <div style="width:2px;flex:1;min-height:8px;background:linear-gradient(to bottom,{{ $c['border'] }}28,rgba(51,46,158,.06));margin-top:3px;"></div>
                 @endif
               </div>
 
               {{-- Content --}}
-              <div style="flex:1;min-width:0;padding-left:10px;padding-bottom:{{ $loop->last ? '4px' : '18px' }};padding-top:{{ $isFullRow ? '1px' : '2px' }};">
+              <div style="flex:1;min-width:0;padding-left:10px;padding-bottom:{{ $loop->last ? '4px' : '10px' }};padding-top:{{ $isFullRow ? '1px' : '4px' }};">
                 {{-- Action line --}}
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.3;">
                   @if($isFullRow)
@@ -752,16 +765,35 @@
                   @if(!empty($c['label']) && $c['label'] !== 'Edit' && $c['label'] !== '')
                     <span style="font-size:0.648rem;font-weight:700;color:{{ $c['border'] }};background:{{ $c['border'] }}18;border:1px solid {{ $c['border'] }}44;padding:1px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;">{{ $c['label'] }}</span>
                   @endif
+                  {{-- Repeat count for a folded burst of identical events --}}
+                  @if($grouped)
+                    <span style="font-size:0.66rem;font-weight:800;color:#475569;background:rgba(100,116,139,.12);border:1px solid rgba(100,116,139,.28);padding:1px 7px;border-radius:20px;flex-shrink:0;">&times;{{ $entry['group_count'] }}</span>
+                  @endif
                 </div>
-                {{-- Agent + timestamp --}}
+                {{-- Agent + timestamp. A folded run shows its span, first → last. --}}
                 @if($isFullRow)
                   <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
                     <span style="font-size:0.78rem;font-weight:600;color:#475569;">{{ $entry['agent'] }}</span>
                     <span style="font-size:0.72rem;color:#64748B;">·</span>
-                    <span style="font-size:0.744rem;color:#475569;">{{ $entry['timestamp'] }}</span>
+                    <span style="font-size:0.744rem;color:#475569;">{{ $entry['timestamp'] }}@if($grouped) → {{ $entry['group_last_ts'] }}@endif</span>
                   </div>
                 @else
-                  <div style="font-size:0.72rem;color:#475569;margin-top:1px;">{{ $entry['timestamp'] }}</div>
+                  <div style="font-size:0.72rem;color:#475569;margin-top:1px;">{{ $entry['timestamp'] }}@if($grouped) → {{ $entry['group_last_ts'] }}@endif</div>
+                @endif
+                {{-- Every folded event is still here — one click lists them all. --}}
+                @if($grouped)
+                  <div style="margin-top:3px;">
+                    <button type="button" @click="grp = !grp"
+                      style="font-size:0.696rem;color:#475569;background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;gap:3px;line-height:1;">
+                      <i class="ph ph-caret-down" style="font-size:0.78rem;transition:transform .12s;" :style="grp ? 'transform:rotate(180deg)' : ''"></i>
+                      <span x-text="grp ? 'Hide' : 'Show all {{ $entry['group_count'] }}'"></span>
+                    </button>
+                    <div x-show="grp" x-cloak style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px 5px;">
+                      @foreach($entry['group_children'] as $ch)
+                        <span style="font-size:0.678rem;color:#475569;background:rgba(51,46,158,.05);border:1px solid rgba(51,46,158,.1);border-radius:6px;padding:1px 6px;white-space:nowrap;">{{ $ch['timestamp'] }}</span>
+                      @endforeach
+                    </div>
+                  </div>
                 @endif
                 {{-- Detail --}}
                 @if(!empty($entry['detail']))
@@ -781,9 +813,9 @@
                   @foreach($entry['reasons'] ?? [] as $r)
                     <div style="margin-top:7px;display:flex;gap:7px;align-items:flex-start;">
                       @if(!empty($r['avatar_url']))
-                        <img src="{{ $r['avatar_url'] }}" alt="{{ $r['avatar_initials'] ?? '?' }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(51,46,158,.22);margin-top:1px;">
+                        <img src="{{ $r['avatar_url'] }}" alt="{{ $r['avatar_initials'] ?? '?' }}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(51,46,158,.22);margin-top:1px;">
                       @else
-                        <div style="width:20px;height:20px;border-radius:50%;background:#332E9E;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.552rem;font-weight:800;color:#fff;margin-top:1px;">{{ $r['avatar_initials'] ?? '?' }}</div>
+                        <div style="width:30px;height:30px;border-radius:50%;background:#332E9E;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.72rem;font-weight:800;color:#fff;margin-top:1px;">{{ $r['avatar_initials'] ?? '?' }}</div>
                       @endif
                       <div style="flex:1;min-width:0;background:rgba(51,46,158,.04);border:1px solid rgba(51,46,158,.1);border-radius:8px;padding:5px 9px;">
                         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">

@@ -389,7 +389,61 @@ class BookingShow extends Component
         }
 
         usort($entries, fn($a, $b) => $a['ts_sort'] <=> $b['ts_sort']);
-        return $entries;
+        return $this->collapseRepeatedActivity($entries);
+    }
+
+    /**
+     * Collapse a burst of identical back-to-back events into one expandable row —
+     * the same person doing the same thing with nothing to read, e.g. "Opened
+     * Booking" 35 times in a row. Roughly 7 in 10 log entries are booking opens,
+     * so without this the real comments are buried.
+     *
+     * Nothing is discarded: every original entry is kept in 'group_children' and
+     * listed when the row is expanded.
+     *
+     * A run only folds when the entries are genuinely interchangeable — same
+     * action, same person and *identical* detail text (opens all read "Booking
+     * opened for viewing"). That shared text is still printed once on the folded
+     * row, so no wording is ever hidden. Anything a human typed is left alone:
+     * entries from the comments table, comment threads and preset notes never
+     * fold, even when they repeat.
+     */
+    protected function collapseRepeatedActivity(array $entries): array
+    {
+        $out = [];
+
+        foreach ($entries as $e) {
+            $groupable = !empty($e['is_json']) && empty($e['reasons']) && empty($e['preset']);
+            $last      = $out ? count($out) - 1 : null;
+
+            $continuesRun = $groupable
+                && $last !== null
+                && !empty($out[$last]['_groupable'])
+                && $out[$last]['action'] === $e['action']
+                && $out[$last]['agent']  === $e['agent']
+                && ($out[$last]['detail'] ?? '') === ($e['detail'] ?? '');
+
+            if ($continuesRun) {
+                // Seed the run with the row already in place, then append.
+                if (empty($out[$last]['group_children'])) {
+                    $base = $out[$last];
+                    unset($base['_groupable'], $base['group_children'], $base['group_count'], $base['group_last_ts']);
+                    $out[$last]['group_children'][] = $base;
+                }
+                $out[$last]['group_children'][] = $e;
+                $out[$last]['group_count']      = count($out[$last]['group_children']);
+                $out[$last]['group_last_ts']    = $e['timestamp'];
+                continue;
+            }
+
+            $e['_groupable']     = $groupable;
+            $e['group_children'] = [];
+            $e['group_count']    = 1;
+            $e['group_last_ts']  = $e['timestamp'];
+            $out[] = $e;
+        }
+
+        return $out;
     }
 
     private function loadBookingData(): void
@@ -772,14 +826,14 @@ class BookingShow extends Component
         }
     }
 
-    // Mirrors the blade's $canUploadDocuments gate (owner while pending/
-    // confirmed, or bookings.edit_any) so the Livewire actions can't be
-    // invoked directly once the UI would no longer show the upload control.
+    // Mirrors the blade's $canUploadDocuments gate. Documents are never locked
+    // by workflow stage: the owner (or anyone with bookings.edit_any) can attach
+    // them at ANY status — e-tickets/invoices/vouchers are attached after the
+    // booking is issued, so a stage lock here would block the main use case.
     private function canManageDocuments(): bool
     {
         return Auth::user()->hasPermission('bookings.edit_any')
-            || (Auth::id() === $this->booking->user_id
-                && in_array($this->booking->booking_status, ['pending', 'confirmed']));
+            || Auth::id() === $this->booking->user_id;
     }
 
     private function abortIfDocumentsLocked(): void
