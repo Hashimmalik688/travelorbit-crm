@@ -13,11 +13,6 @@
 @keyframes fadeUp   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 @keyframes countUp  { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
 @keyframes pulse    { 0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.4)} 50%{box-shadow:0 0 0 5px rgba(22,163,74,0)} }
-@keyframes heroFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-@keyframes orbFloat { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-10px,10px) scale(1.08)} }
-@keyframes orbFloat2{ 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(10px,-8px) scale(1.1)} }
-@keyframes planeDrift{ 0%,100%{transform:translateY(0) rotate(8deg)} 50%{transform:translateY(-10px) rotate(8deg)} }
-@keyframes iconPulse{ 0%,100%{box-shadow:0 0 0 0 var(--pulse-c,transparent)} 70%{box-shadow:0 0 0 8px transparent} }
 
 .ad-up      { animation: fadeUp .4s ease both; }
 .ad-up.d1   { animation-delay:.04s }
@@ -27,37 +22,25 @@
 .ad-up.d5   { animation-delay:.24s }
 .ad-count   { animation: countUp .6s cubic-bezier(.22,1,.36,1) both; animation-delay:.35s }
 
-/* Hero */
+/* Hero — a solid gradient banner. Flattened to match the rest of the CRM:
+   no backdrop blur, no translucency, no floating orbs, no animated flow. */
 .ad-hero {
-  background:linear-gradient(120deg,rgba(51,46,158,0.90) 0%,rgba(124,58,237,0.74) 45%,rgba(99,102,241,0.80) 100%);
-  background-size:200% 200%;
-  animation: fadeUp .4s ease both, heroFlow 10s ease-in-out infinite;
-  border-radius:20px;padding:22px 30px 52px;position:relative;overflow:hidden;
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,0.2);
-  box-shadow:0 8px 32px rgba(51,46,158,0.28),inset 0 1px 0 rgba(255,255,255,0.18);
+  background:linear-gradient(120deg,#332E9E 0%,#6D46C7 55%,#5B5BE6 100%);
+  animation: fadeUp .4s ease both;
+  border-radius:16px;padding:22px 30px 52px;position:relative;overflow:hidden;
+  box-shadow:0 1px 2px rgba(15,23,42,0.06);
 }
-.ad-orb { position:absolute;border-radius:50%;pointer-events:none; }
-.ad-orb.o1 { right:-50px;top:-50px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,255,255,0.1) 0%,transparent 70%);animation:orbFloat 7s ease-in-out infinite; }
-.ad-orb.o2 { left:-30px;bottom:-30px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,107,53,0.12) 0%,transparent 70%);animation:orbFloat2 8s ease-in-out infinite; }
-.ad-orb.o3 { right:25%;top:-15px;width:60px;height:60px;background:radial-gradient(circle,rgba(22,163,74,0.1) 0%,transparent 70%);animation:orbFloat 6s ease-in-out infinite; }
-.ad-hero-plane { position:absolute;right:34px;top:50%;transform:translateY(-50%) rotate(8deg);font-size:5rem;color:rgba(255,255,255,.14);animation:planeDrift 5s ease-in-out infinite;pointer-events:none; }
+.ad-hero-plane { position:absolute;right:34px;top:50%;transform:translateY(-50%) rotate(8deg);font-size:5rem;color:rgba(255,255,255,.12);pointer-events:none; }
 
-/* Money stats - Glassmorphism, floated up over the hero */
+/* Money stats — flat white cards, floated up over the hero */
 .ad-money-row { margin-top:-32px;position:relative;z-index:2; }
-.ad-money { border-radius:18px;padding:22px 24px;background:linear-gradient(135deg,rgba(255,255,255,0.95) 0%,rgba(255,255,255,0.85) 100%);border:1px solid rgba(255,255,255,0.6);box-shadow:0 10px 30px rgba(51,46,158,0.16),0 1px 3px rgba(0,0,0,0.04);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px) }
-.ad-money:hover { transform:translateY(-4px);box-shadow:0 16px 36px rgba(51,46,158,0.18) }
-.ad-money::after { content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:18px 18px 0 0 }
-.ad-money.fresh::after  { background:linear-gradient(90deg,#332E9E,#6366F1) }
-.ad-money.issued::after { background:linear-gradient(90deg,#16A34A,#4ADE80) }
-.ad-money.pending::after{ background:linear-gradient(90deg,#D97706,#FBBF24) }
-.ad-money.alltime::after{ background:linear-gradient(90deg,#64748B,#94A3B8) }
-.ad-money { height:100%;display:flex;flex-direction:column; }
-.ad-icon-badge { animation: iconPulse 2.6s ease-in-out infinite; }
-.ad-money.fresh   .ad-icon-badge { --pulse-c: rgba(51,46,158,.20); }
-.ad-money.issued  .ad-icon-badge { --pulse-c: rgba(22,163,74,.20); }
-.ad-money.pending .ad-icon-badge { --pulse-c: rgba(217,119,6,.20); }
-.ad-money.alltime .ad-icon-badge { --pulse-c: rgba(100,116,139,.20); }
+.ad-money { border-radius:14px;padding:22px 24px;background:#FFFFFF;border:1px solid var(--to-border);box-shadow:0 1px 2px rgba(15,23,42,0.04);position:relative;overflow:hidden;transition:box-shadow .12s ease;height:100%;display:flex;flex-direction:column; }
+.ad-money:hover { box-shadow:0 2px 6px rgba(15,23,42,.07) }
+.ad-money::after { content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0 }
+.ad-money.fresh::after  { background:#332E9E }
+.ad-money.issued::after { background:#16A34A }
+.ad-money.pending::after{ background:#D97706 }
+.ad-money.alltime::after{ background:#64748B }
 
 /* Calendar styles */
 .ad-cal-day {
@@ -93,11 +76,8 @@
 }
 </style>
 
-{{-- ══ GLASSMORPHISM HERO ══ --}}
+{{-- ══ HERO — solid gradient welcome banner ══ --}}
 <div class="ad-hero">
-  <div class="ad-orb o1"></div>
-  <div class="ad-orb o2"></div>
-  <div class="ad-orb o3"></div>
   <i class="ph ph-paper-plane-tilt ad-hero-plane"></i>
 
   <div style="position:relative;z-index:1;">
@@ -145,12 +125,12 @@
 {{-- Leaderboard carries counts only (no margin), safe for agents; the month
      sits beside it so the top of the dashboard reads in a single look. --}}
 @php $currentKey = now()->format('Y-m'); @endphp
-<div class="row g-3 mb-3 align-items-start">
+<div class="row g-3 mb-3">
   <div class="col-lg-8 ad-up d3">
     @livewire('selling-board')
   </div>
   <div class="col-lg-4">
-    <div class="ad-up d3" style="max-width:300px;margin-left:auto;background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);"
+    <div class="ad-up d3" style="max-width:300px;margin-left:auto;background:#FFFFFF;border-radius:14px;border:1px solid var(--to-border);box-shadow:0 1px 2px rgba(15,23,42,0.04);"
       x-data="{
         cur: @js($allMonthData[$currentKey])
       }">
@@ -204,7 +184,7 @@
 </div>
 
 {{-- ══ Pending Bookings — full width, most urgent payment date first ══ --}}
-<div class="ad-up d4" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);">
+<div class="ad-up d4" style="background:#FFFFFF;border-radius:14px;border:1px solid var(--to-border);overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,0.04);">
   <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-bottom:1px solid rgba(51,46,158,.06);">
     <h6 class="fw-bold mb-0" style="font-size:1.044rem;color:#0F172A;">Pending Bookings</h6>
     <span style="font-size:0.744rem;font-weight:700;color:#D97706;background:rgba(217,119,6,.10);padding:2px 9px;border-radius:20px;">{{ $pendingTabBookings->count() }} booking{{ $pendingTabBookings->count() !== 1 ? 's' : '' }}</span>
