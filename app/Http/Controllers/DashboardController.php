@@ -96,7 +96,12 @@ class DashboardController extends Controller
         $dateFrom = request()->has('from') ? (request('from') ?: null) : now()->subDays(5)->toDateString();
         $dateTo   = request()->has('to')   ? (request('to') ?: null)   : now()->addDays(7)->toDateString();
 
+        // Managers/accounts (data.view_all) see every booking's legs; an agent
+        // reaching this via reports.departure_arrival is scoped to their own
+        // bookings only, matching the app-wide own-vs-all data convention.
+        $user = auth()->user();
         $segments = \App\Models\BookingFlightDetail::with(['booking.user', 'booking.passengers'])
+            ->when(! $user->canViewAllData(), fn ($q) => $q->whereHas('booking', fn ($b) => $b->where('user_id', $user->id)))
             ->orderBy('booking_id')
             ->orderBy('id')
             ->get()
@@ -457,6 +462,12 @@ class DashboardController extends Controller
                     ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
                     ->get();
 
+                // The commission window flips on the 20th. Both the count and
+                // the margin come from the SAME set so they always agree:
+                //   days 1-19  → every live booking this month (Fresh)
+                //   day 20 on  → only issued-and-fully-paid bookings (Issued)
+                // On the 1st the month window is empty, so everything is 0
+                // until new bookings land — the monthly reset is automatic.
                 if ($cutoffPassed) {
                     $relevant = $bookingsThisMonth->whereIn('booking_status', $issuedStatuses)
                         ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
@@ -469,7 +480,7 @@ class DashboardController extends Controller
                     'profile_photo_path' => $agent->profile_photo_path,
                     'made_booking_today' => $agent->today_bookings > 0,
                     'margin'             => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
-                    'count'              => $bookingsThisMonth->count(),
+                    'count'              => $relevant->count(),
                 ];
             })
             // It's a competition on volume: most bookings this month comes top,
