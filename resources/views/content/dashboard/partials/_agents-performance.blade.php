@@ -23,8 +23,11 @@
 /* Tile is full-bleed: the portrait fills its whole width so the face is
    shown properly rather than cropped into a small circle. The green/red
    today-activity ring lives on the tile edge. */
-.neo-ap-tile { border-radius:10px;background:var(--to-page);border:2px solid var(--to-border);box-shadow:none;padding:0;overflow:hidden;text-align:center; }
-.neo-ap-photo { width:100%;aspect-ratio:3/4;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden; }
+/* overflow is VISIBLE so the top-seller crown can hang off the corner. The
+   photo therefore has to round its own top corners — the tile can no longer
+   clip them for it. position:relative anchors the crown to the tile corner. */
+.neo-ap-tile { border-radius:10px;background:var(--to-page);border:2px solid var(--to-border);box-shadow:none;padding:0;overflow:visible;position:relative;text-align:center; }
+.neo-ap-photo { width:100%;aspect-ratio:3/4;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:8px 8px 0 0; }
 .neo-ap-dot { position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;border:2px solid #FFFFFF; }
 .neo-ap-name { font-size:0.75rem;font-weight:700;color:#1E293B;padding:6px 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .neo-ap-metric { font-size:0.72rem;font-weight:800;padding:0 4px 7px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px; }
@@ -37,19 +40,20 @@
 
 /* Top seller. The green/red ring already encodes today-activity, so the
    crown gets its own gold halo rather than fighting for the border.
-   NOTE: .neo-ap-tile sets overflow:hidden, so the crown must sit fully
-   INSIDE the photo — a negative offset gets clipped to a sliver. */
+   The crown is a child of the TILE (not the photo) — the photo clips its
+   own overflow, so a crown inside it could never hang past the corner. */
 .neo-ap-tile.is-top { box-shadow:0 0 0 3px rgba(245,158,11,.45); }
 .neo-ap-crown {
-  position:absolute;top:5px;left:5px;z-index:2;
-  width:23px;height:23px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.92rem;line-height:1;
-  background:#FFFFFF;
-  box-shadow:0 1px 5px rgba(15,23,42,.35);
-  animation:neoCrownPop .45s cubic-bezier(.34,1.56,.64,1) both;
+  position:absolute;top:-11px;left:-9px;z-index:3;
+  font-size:1.15rem;line-height:1;
+  transform:rotate(-30deg);
+  transform-origin:bottom right;   /* pivots on the corner it sits on */
+  filter:drop-shadow(0 2px 3px rgba(15,23,42,.4));
+  pointer-events:none;
 }
-@keyframes neoCrownPop { from{transform:translateY(-6px) rotate(-14deg);opacity:0} to{transform:none;opacity:1} }
+/* Ends on the tilt, not transform:none — otherwise the animation would
+   straighten the crown as it lands. */
+@keyframes neoCrownPop { from{transform:translateY(-9px) rotate(-70deg);opacity:0} to{transform:rotate(-30deg);opacity:1} }
 @media (prefers-reduced-motion: reduce) { .neo-ap-crown { animation:none; } }
 </style>
 <div class="neo-ap-wrap">
@@ -84,14 +88,16 @@
                      . ($apIsTop ? ' · top seller this month' : '');
       @endphp
       <div class="neo-ap-tile{{ $apIsTop ? ' is-top' : '' }}" style="border-color:{{ $apColor }};" title="{{ $apTitle }}">
+        {{-- Sibling of the photo, not a child: the photo clips its own
+             overflow, so a crown inside it could not overhang the corner. --}}
+        @if ($apIsTop)
+          <span class="neo-ap-crown" aria-label="Top seller" role="img">👑</span>
+        @endif
         <div class="neo-ap-photo">
           @if ($apPhotoUrl)
             <img src="{{ $apPhotoUrl }}" alt="{{ $apFirstName }}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">
           @else
             <div style="font-size:1.32rem;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:.03em;">{{ $apInitials }}</div>
-          @endif
-          @if ($apIsTop)
-            <span class="neo-ap-crown" aria-label="Top seller" role="img">👑</span>
           @endif
           <span class="neo-ap-dot" style="background:{{ $apColor }};"></span>
         </div>
