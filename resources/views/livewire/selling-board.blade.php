@@ -4,11 +4,11 @@
    the single white card language in layouts/sections/design-v5.blade.php.
    Geometry is unchanged — only fill, border and shadow. */
 .neo-sb-wrap { background:#FFFFFF;border:1px solid var(--to-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden;height:100%; }
-.neo-sb-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--to-border); }
-.neo-sb-col { padding:14px 18px 18px; }
-.neo-sb-label { font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px; }
+.neo-sb-hdr { padding:12px 18px 9px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--to-border); }
+.neo-sb-col { padding:11px 16px 13px; }
+.neo-sb-label { font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px; }
 .neo-sb-row {
-  display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;margin-bottom:8px;
+  display:flex;align-items:center;gap:10px;padding:6px 11px;border-radius:10px;margin-bottom:6px;
   background:var(--to-page);border:1px solid var(--to-border);box-shadow:none;
 }
 .neo-sb-avatar { width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.696rem;font-weight:800;flex-shrink:0; }
