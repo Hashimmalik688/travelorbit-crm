@@ -28,6 +28,10 @@
   .left{background:#fff;border-right:1px solid var(--line)}
   .right{background:#e4e6ee;display:flex;flex-direction:column;align-items:center}
 
+  .back-link{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--sub);
+    text-decoration:none;margin-bottom:14px}
+  .back-link:hover{color:var(--indigo)}
+
   .brandbar{display:flex;align-items:center;gap:10px;margin-bottom:18px}
   .brandbar img{height:30px}
   .brandbar .t{font-family:'Manrope';font-weight:800;font-size:13px;color:var(--ink)}
@@ -42,9 +46,10 @@
   .frow.c3{grid-template-columns:1fr 1fr 1fr}
   .frow.c1{grid-template-columns:1fr}
   .field label{display:block;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
-  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:inherit;
+  .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:inherit;
     font-size:12.5px;background:#fff;color:var(--ink)}
-  .field input:focus,.field select:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 2px rgba(51,46,143,.12)}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 2px rgba(51,46,143,.12)}
+  .field textarea{resize:vertical;min-height:52px;line-height:1.4}
 
   .pax-card{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:#fff;position:relative}
   .card-remove{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:6px;border:none;
@@ -111,13 +116,13 @@
   header{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:6px}
   header .logo img{height:44px;display:block;filter:drop-shadow(0 1px 2px rgba(43,48,64,.12))}
   header .services{font-size:10.5px;color:var(--sub);margin-top:9px;letter-spacing:.2px;font-weight:600}
-  header .contacts{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:2px}
-  header .c-row{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--sub)}
+  header .contacts{display:flex;align-items:center;justify-content:flex-end;gap:16px;flex-wrap:wrap;margin-top:10px}
+  header .c-row{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--sub);white-space:nowrap}
   header .c-row b{color:var(--ink);font-weight:800}
-  header .c-row .ic{flex-shrink:0;width:16px;height:16px;border-radius:6px;display:flex;align-items:center;
+  header .c-row .ic{flex-shrink:0;width:21px;height:21px;border-radius:6px;display:flex;align-items:center;
     justify-content:center;background:rgba(91,86,214,.12);color:var(--indigo)}
   header .c-row.wa .ic{background:rgba(63,161,104,.14);color:#3fa168}
-  header .c-row .ic svg{width:9.5px;height:9.5px}
+  header .c-row .ic svg{width:12px;height:12px}
 
   /* prominent centered document title, sat between the contact row and the
      agent card — the header's one clear statement of what this document is */
@@ -153,6 +158,7 @@
   table.pax th{font-family:'Manrope';font-size:8.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
     color:var(--faint);text-align:left;padding:0 12px 8px;border-bottom:1px solid var(--line)}
   table.pax td{padding:14px 12px;font-size:13px;border-bottom:1px solid var(--line2);vertical-align:top}
+  table.pax .bag{white-space:pre-line}
   table.pax tr:last-child td{border-bottom:1px solid var(--line)}
   table.pax .pname{font-weight:700}
   table.pax .ptype{display:block;font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--faint);margin-top:1px}
@@ -258,7 +264,7 @@
        anything past one viewport height in Chromium's print engine too — without
        this override, everything below the first "page" of content is silently
        dropped instead of flowing onto page 2. */
-    .panel{max-height:none !important;overflow:visible !important}
+    .panel{max-height:none !important;overflow:visible !important;padding:0 !important}
     .sheet{margin:0;box-shadow:none;width:auto}
     .sheet::before{display:none}
     .itin-controls,.itin-add{display:none !important}
@@ -290,12 +296,20 @@
     'lock'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
     'apple'    => '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.7 12.7c0-3 2.4-4.4 2.5-4.5-1.4-2-3.5-2.3-4.2-2.3-1.8-.2-3.5 1-4.4 1-.9 0-2.3-1-3.8-1-1.9 0-3.7 1.1-4.7 2.9-2 3.5-.5 8.6 1.4 11.5 1 1.4 2.1 3 3.6 2.9 1.4-.1 2-.9 3.7-.9s2.2.9 3.7.9c1.5 0 2.5-1.4 3.5-2.8.9-1.3 1.4-2.7 1.4-2.7-1.7-.6-2.7-2.3-2.7-4.2z"/><path d="M13.9 4.2c.8-1 1.4-2.4 1.2-3.7-1.2 0-2.6.8-3.5 1.8-.7.8-1.4 2.2-1.2 3.6 1.4.1 2.7-.7 3.5-1.7z"/></svg>',
   ];
+
+  // Standalone page (no shared sidebar/navbar), so it needs its own way back —
+  // same role → dashboard-route split the main sidebar uses (verticalMenu.json).
+  $backUrl = in_array(auth()->user()?->role, ['admin', 'manager']) ? url('/') : url('/my-dashboard');
 @endphp
 <body x-data="eticketBuilder()" @paste.window="onItinPaste($event)">
 
 <div class="shell">
   <!-- ================= LEFT: FORM ================= -->
   <div class="panel left">
+    <a href="{{ $backUrl }}" class="back-link">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back to MIS
+    </a>
     <div class="brandbar">
       <img src="{{ asset('images/eticket-logo.png') }}" alt="Travel Orbit">
       <div class="t">E-Ticket Builder<small>Standalone: nothing here saves to the booking</small></div>
@@ -311,11 +325,11 @@
       <h3>{!! $icon['ticket'] !!}Load From Booking</h3>
       <template x-if="!selectedBooking">
         <div class="search-wrap">
-          <input type="text" placeholder="Search booking # or customer name…" x-model="query"
-                 @focus="showDropdown = true" @input="showDropdown = true"
+          <input type="text" autocomplete="off" placeholder="Search by booking reference…" x-model="query"
+                 @focus="if (query.trim()) showDropdown = true" @input="showDropdown = query.trim().length > 0"
                  @click.outside="showDropdown = false"
                  style="width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:12.5px;">
-          <div class="search-results" x-show="showDropdown" x-cloak>
+          <div class="search-results" x-show="showDropdown && query.trim().length > 0" x-cloak>
             <template x-for="b in filteredBookings" :key="b.id">
               <button type="button" @click="pickBooking(b)" x-text="b.label"></button>
             </template>
@@ -336,27 +350,16 @@
       <div class="loading-tag" x-show="loading" x-cloak>Loading booking data…</div>
     </div>
 
-    <div class="fieldset">
-      <h3>{!! $icon['doc'] !!}Ticket Details</h3>
-      <div class="frow">
-        <div class="field"><label>Booking Reference</label><input type="text" x-model="bookingRef"></div>
-        <div class="field"><label>Airline Ref / PNR</label><input type="text" x-model="airlineRef"></div>
-      </div>
-      <div class="frow">
-        <div class="field"><label>Date Issued</label><input type="text" x-model="issueDate" placeholder="15 Jul 2026"></div>
-        <div class="field"><label>Status</label><input type="text" x-model="status" placeholder="Issued"></div>
-      </div>
-    </div>
 
     <div class="fieldset">
       <h3>{!! $icon['user'] !!}Travel Consultant</h3>
       <div class="frow">
-        <div class="field"><label>Name</label><input type="text" x-model="agentName"></div>
-        <div class="field"><label>Email</label><input type="text" x-model="agentEmail"></div>
+        <div class="field"><label>Name</label><input type="text" autocomplete="off" x-model="agentName"></div>
+        <div class="field"><label>Email</label><input type="text" autocomplete="off" x-model="agentEmail"></div>
       </div>
       <div class="frow">
-        <div class="field"><label>Phone</label><input type="text" x-model="agentPhone"></div>
-        <div class="field"><label>WhatsApp</label><input type="text" x-model="agentWhatsapp"></div>
+        <div class="field"><label>Phone</label><input type="text" autocomplete="off" x-model="agentPhone"></div>
+        <div class="field"><label>WhatsApp</label><input type="text" autocomplete="off" x-model="agentWhatsapp"></div>
       </div>
     </div>
 
@@ -366,14 +369,17 @@
         <div class="pax-card">
           <button type="button" class="card-remove" @click="removePassenger(i)" x-show="passengers.length > 1">✕</button>
           <div class="frow">
-            <div class="field"><label>Full Name</label><input type="text" x-model="p.name" placeholder="James Anderson"></div>
+            <div class="field"><label>Full Name</label><input type="text" autocomplete="off" x-model="p.name" placeholder="James Anderson"></div>
             <div class="field"><label>Type</label>
               <select x-model="p.type"><option>Adult</option><option>Youth</option><option>Child</option><option>Infant</option></select>
             </div>
           </div>
           <div class="frow">
-            <div class="field"><label>E-Ticket Number</label><input type="text" x-model="p.eticket" placeholder="176-1234567890"></div>
-            <div class="field"><label>Airline Ref</label><input type="text" x-model="p.airlineRef" placeholder="Per-passenger, if it differs"></div>
+            <div class="field"><label>E-Ticket Number</label><input type="text" autocomplete="off" x-model="p.eticket" placeholder="176-1234567890"></div>
+            <div class="field"><label>Airline Ref</label><input type="text" autocomplete="off" x-model="p.airlineRef" placeholder="Per-passenger, if it differs"></div>
+          </div>
+          <div class="frow c1">
+            <div class="field"><label>Baggage Allowance</label><textarea rows="2" x-model="p.baggage" placeholder="2 x 23kg + 7kg cabin"></textarea></div>
           </div>
         </div>
       </template>
@@ -429,7 +435,7 @@
               <td x-text="String(i+1).padStart(2,'0')"></td>
               <td><span class="pname" x-text="p.name || 'N/A'"></span><span class="ptype" x-text="p.type"></span></td>
               <td class="tkt" x-text="p.eticket || 'N/A'"></td>
-              <td x-text="'Confirm with airline'"></td>
+              <td class="bag" x-text="p.baggage || 'Confirm with airline'"></td>
               <td class="tkt" x-text="p.airlineRef || 'N/A'"></td>
             </tr>
           </template>
@@ -531,7 +537,6 @@ function eticketBuilder() {
       conditionsUrl: 'https://travelorbit.co.uk/terms/',
     },
 
-    bookingRef: '', airlineRef: '', issueDate: '', status: 'Issued',
     agentName: '', agentPhone: '', agentWhatsapp: '', agentEmail: '',
     passengers: [],
     itineraryImages: [],
@@ -543,7 +548,8 @@ function eticketBuilder() {
 
     get filteredBookings() {
       const q = this.query.trim().toLowerCase();
-      const list = q ? this.bookings.filter(b => b.label.toLowerCase().includes(q)) : this.bookings;
+      if (!q) return [];
+      const list = this.bookings.filter(b => b.reference.toLowerCase().includes(q));
       return list.slice(0, 50);
     },
 
@@ -554,16 +560,15 @@ function eticketBuilder() {
       try {
         const res = await fetch(`/eticket/data/${b.id}`);
         const data = await res.json();
-        this.bookingRef = data.bookingRef;
-        this.issueDate = data.issueDate;
-        this.status = data.status;
         this.agentName = data.agentName;
         this.agentPhone = data.agentPhone;
         this.agentWhatsapp = data.agentWhatsapp;
         this.agentEmail = data.agentEmail;
-        this.passengers = data.passengers.length ? data.passengers : [this.blankPassenger()];
         const first = data.segments[0];
-        this.airlineRef = first ? (first.airlineLocator || (first.locator || '').split('/')[0].trim()) : '';
+        const defaultBaggage = first ? (first.baggage || '') : '';
+        this.passengers = data.passengers.length
+          ? data.passengers.map(p => ({ ...p, baggage: p.baggage || defaultBaggage }))
+          : [this.blankPassenger()];
         this.selectedBooking = { ref: data.bookingRef, customer: data.customerName || 'Unnamed' };
       } finally {
         this.loading = false;
@@ -577,14 +582,14 @@ function eticketBuilder() {
     },
 
     blankPassenger() {
-      return { name: '', type: 'Adult', eticket: '', airlineRef: '' };
+      return { name: '', type: 'Adult', eticket: '', airlineRef: '', baggage: '' };
     },
     addPassenger() { this.passengers.push(this.blankPassenger()); },
     removePassenger(i) { this.passengers.splice(i, 1); },
 
     resetAll() {
       if (!confirm('Clear the whole form?')) return;
-      this.query = ''; this.selectedBooking = null; this.bookingRef = ''; this.airlineRef = ''; this.issueDate = ''; this.status = 'Issued';
+      this.query = ''; this.selectedBooking = null;
       this.agentName = ''; this.agentPhone = ''; this.agentWhatsapp = ''; this.agentEmail = '';
       this.passengers = [this.blankPassenger()];
       this.itineraryImages = [];

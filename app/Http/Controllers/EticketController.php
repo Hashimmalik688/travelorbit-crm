@@ -21,7 +21,8 @@ class EticketController extends Controller
             ->get()
             ->map(fn (Booking $b) => [
                 'id' => $b->id,
-                'label' => sprintf('TO-%06d — %s', $b->booking_number, self::resolveName($b)),
+                'reference' => '#' . $b->booking_number,
+                'label' => sprintf('#%d — %s', $b->booking_number, self::resolveName($b)),
             ]);
 
         return view('eticket.builder', compact('bookings'));
@@ -33,7 +34,7 @@ class EticketController extends Controller
         $booking->load(['user', 'customer', 'passengers', 'flightDetails']);
 
         return response()->json([
-            'bookingRef' => 'TO-' . str_pad((string) $booking->booking_number, 6, '0', STR_PAD_LEFT),
+            'bookingRef' => '#' . $booking->booking_number,
             'customerName' => self::resolveName($booking),
             'issueDate'  => \Carbon\Carbon::parse($booking->invoiced_at ?? $booking->created_at)->format('d M Y'),
             'status'     => Booking::STATUS_LABELS[$booking->booking_status === 'invoiced' ? 'issued' : $booking->booking_status]

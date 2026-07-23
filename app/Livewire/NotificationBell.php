@@ -27,7 +27,7 @@ class NotificationBell extends Component
 
         if ($user->hasPermission('accounts.access')) {
             $n = Booking::where('booking_status','ticket_in_process')->count();
-            if ($n > 0) $items->push(['icon'=>'ph-receipt','color'=>'#0EA5E9','bg'=>'rgba(14,165,233,.08)','title'=>"{$n} booking".($n>1?'s':'').' ready to invoice','sub'=>'Ticket in Process','url'=>route('payments')]);
+            if ($n > 0) $items->push(['icon'=>'ph-receipt','color'=>'#0EA5E9','bg'=>'rgba(14,165,233,.08)','title'=>"{$n} booking".($n>1?'s':'').' ready to invoice','sub'=>'Ticket in Process','url'=>route('accounts.dashboard')]);
         }
 
         if ($user->hasPermission('accounts.access')) {
