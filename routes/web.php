@@ -7,7 +7,6 @@ use App\Http\Controllers\Crm\CustomerController;
 use App\Http\Controllers\Crm\BookingController;
 use App\Http\Controllers\Crm\BookingWorkflowController;
 use App\Http\Controllers\EticketController;
-use App\Http\Controllers\Finance\PaymentController;
 use App\Http\Controllers\Finance\RefundController;
 use App\Http\Controllers\Mis\ReportController;
 use App\Http\Controllers\SettingsController;
@@ -73,7 +72,6 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware('permission:accounts.access')->group(function () {
-        Route::get('/payments', [PaymentController::class, 'index'])->name('payments');
         Route::get('/refunds', [RefundController::class, 'index'])->name('refunds');
         Route::get('/payment-charges', fn() => view('content.finance.payment-charge-requests'))->name('payment-charges');
     });
@@ -82,6 +80,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports',             fn() => view('content.reports.index'))->name('reports');
         Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');
         Route::get('/reports/payment-status', [DashboardController::class, 'paymentStatusReport'])->name('reports.payment-status');
+    });
+
+    // Departure/Arrival — reports.view holders (managers/accounts) see every
+    // booking; agents/operations reach it via reports.departure_arrival and are
+    // scoped to their own bookings inside the controller (canViewAllData gate).
+    Route::middleware('permission:reports.view,reports.departure_arrival')->group(function () {
         Route::get('/reports/departure-arrival', [DashboardController::class, 'departureArrivalReport'])->name('reports.departure-arrival');
     });
 

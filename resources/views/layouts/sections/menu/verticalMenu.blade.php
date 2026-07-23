@@ -32,6 +32,11 @@ $bottomSlugs  = [];
         $menuPerms = isset($menu->permissions) ? (array)$menu->permissions : null;
         $menuExcl  = isset($menu->excludePermissions) ? (array)$menu->excludePermissions : null;
         $menuRoles = isset($menu->roles) ? (array)$menu->roles : null;
+        // `excludeRoles` hides an item from specific roles even when they hold
+        // the permission that would otherwise show it — used to keep e.g.
+        // Customers and Reports out of the Accounts nav without revoking the
+        // underlying permission grant. Applied on top of the perm/role gate.
+        $menuExclRoles = isset($menu->excludeRoles) ? (array)$menu->excludeRoles : null;
         if ($menuPerms !== null) {
             $isVisible = $user && $user->hasAnyPermission($menuPerms)
                 && (!$menuExcl || !$user->hasAnyPermission($menuExcl));
@@ -39,6 +44,9 @@ $bottomSlugs  = [];
             $isVisible = in_array($userRole, $menuRoles);
         } else {
             $isVisible = true;
+        }
+        if ($isVisible && $menuExclRoles && in_array($userRole, $menuExclRoles)) {
+            $isVisible = false;
         }
       @endphp
       @continue(!$isVisible)

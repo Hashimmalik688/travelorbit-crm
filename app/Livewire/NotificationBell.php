@@ -32,7 +32,7 @@ class NotificationBell extends Component
 
         if ($user->hasPermission('accounts.access')) {
             $n = BookingPayment::where('balance_remaining','>',0)->whereNotNull('due_date')->where('due_date','<',now())->count();
-            if ($n > 0) $items->push(['icon'=>'ph-warning-circle','color'=>'#DC2626','bg'=>'rgba(220,38,38,.08)','title'=>"{$n} overdue payment".($n>1?'s':''),'sub'=>'Past balance due date','url'=>route('payments')]);
+            if ($n > 0) $items->push(['icon'=>'ph-warning-circle','color'=>'#DC2626','bg'=>'rgba(220,38,38,.08)','title'=>"{$n} overdue payment".($n>1?'s':''),'sub'=>'Past balance due date','url'=>route('accounts.dashboard')]);
         }
 
         if ($user->role === 'agent') {

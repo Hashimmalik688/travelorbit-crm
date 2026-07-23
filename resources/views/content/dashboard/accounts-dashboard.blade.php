@@ -25,13 +25,7 @@
   <div style="position:relative;z-index:1;">
     <div style="font-size:0.744rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">{{ now()->format('l, d F Y') }}</div>
     <h2 style="color:#fff;font-size:1.68rem;font-weight:800;letter-spacing:-.03em;margin:0;">Accounts Hub <span style="font-size:0.936rem;font-weight:500;opacity:.55;">- {{ $user->name }}</span></h2>
-    <p style="color:rgba(255,255,255,.55);font-size:0.96rem;margin:4px 0 0;">Issue tickets <span style="opacity:.4;">·</span> invoice bookings <span style="opacity:.4;">·</span> manage payments</p>
-  </div>
-  <div class="d-flex gap-2 flex-shrink-0" style="position:relative;z-index:1;">
-    <a href="{{ route('payments') }}" class="btn btn-sm fw-semibold d-flex align-items-center gap-1"
-      style="background:linear-gradient(135deg,rgba(255,255,255,0.2) 0%,rgba(255,255,255,0.1) 100%);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:0.912rem;">
-      <i class="ph ph-credit-card"></i> Payments
-    </a>
+    <p style="color:rgba(255,255,255,.55);font-size:0.96rem;margin:4px 0 0;">Issue tickets <span style="opacity:.4;">·</span> invoice bookings</p>
   </div>
 </div>
 
