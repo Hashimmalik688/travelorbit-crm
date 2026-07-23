@@ -24,7 +24,7 @@
 return [
 
     // Display order for the checkbox matrix, grouped by the `group` field below.
-    'groups' => ['Bookings', 'Customers', 'Issuance', 'Accounts', 'Reports', 'Data'],
+    'groups' => ['Bookings', 'Customers', 'Issuance', 'Accounts', 'Reports', 'Tools', 'Data', 'System'],
 
     'permissions' => [
         // ── Bookings ──────────────────────────────────────────────
@@ -64,6 +64,12 @@ return [
             'icon'        => 'ph ph-share-network',
             'description' => 'Share part of a booking\'s margin with another user.',
         ],
+        'bookings.own_issued' => [
+            'label'       => 'Own issued Payment lists',
+            'group'       => 'Bookings',
+            'icon'        => 'ph ph-calendar-check',
+            'description' => "See your own Payment Plan and Payment Awaiting lists (issued bookings still owing).",
+        ],
 
         // ── Customers ─────────────────────────────────────────────
         'customers.view' => [
@@ -85,6 +91,12 @@ return [
             'group'       => 'Issuance',
             'icon'        => 'ph ph-gear-six',
             'description' => 'Mark tickets in-process, remove from or restore the queue.',
+        ],
+        'bookings.change_status' => [
+            'label'       => 'Change booking status',
+            'group'       => 'Issuance',
+            'icon'        => 'ph ph-arrows-left-right',
+            'description' => 'Open the Status Change page and set any status on a booking in the issuance pipeline. Applies the same date stamps and audit trail as the normal workflow buttons.',
         ],
 
         // ── Accounts / Payments ──────────────────────────────────
@@ -127,10 +139,22 @@ return [
             'description' => 'Open the Reports hub and sales reports.',
         ],
         'reports.performance' => [
-            'label'       => 'Agent performance report',
+            'label'       => 'My performance report',
             'group'       => 'Reports',
             'icon'        => 'ph ph-trend-up',
-            'description' => 'Open the Agent Performance report.',
+            'description' => "Open the performance report scoped to the user's own bookings only.",
+        ],
+        'reports.performance_all' => [
+            'label'       => 'All-agents performance report',
+            'group'       => 'Reports',
+            'icon'        => 'ph ph-users-four',
+            'description' => "See every agent's numbers in the performance report (not just your own), with the agent/month filters.",
+        ],
+        'reports.departure_arrival' => [
+            'label'       => 'Departure/Arrival report',
+            'group'       => 'Reports',
+            'icon'        => 'ph ph-airplane-tilt',
+            'description' => "Open the Departure/Arrival report. Without data.view_all it's scoped to the user's own bookings.",
         ],
         'reports.apply_deduction' => [
             'label'       => 'Apply margin deductions',
@@ -139,12 +163,60 @@ return [
             'description' => "Apply or remove a margin deduction against an agent's performance report.",
         ],
 
+        // ── Tools ────────────────────────────────────────────────
+        'eticket.access' => [
+            'label'       => 'E-Ticket Builder',
+            'group'       => 'Tools',
+            'icon'        => 'ph ph-ticket',
+            'description' => 'Open the standalone E-Ticket Builder print tool.',
+        ],
+        'calldesk.access' => [
+            'label'       => 'Call Desk',
+            'group'       => 'Tools',
+            'icon'        => 'ph ph-phone-call',
+            'description' => "Open the Call Desk (inquiries, callbacks, new call). Data is scoped by \"View all agents' data\".",
+        ],
+
         // ── Data scope ───────────────────────────────────────────
         'data.view_all' => [
             'label'       => "View all agents' data",
             'group'       => 'Data',
             'icon'        => 'ph ph-globe',
             'description' => "See every agent's data (Call Desk, performance, notifications) instead of only your own.",
+        ],
+
+        // ── System / Settings ────────────────────────────────────
+        // Admin is a hard-wired super-user and always passes these; granting a
+        // key here lets a non-admin be delegated that one Settings area.
+        'settings.users' => [
+            'label'       => 'User management',
+            'group'       => 'System',
+            'icon'        => 'ph ph-users-three',
+            'description' => 'Add, edit, delete users and manage their permissions.',
+        ],
+        'settings.activity' => [
+            'label'       => 'Activity / audit log',
+            'group'       => 'System',
+            'icon'        => 'ph ph-clock-counter-clockwise',
+            'description' => 'View the full activity / audit trail.',
+        ],
+        'settings.vendors' => [
+            'label'       => 'Flight vendors',
+            'group'       => 'System',
+            'icon'        => 'ph ph-airplane-tilt',
+            'description' => 'Manage the flight vendor options shown in the booking form.',
+        ],
+        'settings.gds' => [
+            'label'       => 'GDS options',
+            'group'       => 'System',
+            'icon'        => 'ph ph-globe-hemisphere-west',
+            'description' => 'Manage the GDS options (Amadeus, Sabre, etc.) shown in the booking form.',
+        ],
+        'settings.ip' => [
+            'label'       => 'IP whitelist',
+            'group'       => 'System',
+            'icon'        => 'ph ph-shield-check',
+            'description' => 'Manage the IP / CIDR access whitelist.',
         ],
     ],
 
@@ -158,14 +230,22 @@ return [
             'bookings.create',
             'bookings.queue_issuance',
             'bookings.share_margin',
+            'bookings.own_issued',
             'reports.performance',
+            'reports.departure_arrival',
+            'eticket.access',
+            'calldesk.access',
         ],
         'operations' => [
             'bookings.create',
             'bookings.queue_issuance',
             'bookings.share_margin',
+            'bookings.own_issued',
             'customers.view',
             'reports.performance',
+            'reports.departure_arrival',
+            'eticket.access',
+            'calldesk.access',
         ],
         'accounts' => [
             'customers.view',
@@ -174,21 +254,28 @@ return [
             'payments.invoice',
             'payments.issue',
             'reports.view',
-            'reports.performance',
+            'reports.performance_all',
             'data.view_all',
+            'eticket.access',
+            'calldesk.access',
         ],
         'issuance' => [
             'issuance.access',
             'issuance.manage',
+            'bookings.change_status',
+            'eticket.access',
+            'calldesk.access',
         ],
         // Manager had full access EXCEPT the admin-only "All Bookings" page,
-        // so its preset is everything but `bookings.view_all`.
+        // so its preset is everything but `bookings.view_all` (and the
+        // System/Settings keys, which stay admin-delegated).
         'manager' => [
-            'bookings.create', 'bookings.queue_issuance',
+            'bookings.create', 'bookings.queue_issuance', 'bookings.own_issued',
             'bookings.delete', 'bookings.edit_any', 'bookings.share_margin', 'customers.view',
             'issuance.access', 'issuance.manage', 'accounts.access',
             'payments.charge', 'payments.invoice', 'payments.issue',
-            'reports.view', 'reports.performance', 'reports.apply_deduction', 'refunds.manage', 'data.view_all',
+            'reports.view', 'reports.performance_all', 'reports.apply_deduction', 'refunds.manage', 'data.view_all',
+            'eticket.access', 'calldesk.access',
         ],
         // admin is a hard-wired super-user; '*' just pre-ticks every box in the UI.
         'admin' => ['*'],

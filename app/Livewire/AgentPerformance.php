@@ -34,7 +34,10 @@ class AgentPerformance extends Component
     public function mount(): void
     {
         $user = Auth::user();
-        $this->canViewAll = $user->canViewAllData();
+        // The all-agents view is its own permission now, independent of the
+        // global data.view_all scope flag: reports.performance_all sees every
+        // agent; a plain reports.performance holder is locked to their own.
+        $this->canViewAll = $user->hasPermission('reports.performance_all');
         $this->month = now()->format('Y-m');
 
         // Self-only roles (agent, operations) are locked to their own data.
@@ -283,6 +286,7 @@ class AgentPerformance extends Component
             'tiktok'           => 'TikTok',
             'website'          => 'Website',
             'google'           => 'Google',
+            'personal'         => 'Personal',
         ];
 
         $bySource = $bookings->countBy(fn ($b) => $b->lead_source)->all();

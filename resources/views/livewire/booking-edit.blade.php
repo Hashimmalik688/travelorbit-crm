@@ -70,7 +70,7 @@
     <div class="row g-3">
       <div class="col-md-3">
         <label class="be-label">Lead Source</label>
-        <x-styled-select modelName="lead_source" :options="[['value'=>'','label'=>'Select'],['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google']]" placeholder="Select" />
+        <x-styled-select modelName="lead_source" :options="[['value'=>'','label'=>'Select'],['value'=>'to_returning','label'=>'TO Returning'],['value'=>'to_referral','label'=>'TO Referral'],['value'=>'referral_client','label'=>'Referral Client'],['value'=>'returning_client','label'=>'Returning Client'],['value'=>'fb','label'=>'Facebook'],['value'=>'wa','label'=>'WhatsApp'],['value'=>'email','label'=>'Email'],['value'=>'diaspora_group','label'=>'Diaspora Group'],['value'=>'instagram','label'=>'Instagram'],['value'=>'tiktok','label'=>'TikTok'],['value'=>'website','label'=>'Website'],['value'=>'google','label'=>'Google'],['value'=>'personal','label'=>'Personal']]" placeholder="Select" />
       </div>
       <div class="col-md-3">
         <label class="be-label">Lead Nature</label>

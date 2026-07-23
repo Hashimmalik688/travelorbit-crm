@@ -38,7 +38,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Issued-but-unpaid mini reports — the user's own bookings, split out of the dashboard tabs
-    Route::middleware('permission:bookings.create')->group(function () {
+    Route::middleware('permission:bookings.own_issued')->group(function () {
         Route::get('/my-bookings/payment-plan', [DashboardController::class, 'paymentPlanReport'])->name('bookings.payment-plan');
         Route::get('/my-bookings/payment-awaiting', [DashboardController::class, 'paymentAwaitingReport'])->name('bookings.payment-awaiting');
     });
@@ -63,8 +63,17 @@ Route::middleware(['auth'])->group(function () {
 
     // E-ticket builder — a standalone print tool, not tied to any booking's page.
     // Pick a booking from the dropdown to prefill the form; nothing here saves back.
-    Route::get('/eticket', [EticketController::class, 'index'])->name('eticket.builder');
-    Route::get('/eticket/data/{booking}', [EticketController::class, 'data'])->name('eticket.data');
+    Route::middleware('permission:eticket.access')->group(function () {
+        Route::get('/eticket', [EticketController::class, 'index'])->name('eticket.builder');
+        Route::get('/eticket/data/{booking}', [EticketController::class, 'data'])->name('eticket.data');
+    });
+
+    // Status Change — issuance's manual override for a booking sitting in the
+    // issuance pipeline. Any status may be set; the matching date stamp and the
+    // activity/audit entries are applied by BookingStatusService.
+    Route::get('/status-change', fn() => view('content.issuance.status-change'))
+        ->name('issuance.status-change')
+        ->middleware('permission:bookings.change_status');
 
     Route::middleware('permission:customers.view')->group(function () {
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers');
@@ -89,36 +98,41 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports/departure-arrival', [DashboardController::class, 'departureArrivalReport'])->name('reports.departure-arrival');
     });
 
-    // Agent Performance — users with data.view_all see everyone; others are scoped to
-    // their own data inside the AgentPerformance Livewire component.
-    Route::middleware('permission:reports.performance')->group(function () {
+    // Performance report — reports.performance_all holders see every agent;
+    // reports.performance holders are scoped to their own data inside the
+    // AgentPerformance Livewire component.
+    Route::middleware('permission:reports.performance,reports.performance_all')->group(function () {
         Route::get('/reports/performance', [ReportController::class, 'performance'])->name('reports.performance');
     });
 
-    Route::middleware('role:admin')->group(function () {
+    // Settings — each sub-area is gated by its own delegatable permission.
+    // Admin is a hard-wired super-user and passes every one of these.
+    // The Settings Hub opens for anyone holding at least one Settings key.
+    Route::middleware('permission:settings.users,settings.activity,settings.vendors,settings.gds,settings.ip')->group(function () {
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
-        // User management (admin only)
-        Route::middleware('role:admin')->group(function () {
-            Route::get('/settings/users',                  [UserManagementController::class, 'index'])->name('settings.users');
-            Route::get('/settings/users/index',            [UserManagementController::class, 'index'])->name('settings.users.index');
-            Route::get('/settings/users/create',           [UserManagementController::class, 'create'])->name('settings.users.create');
-            Route::post('/settings/users',                 [UserManagementController::class, 'store'])->name('settings.users.store');
-            Route::get('/settings/users/{user}',           [UserManagementController::class, 'show'])->name('settings.users.show');
-            Route::get('/settings/users/{user}/edit',      [UserManagementController::class, 'edit'])->name('settings.users.edit');
-            Route::put('/settings/users/{user}',           [UserManagementController::class, 'update'])->name('settings.users.update');
-            Route::delete('/settings/users/{user}',        [UserManagementController::class, 'destroy'])->name('settings.users.destroy');
-            Route::post('/settings/users/{user}/password', [UserManagementController::class, 'resetPassword'])->name('settings.users.reset-password');
-        });
+    });
+    Route::middleware('permission:settings.users')->group(function () {
+        Route::get('/settings/users',                  [UserManagementController::class, 'index'])->name('settings.users');
+        Route::get('/settings/users/index',            [UserManagementController::class, 'index'])->name('settings.users.index');
+        Route::get('/settings/users/create',           [UserManagementController::class, 'create'])->name('settings.users.create');
+        Route::post('/settings/users',                 [UserManagementController::class, 'store'])->name('settings.users.store');
+        Route::get('/settings/users/{user}',           [UserManagementController::class, 'show'])->name('settings.users.show');
+        Route::get('/settings/users/{user}/edit',      [UserManagementController::class, 'edit'])->name('settings.users.edit');
+        Route::put('/settings/users/{user}',           [UserManagementController::class, 'update'])->name('settings.users.update');
+        Route::delete('/settings/users/{user}',        [UserManagementController::class, 'destroy'])->name('settings.users.destroy');
+        Route::post('/settings/users/{user}/password', [UserManagementController::class, 'resetPassword'])->name('settings.users.reset-password');
+    });
+    Route::middleware('permission:settings.activity')->group(function () {
         Route::get('/settings/audit-log', [SettingsController::class, 'auditLog'])->name('settings.audit-log');
         Route::get('/settings/activity',  [SettingsController::class, 'auditLog'])->name('settings.activity');
-        Route::get('/settings/vendors',   [SettingsController::class, 'vendors'])->name('settings.vendors');
-        Route::get('/settings/gds', [SettingsController::class, 'gds'])->name('settings.gds');
-        Route::get('/settings/ip-whitelist', fn() => view('settings.ip-whitelist'))->name('settings.ip')->middleware('role:admin');
     });
+    Route::get('/settings/vendors', [SettingsController::class, 'vendors'])->name('settings.vendors')->middleware('permission:settings.vendors');
+    Route::get('/settings/gds', [SettingsController::class, 'gds'])->name('settings.gds')->middleware('permission:settings.gds');
+    Route::get('/settings/ip-whitelist', fn() => view('settings.ip-whitelist'))->name('settings.ip')->middleware('permission:settings.ip');
 
-    // Call Desk — every authenticated user; managers/admins see all agents' data,
+    // Call Desk — gated by calldesk.access; managers/admins see all agents' data,
     // everyone else is scoped to their own (enforced in the Livewire components).
-    Route::prefix('call-desk')->name('calldesk.')->group(function () {
+    Route::middleware('permission:calldesk.access')->prefix('call-desk')->name('calldesk.')->group(function () {
         Route::get('/', [CallCenterController::class, 'dashboard'])->name('dashboard');
         Route::get('/new-call', [CallCenterController::class, 'newCall'])->name('new-call');
         Route::get('/inquiries', [CallCenterController::class, 'inquiries'])->name('inquiries');

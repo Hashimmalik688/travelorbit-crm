@@ -740,12 +740,12 @@
             @php $grouped = ($entry['group_count'] ?? 1) > 1; @endphp
             <div x-data="{ open: false, text: '', grp: false }" style="display:flex;gap:0;">
               {{-- Rail column: avatar circle + connecting line --}}
-              <div style="display:flex;flex-direction:column;align-items:center;width:46px;flex-shrink:0;">
+              <div style="display:flex;flex-direction:column;align-items:center;width:60px;flex-shrink:0;">
                 @if(!empty($entry['avatar_url']))
                   <img src="{{ $entry['avatar_url'] }}" alt="{{ $entry['avatar_initials'] ?? '?' }}"
-                    style="width:{{ $isFullRow ? '38px' : '32px' }};height:{{ $isFullRow ? '38px' : '32px' }};border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid {{ $c['border'] }};box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">
+                    style="width:{{ $isFullRow ? '52px' : '46px' }};height:{{ $isFullRow ? '52px' : '46px' }};border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid {{ $c['border'] }};box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">
                 @else
-                  <div style="width:{{ $isFullRow ? '38px' : '32px' }};height:{{ $isFullRow ? '38px' : '32px' }};border-radius:50%;background:{{ $c['border'] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:{{ $isFullRow ? '.8rem' : '.7rem' }};font-weight:800;color:#fff;box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">{{ $entry['avatar_initials'] ?? '?' }}</div>
+                  <div style="width:{{ $isFullRow ? '52px' : '46px' }};height:{{ $isFullRow ? '52px' : '46px' }};border-radius:50%;background:{{ $c['border'] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:{{ $isFullRow ? '1.02rem' : '.92rem' }};font-weight:800;color:#fff;box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">{{ $entry['avatar_initials'] ?? '?' }}</div>
                 @endif
                 @if(!$loop->last)
                   <div style="width:2px;flex:1;min-height:8px;background:linear-gradient(to bottom,{{ $c['border'] }}28,rgba(51,46,158,.06));margin-top:3px;"></div>

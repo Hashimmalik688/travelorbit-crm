@@ -18,6 +18,7 @@
         'bg'    => 'rgba(22,163,74,.08)',
         'url'   => route('settings.users'),
         'meta'  => null,
+        'perm'  => 'settings.users',
       ],
       [
         'title' => 'Activity Log',
@@ -27,6 +28,7 @@
         'bg'    => 'rgba(14,165,233,.08)',
         'url'   => route('settings.activity'),
         'meta'  => null,
+        'perm'  => 'settings.activity',
       ],
       [
         'title' => 'IP Whitelist',
@@ -36,6 +38,7 @@
         'bg'    => 'rgba(217,119,6,.08)',
         'url'   => route('settings.ip'),
         'meta'  => 'Security',
+        'perm'  => 'settings.ip',
       ],
       [
         'title' => 'Flight Vendors',
@@ -45,6 +48,7 @@
         'bg'    => 'rgba(255,107,53,.08)',
         'url'   => route('settings.vendors'),
         'meta'  => 'Booking',
+        'perm'  => 'settings.vendors',
       ],
       [
         'title' => 'GDS Options',
@@ -54,10 +58,12 @@
         'bg'    => 'rgba(124,58,237,.08)',
         'url'   => route('settings.gds'),
         'meta'  => 'Booking',
+        'perm'  => 'settings.gds',
       ],
     ];
   @endphp
   @foreach($cards as $c)
+    @continue(!empty($c['perm']) && !auth()->user()->hasPermission($c['perm']))
     <div class="col-md-4">
       <a href="{{ $c['url'] }}" @if(!empty($c['target'])) target="{{ $c['target'] }}" rel="noopener" @endif style="display:block;text-decoration:none;background:#fff;border-radius:18px;border:1px solid rgba(51,46,158,.08);padding:28px 26px;box-shadow:0 2px 12px rgba(51,46,158,.04);transition:all .18s;position:relative;overflow:hidden;"
         onmouseenter="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(51,46,158,.12)';this.style.borderColor='rgba(51,46,158,.18)'"

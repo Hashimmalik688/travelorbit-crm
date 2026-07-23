@@ -3,31 +3,33 @@
     { "url": "/",               "name": "Operations Centre", "icon": "menu-icon icon-base ph ph-squares-four",    "slug": "dashboard",        "roles": ["admin","manager"] },
     { "url": "/my-dashboard",   "name": "Agent Dashboard",   "icon": "menu-icon icon-base ph ph-layout",          "slug": "my.dashboard",     "roles": ["agent","operations"] },
     { "url": "/my-dashboard",   "name": "Accounts Hub",      "icon": "menu-icon icon-base ph ph-layout",          "slug": "my.dashboard",     "roles": ["accounts"] },
-    { "url": "/eticket",        "name": "E-Ticket Builder",  "icon": "menu-icon icon-base ph ph-ticket",          "slug": "eticket.builder",  "target": "_blank", "permissions": ["bookings.create"] },
+    { "url": "/eticket",        "name": "E-Ticket Builder",  "icon": "menu-icon icon-base ph ph-ticket",          "slug": "eticket.builder",  "target": "_blank", "permissions": ["eticket.access"] },
 
     { "menuHeader": "Bookings", "permissions": ["bookings.view_all","bookings.create","customers.view"] },
     { "url": "/bookings",        "name": "All Bookings",     "icon": "menu-icon icon-base ph ph-list",            "slug": "bookings.index",   "permissions": ["bookings.view_all"] },
     { "url": "/bookings/create", "name": "New Booking",      "icon": "menu-icon icon-base ph ph-plus-circle",     "slug": "bookings.create",  "permissions": ["bookings.create"] },
     { "url": "/customers",       "name": "Customers",        "icon": "menu-icon icon-base ph ph-users",           "slug": "customers",        "permissions": ["customers.view"], "excludeRoles": ["accounts"] },
 
-    { "menuHeader": "Issuance", "permissions": ["issuance.access"] },
+    { "menuHeader": "Issuance", "permissions": ["issuance.access","bookings.change_status"] },
     { "url": "/issuance-dashboard", "name": "Issuance Queue", "icon": "menu-icon icon-base ph ph-ticket",         "slug": "issuance.dashboard","permissions": ["issuance.access"] },
+    { "url": "/status-change",      "name": "Status Change",  "icon": "menu-icon icon-base ph ph-arrows-left-right", "slug": "issuance.status-change", "permissions": ["bookings.change_status"] },
 
-    { "menuHeader": "Issued",   "roles": ["agent","operations"] },
-    { "url": "/my-bookings/payment-plan",     "name": "Payment Plan",     "icon": "menu-icon icon-base ph ph-calendar-check", "slug": "bookings.payment-plan",     "roles": ["agent","operations"] },
-    { "url": "/my-bookings/payment-awaiting", "name": "Payment Awaiting", "icon": "menu-icon icon-base ph ph-hourglass-medium","slug": "bookings.payment-awaiting", "roles": ["agent","operations"] },
+    { "menuHeader": "Issued",   "permissions": ["bookings.own_issued"] },
+    { "url": "/my-bookings/payment-plan",     "name": "Payment Plan",     "icon": "menu-icon icon-base ph ph-calendar-check", "slug": "bookings.payment-plan",     "permissions": ["bookings.own_issued"] },
+    { "url": "/my-bookings/payment-awaiting", "name": "Payment Awaiting", "icon": "menu-icon icon-base ph ph-hourglass-medium","slug": "bookings.payment-awaiting", "permissions": ["bookings.own_issued"] },
 
     { "menuHeader": "Accounts", "permissions": ["accounts.access"] },
     { "url": "/accounts-dashboard", "name": "Ready to Invoice",  "icon": "menu-icon icon-base ph ph-receipt",     "slug": "accounts.dashboard", "permissions": ["accounts.access"] },
     { "url": "/payment-charges",  "name": "Charge Requests",      "icon": "menu-icon icon-base ph ph-queue",          "slug": "payment-charges",   "permissions": ["accounts.access"] },
     { "url": "/refunds",          "name": "Refunds",               "icon": "menu-icon icon-base ph ph-arrow-u-up-left", "slug": "refunds",          "permissions": ["accounts.access"] },
 
-    { "menuHeader": "Reports",  "permissions": ["reports.view","reports.performance","reports.departure_arrival"] },
+    { "menuHeader": "Reports",  "permissions": ["reports.view","reports.performance","reports.performance_all","reports.departure_arrival"] },
     { "url": "/reports",        "name": "Reports Hub",       "icon": "menu-icon icon-base ph ph-chart-bar",       "slug": "reports",          "permissions": ["reports.view"], "excludeRoles": ["accounts"] },
-    { "url": "/reports/performance", "name": "My Performance", "icon": "menu-icon icon-base ph ph-trend-up",     "slug": "reports.performance", "permissions": ["reports.performance"], "excludePermissions": ["reports.view"] },
+    { "url": "/reports/performance", "name": "My Performance", "icon": "menu-icon icon-base ph ph-trend-up",     "slug": "reports.performance", "permissions": ["reports.performance"], "excludePermissions": ["reports.view","reports.performance_all"] },
+    { "url": "/reports/performance", "name": "Agent Performance", "icon": "menu-icon icon-base ph ph-users-four", "slug": "reports.performance", "permissions": ["reports.performance_all"], "excludePermissions": ["reports.view"] },
     { "url": "/reports/departure-arrival", "name": "Departures", "icon": "menu-icon icon-base ph ph-airplane-tilt", "slug": "reports.departure-arrival", "permissions": ["reports.departure_arrival"], "excludePermissions": ["reports.view"] },
 
-    { "menuHeader": "System",   "roles": ["admin"] },
-    { "url": "/settings",       "name": "Settings Hub",      "icon": "menu-icon icon-base ph ph-gear",            "slug": "settings",         "roles": ["admin"] }
+    { "menuHeader": "System",   "permissions": ["settings.users","settings.activity","settings.vendors","settings.gds","settings.ip"] },
+    { "url": "/settings",       "name": "Settings Hub",      "icon": "menu-icon icon-base ph ph-gear",            "slug": "settings",         "permissions": ["settings.users","settings.activity","settings.vendors","settings.gds","settings.ip"] }
   ]
 }

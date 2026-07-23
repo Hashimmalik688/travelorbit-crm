@@ -76,6 +76,7 @@
                       ['label' => 'Client Type', 'options' => [
                         ['value' => 'referral_client', 'label' => 'Referral Client'],
                         ['value' => 'returning_client', 'label' => 'Returning Client'],
+                        ['value' => 'personal', 'label' => 'Personal'],
                       ]],
                       ['label' => 'Social & Channels', 'options' => [
                         ['value' => 'fb', 'label' => 'Facebook'],

@@ -26,7 +26,10 @@
 
     {{-- Right: Utility icons --}}
     <div class="to-navbar-actions d-flex align-items-center gap-2">
-        {{-- Call Desk — opens the call center in a new tab --}}
+        {{-- Call Desk — opens the call center in a new tab. This is the only
+             entry point (no sidebar item); hidden without calldesk.access so
+             it can't bounce the user off the permission-gated route. --}}
+        @if(auth()->user()?->hasPermission('calldesk.access'))
         <a href="{{ route('calldesk.dashboard') }}" target="_blank" rel="noopener" class="to-nav-btn" title="Call Desk">
             <i class="ph ph-headset"></i>
             @if($callDeskPendingCallbacks > 0)
@@ -35,6 +38,7 @@
                 </span>
             @endif
         </a>
+        @endif
 
         {{-- Notification bell --}}
         @livewire('notification-bell')

@@ -197,7 +197,7 @@ class CreateBooking extends Component
 
     public function updatedLeadSource(): void
     {
-        $labels = ['to_returning'=>'TO Returning','to_referral'=>'TO Referral','referral_client'=>'Referral Client','returning_client'=>'Returning Client','fb'=>'Facebook','wa'=>'WhatsApp','email'=>'Email','diaspora_group'=>'Diaspora Group','instagram'=>'Instagram','tiktok'=>'TikTok','website'=>'Website','google'=>'Google'];
+        $labels = ['to_returning'=>'TO Returning','to_referral'=>'TO Referral','referral_client'=>'Referral Client','returning_client'=>'Returning Client','fb'=>'Facebook','wa'=>'WhatsApp','email'=>'Email','diaspora_group'=>'Diaspora Group','instagram'=>'Instagram','tiktok'=>'TikTok','website'=>'Website','google'=>'Google','personal'=>'Personal'];
         $this->logActivity('Lead source set to ' . ($labels[$this->lead_source] ?? $this->lead_source), '', 'updated');
     }
 
@@ -691,7 +691,7 @@ class CreateBooking extends Component
 
         $rules = match ($stepId) {
             'lead-caller' => [
-                'lead_source'              => 'required|in:to_returning,to_referral,referral_client,returning_client,fb,wa,email,diaspora_group,instagram,tiktok,website,google',
+                'lead_source'              => 'required|in:to_returning,to_referral,referral_client,returning_client,fb,wa,email,diaspora_group,instagram,tiktok,website,google,personal',
                 'lead_nature'              => 'required|in:new_booking,date_change,refund_booking,previous_booking',
                 'booking_type'             => 'required|in:flight,hotel,umrah,holiday,transfers,excursion,visa',
                 'last_payment_date'        => 'required|date',
