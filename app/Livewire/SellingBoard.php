@@ -9,9 +9,10 @@ class SellingBoard extends Component
 {
     public function render()
     {
-        // Same "who actually creates bookings" scope as the rest of the
-        // Operations Centre dashboard — admin excluded.
-        $allAgents = User::whereIn('role', ['agent', 'operations', 'manager'])
+        // Agent role only — the leaderboard is an agents' competition, so
+        // managers/operations don't belong on it (matches Agents Performance,
+        // which is also agent-only).
+        $allAgents = User::where('role', 'agent')
             ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())])
             ->get();
 

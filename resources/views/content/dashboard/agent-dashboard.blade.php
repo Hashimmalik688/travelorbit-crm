@@ -62,15 +62,22 @@
 /* Calendar styles */
 .ad-cal-day {
   aspect-ratio:1;display:flex;align-items:center;justify-content:center;
-  border-radius:6px;font-size:0.72rem;font-weight:500;color:#475569;cursor:default;
+  border-radius:5px;font-size:0.66rem;font-weight:500;color:#475569;cursor:default;
   transition:all .15s;position:relative;
 }
-.ad-cal-day.sale { background:rgba(22,163,74,.12);color:#16A34A;font-weight:700 }
+/* A sale that day — soft green tint + pulsing dot. */
+.ad-cal-day.sale { background:rgba(22,163,74,.14);color:#16A34A;font-weight:700 }
 .ad-cal-day.sale::after { content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#16A34A;animation:pulse 2s infinite }
-.ad-cal-day.today { background:linear-gradient(135deg,#332E9E,#4A45B5)!important;color:#fff!important;font-weight:800!important;box-shadow:0 3px 10px rgba(51,46,158,.35) }
-.ad-cal-day.today::after { background:#fff!important;animation:none!important }
+/* Today — a BLUE RING, never a fill. A solid fill used to sit on top of the
+   sale styling and hide whether today had a sale; a ring marks the date
+   while letting the green show through. */
+.ad-cal-day.today { box-shadow:inset 0 0 0 2px #2563EB;color:#1D4ED8;font-weight:800 }
+/* Sold TODAY — the ring turns green and fills, so "today + a sale" reads as a
+   clear win rather than a plain blue box. */
+.ad-cal-day.today.sale { background:#16A34A;color:#fff;box-shadow:inset 0 0 0 2px #15803D }
+.ad-cal-day.today.sale::after { background:#fff!important;animation:none!important }
 .ad-cal-day.empty { opacity:0;pointer-events:none }
-.ad-cal-day:not(.empty):not(.today):hover { background:rgba(51,46,158,.06);color:#332E9E }
+.ad-cal-day:not(.empty):not(.today):not(.sale):hover { background:rgba(51,46,158,.06);color:#332E9E }
 
 .ad-brow { display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:#fff;border:1px solid rgba(51,46,158,.07);margin-bottom:8px;transition:all .15s }
 .ad-brow:hover { background:#F8FAFF;border-color:rgba(51,46,158,.14);transform:translateX(2px) }
@@ -162,7 +169,9 @@
   {{-- ── Right column: Calendar ── --}}
   <div class="col-lg-4">
     @php $currentKey = now()->format('Y-m'); @endphp
-    <div class="ad-up d3" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);"
+    {{-- max-width keeps the month compact instead of stretching cells across
+         the whole column; margin-right:auto pins it to the left of the column. --}}
+    <div class="ad-up d3" style="max-width:300px;margin-right:auto;background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);"
       x-data="{
         cur: @js($allMonthData[$currentKey])
       }">
