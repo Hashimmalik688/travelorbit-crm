@@ -19,7 +19,11 @@
    the single white card language in layouts/sections/design-v5.blade.php. */
 .neo-ap-wrap { background:#FFFFFF;border:1px solid var(--to-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden;height:100%; }
 .neo-ap-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--to-border); }
-.neo-ap-grid { display:grid;grid-template-columns:repeat(auto-fill, minmax(92px,1fr));gap:10px;padding:4px 18px 18px; }
+/* Top padding and the larger ROW gap exist for the crown: it sits above the
+   tile's top edge, so the first row needs clearance inside .neo-ap-wrap
+   (which clips) and later rows need room so a crown can't touch the tile
+   above it. */
+.neo-ap-grid { display:grid;grid-template-columns:repeat(auto-fill, minmax(92px,1fr));gap:20px 10px;padding:18px 18px 18px; }
 /* Tile is full-bleed: the portrait fills its whole width so the face is
    shown properly rather than cropped into a small circle. The green/red
    today-activity ring lives on the tile edge. */
@@ -43,19 +47,38 @@
    The crown is a child of the TILE (not the photo) — the photo clips its
    own overflow, so a crown inside it could never hang past the corner. */
 .neo-ap-tile.is-top { box-shadow:0 0 0 3px rgba(245,158,11,.45); }
+/* Sits ABOVE the tile's top edge, centred — the tile wears it. Drawn as an
+   SVG rather than the crown emoji so the gold is actually gold: the emoji is
+   a colour font the page cannot restyle, and it renders grey-blue on some
+   platforms. */
 .neo-ap-crown {
-  position:absolute;top:-11px;left:-9px;z-index:3;
-  font-size:1.15rem;line-height:1;
-  transform:rotate(-30deg);
-  transform-origin:bottom right;   /* pivots on the corner it sits on */
-  filter:drop-shadow(0 2px 3px rgba(15,23,42,.4));
+  position:absolute;top:-14px;left:50%;z-index:3;
+  width:30px;height:22px;
+  transform:translateX(-50%) rotate(-8deg);
+  transform-origin:center bottom;
+  filter:drop-shadow(0 2px 2px rgba(15,23,42,.35)) drop-shadow(0 0 5px rgba(245,158,11,.6));
   pointer-events:none;
 }
-/* Ends on the tilt, not transform:none — otherwise the animation would
-   straighten the crown as it lands. */
-@keyframes neoCrownPop { from{transform:translateY(-9px) rotate(-70deg);opacity:0} to{transform:rotate(-30deg);opacity:1} }
+/* Keeps the -50% centring in every frame — dropping it mid-animation would
+   slide the crown sideways as it lands. */
+@keyframes neoCrownPop {
+  from { transform:translateX(-50%) translateY(-10px) rotate(-38deg); opacity:0 }
+  to   { transform:translateX(-50%) rotate(-8deg); opacity:1 }
+}
 @media (prefers-reduced-motion: reduce) { .neo-ap-crown { animation:none; } }
 </style>
+{{-- Gold gradient defined ONCE. Tied leaders all get a crown, so putting the
+     <defs> inside the loop would emit duplicate element IDs. --}}
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="toCrownGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FEF3C7"/>
+      <stop offset="35%"  stop-color="#FBBF24"/>
+      <stop offset="70%"  stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#92400E"/>
+    </linearGradient>
+  </defs>
+</svg>
 <div class="neo-ap-wrap">
   <div class="neo-ap-hdr">
     <h6 class="fw-bold mb-0" style="font-size:0.912rem;color:#0F172A;">Agents Performance</h6>
@@ -89,9 +112,17 @@
       @endphp
       <div class="neo-ap-tile{{ $apIsTop ? ' is-top' : '' }}" style="border-color:{{ $apColor }};" title="{{ $apTitle }}">
         {{-- Sibling of the photo, not a child: the photo clips its own
-             overflow, so a crown inside it could not overhang the corner. --}}
+             overflow, so a crown inside it could not sit above the edge. --}}
         @if ($apIsTop)
-          <span class="neo-ap-crown" aria-label="Top seller" role="img">👑</span>
+          <svg class="neo-ap-crown" viewBox="0 0 30 22" role="img" aria-label="Top seller">
+            <title>Top seller</title>
+            <path d="M2.5 17 L4.5 5 L10 10.5 L15 2.5 L20 10.5 L25.5 5 L27.5 17 Z" fill="url(#toCrownGold)"/>
+            <rect x="2.5" y="16" width="25" height="4.5" rx="1.6" fill="url(#toCrownGold)"/>
+            {{-- specular sweep across the band + points, gives it the sheen --}}
+            <path d="M2.5 17 L4.5 5 L10 10.5 L15 2.5 L20 10.5 L25.5 5 L27.5 17 Z" fill="#FFFFFF" opacity=".28"
+                  style="clip-path:polygon(0 0, 42% 0, 22% 100%, 0 100%)"/>
+            <circle cx="15" cy="18.2" r="1.15" fill="#FFF7E0" opacity=".85"/>
+          </svg>
         @endif
         <div class="neo-ap-photo">
           @if ($apPhotoUrl)
