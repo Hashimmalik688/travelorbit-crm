@@ -87,19 +87,24 @@
 .neo-ap-hdr { padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--to-border); }
 {{-- Compact vertical tiles — small square avatar + name + one metric line —
      so a wall of ~50 agents stays a tidy grid rather than a long column. --}}
-.neo-ap-grid { display:grid;grid-template-columns:repeat(auto-fill, minmax(84px,1fr));gap:10px;padding:4px 18px 18px; }
-.neo-ap-tile { border-radius:10px;background:var(--to-page);border:1px solid var(--to-border);box-shadow:none;padding:10px 6px 8px;text-align:center; }
-.neo-ap-photo { width:52px;height:52px;margin:0 auto;border-radius:50%;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid transparent; }
-.neo-ap-dot { position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--to-page); }
-.neo-ap-name { font-size:0.75rem;font-weight:700;color:#1E293B;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.neo-ap-metric { font-size:0.72rem;font-weight:800;margin-top:1px;white-space:nowrap; }
+.neo-ap-grid { display:grid;grid-template-columns:repeat(auto-fill, minmax(92px,1fr));gap:10px;padding:4px 18px 18px; }
+/* Tile is full-bleed: the portrait fills its whole width so the face is
+   shown properly rather than cropped into a small circle. The green/red
+   today-activity ring lives on the tile edge. */
+.neo-ap-tile { border-radius:10px;background:var(--to-page);border:2px solid var(--to-border);box-shadow:none;padding:0;overflow:hidden;text-align:center; }
+.neo-ap-photo { width:100%;aspect-ratio:3/4;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden; }
+.neo-ap-dot { position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;border:2px solid #FFFFFF; }
+.neo-ap-name { font-size:0.75rem;font-weight:700;color:#1E293B;padding:6px 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.neo-ap-metric { font-size:0.72rem;font-weight:800;padding:0 4px 7px;white-space:nowrap; }
 .neo-ap-metric small { font-weight:700;color:#94A3B8; }
 </style>
 <div class="row g-3">
-  <div class="col-lg-7 oc-up d3">
+  {{-- Leaderboard is a short two-column list; Agents Performance holds a wall
+       of ~50 photo tiles, so it gets the wider half. --}}
+  <div class="col-lg-4 oc-up d3">
     @livewire('selling-board')
   </div>
-  <div class="col-lg-5 oc-up d3">
+  <div class="col-lg-8 oc-up d3">
     <div class="neo-ap-wrap">
       <div class="neo-ap-hdr">
         <h6 class="fw-bold mb-0" style="font-size:0.912rem;color:#0F172A;">Agents Performance</h6>
@@ -115,12 +120,12 @@
             $apActive = $ap->made_booking_today;
             $apColor = $apActive ? '#10B981' : '#F43F5E';
           @endphp
-          <div class="neo-ap-tile" title="{{ $ap->name }} — {{ $apActive ? 'made a booking today' : 'no bookings today' }} · £{{ number_format($ap->margin, 0) }} margin, {{ $ap->count }} booking{{ $ap->count !== 1 ? 's' : '' }} this month">
-            <div class="neo-ap-photo" style="border-color:{{ $apColor }};box-shadow:0 2px 8px {{ $apColor }}33;">
+          <div class="neo-ap-tile" style="border-color:{{ $apColor }};" title="{{ $ap->name }} — {{ $apActive ? 'made a booking today' : 'no bookings today' }} · £{{ number_format($ap->margin, 0) }} margin, {{ $ap->count }} booking{{ $ap->count !== 1 ? 's' : '' }} this month">
+            <div class="neo-ap-photo">
               @if ($apPhotoUrl)
                 <img src="{{ $apPhotoUrl }}" alt="{{ $apFirstName }}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">
               @else
-                <div style="font-size:1.05rem;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:.03em;">{{ $apInitials }}</div>
+                <div style="font-size:1.32rem;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:.03em;">{{ $apInitials }}</div>
               @endif
               <span class="neo-ap-dot" style="background:{{ $apColor }};"></span>
             </div>
