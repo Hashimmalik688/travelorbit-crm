@@ -1,9 +1,9 @@
-<div wire:poll.8s="$refresh">
+<div wire:poll.8s="$refresh" style="flex:1 1 auto;width:100%;display:flex;">
 <style>
 /* Class names are historical (neo-*); these surfaces are now FLAT to match
    the single white card language in layouts/sections/design-v5.blade.php.
    Geometry is unchanged — only fill, border and shadow. */
-.neo-sb-wrap { background:#FFFFFF;border:1px solid var(--to-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden;height:100%; }
+.neo-sb-wrap { background:#FFFFFF;border:1px solid var(--to-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden;flex:1 1 auto;width:100%;display:flex;flex-direction:column; }
 .neo-sb-hdr { padding:12px 18px 9px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--to-border); }
 .neo-sb-col { padding:11px 16px 13px; }
 .neo-sb-label { font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px; }
@@ -24,7 +24,7 @@
       <h6 class="fw-bold mb-0" style="font-size:0.912rem;color:#0F172A;">Agent Leaderboard</h6>
       <span style="font-size:0.756rem;color:#475569;">{{ now()->format('d F Y') }}</span>
     </div>
-    <div class="row g-0">
+    <div class="row g-0 flex-grow-1">
       <div class="col-md-6 neo-sb-col" style="border-right:1px solid rgba(51,46,158,.07);">
         <div class="neo-sb-label" style="color:#16A34A;">Selling Today</div>
         @forelse ($sellingToday as $idx => $ag)
