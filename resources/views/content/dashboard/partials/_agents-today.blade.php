@@ -1,7 +1,7 @@
 {{-- Agents Today — passport-photo wall of every agent with their booking count for today.
      Shared by the agent dashboard and the admin/manager Operations Centre.
      Expects: $agents (User collection, each with a `bookings_count` of today's bookings). --}}
-<div class="ad-up d3" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:20px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);overflow:hidden;">
+<div class="ad-up d3" style="background:#FFFFFF;border-radius:14px;border:1px solid var(--to-border);box-shadow:0 1px 2px rgba(15,23,42,0.04);overflow:hidden;">
   <div class="px-4 pt-4 pb-2" style="border-bottom:1px solid rgba(51,46,158,.06);">
     <h6 class="fw-bold mb-0" style="font-size:1.044rem;color:#0F172A;">Agents Today</h6>
     <div style="font-size:0.78rem;color:#475569;">{{ now()->format('d F Y') }}</div>

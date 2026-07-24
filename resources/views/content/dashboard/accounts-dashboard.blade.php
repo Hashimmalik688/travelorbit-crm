@@ -17,11 +17,7 @@
 
 {{-- ══ HEADER ══ --}}
 <div class="ac-up d1 mb-4 d-flex align-items-center justify-content-between px-5 py-4"
-  style="background:linear-gradient(135deg,rgba(14,165,233,0.85) 0%,rgba(6,95,150,0.78) 50%,rgba(12,74,110,0.88) 100%);border-radius:20px;position:relative;overflow:hidden;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(14,165,233,0.25),inset 0 1px 0 rgba(255,255,255,0.15);">
-  <div style="position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.1) 0%,transparent 70%);pointer-events:none;"></div>
-  <div style="position:absolute;left:-30px;bottom:-30px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(22,163,74,0.12) 0%,transparent 70%);pointer-events:none;"></div>
-  <div style="position:absolute;right:20%;top:-15px;width:50px;height:50px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,0.1) 0%,transparent 70%);pointer-events:none;"></div>
-
+  style="background:linear-gradient(135deg,#0EA5E9 0%,#065F96 50%,#0C4A6E 100%);border-radius:16px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,0.06);">
   <div style="position:relative;z-index:1;">
     <div style="font-size:0.744rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">{{ now()->format('l, d F Y') }}</div>
     <h2 style="color:#fff;font-size:1.68rem;font-weight:800;letter-spacing:-.03em;margin:0;">Accounts Hub <span style="font-size:0.936rem;font-weight:500;opacity:.55;">- {{ $user->name }}</span></h2>
@@ -30,13 +26,13 @@
 </div>
 
 {{-- ══ SECTION 1: TICKET IN PROCESS (Issue Queue) ══ --}}
-<div class="ac-up d2 mb-4" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:18px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);">
+<div class="ac-up d2 mb-4" style="background:#FFFFFF;border-radius:14px;border:1px solid var(--to-border);box-shadow:0 1px 2px rgba(15,23,42,0.04);">
   <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
     <div>
       <h6 class="fw-bold mb-0" style="font-size:1.056rem;color:#0F172A;">Ticket in Process <span style="font-size:0.84rem;font-weight:500;color:#475569;">— Issue Disposition</span></h6>
       <div style="font-size:0.84rem;color:#475569;margin-top:2px;">Mark each processed ticket with its payment disposition</div>
     </div>
-    <span style="font-size:0.84rem;font-weight:600;background:linear-gradient(135deg,rgba(217,119,6,0.15) 0%,rgba(217,119,6,0.08) 100%);color:#B45309;padding:4px 12px;border-radius:20px;backdrop-filter:blur(4px);">{{ $issueQueueBookings->count() }} bookings</span>
+    <span style="font-size:0.84rem;font-weight:600;background:rgba(217,119,6,0.12);color:#B45309;padding:4px 12px;border-radius:20px;">{{ $issueQueueBookings->count() }} bookings</span>
   </div>
 
   <div class="px-4 py-3">
@@ -82,13 +78,13 @@
 </div>
 
 {{-- ══ SECTION 2: READY TO INVOICE ══ --}}
-<div class="ac-up d3 mb-4" style="background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);border-radius:18px;border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(51,46,158,0.08);">
+<div class="ac-up d3 mb-4" style="background:#FFFFFF;border-radius:14px;border:1px solid var(--to-border);box-shadow:0 1px 2px rgba(15,23,42,0.04);">
   <div class="px-4 pt-4 pb-3 d-flex align-items-center justify-content-between" style="border-bottom:1px solid rgba(51,46,158,.06);">
     <div>
       <h6 class="fw-bold mb-0" style="font-size:1.056rem;color:#0F172A;">Ready to Invoice <span style="font-size:0.84rem;font-weight:500;color:#475569;">— Issued & Fully Paid</span></h6>
       <div style="font-size:0.84rem;color:#475569;margin-top:2px;">Invoice issued bookings to finalise</div>
     </div>
-    <span style="font-size:0.84rem;font-weight:600;background:linear-gradient(135deg,rgba(22,163,74,0.15) 0%,rgba(22,163,74,0.08) 100%);color:#15803D;padding:4px 12px;border-radius:20px;backdrop-filter:blur(4px);">{{ $invoiceQueueBookings->count() }} bookings</span>
+    <span style="font-size:0.84rem;font-weight:600;background:rgba(22,163,74,0.12);color:#15803D;padding:4px 12px;border-radius:20px;">{{ $invoiceQueueBookings->count() }} bookings</span>
   </div>
 
   <div class="px-4 py-3">
@@ -134,7 +130,7 @@
 </div>
 
 {{-- ══ ISSUE MODAL (3 dispositions) ══ --}}
-<div id="issueModal" style="display:none;position:fixed;inset:0;z-index:1055;align-items:center;justify-content:center;background:rgba(15,23,42,0.3);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);">
+<div id="issueModal" style="display:none;position:fixed;inset:0;z-index:1055;align-items:center;justify-content:center;background:rgba(15,23,42,0.3);">
   <div style="background:#fff;border-radius:20px;width:440px;max-width:92vw;max-height:88vh;box-shadow:0 25px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.04);overflow-y:auto;overflow-x:hidden;animation:issueModalIn .25s ease;display:flex;flex-direction:column;">
     <form method="POST" action="" id="issueForm">
       @csrf

@@ -34,13 +34,8 @@
 .ag-row:hover{ background:#F8FAFF;border-color:rgba(51,46,158,.12) }
 </style>
 
-{{-- ══ GLASSMORPHISM HERO ══ --}}
-<div class="oc-up d1 mb-4" style="background:linear-gradient(135deg,rgba(51,46,158,0.85) 0%,rgba(124,58,237,0.75) 50%,rgba(99,102,241,0.8) 100%);border-radius:20px;padding:28px 32px;position:relative;overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.18);box-shadow:0 8px 32px rgba(51,46,158,0.25),inset 0 1px 0 rgba(255,255,255,0.15);">
-  {{-- Decorative orbs --}}
-  <div style="position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.12) 0%,transparent 70%);pointer-events:none;"></div>
-  <div style="position:absolute;left:-40px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,0.15) 0%,transparent 70%);pointer-events:none;"></div>
-  <div style="position:absolute;right:30%;bottom:-20px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(22,163,74,0.1) 0%,transparent 70%);pointer-events:none;"></div>
-  
+{{-- ══ HERO ══ --}}
+<div class="oc-up d1 mb-4" style="background:linear-gradient(135deg,#332E9E 0%,#6366F1 100%);border-radius:16px;padding:28px 32px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,0.06);">
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-3" style="position:relative;z-index:1;">
     <div>
       <div style="font-size:0.744rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">{{ now()->format('l, d F Y') }}</div>
