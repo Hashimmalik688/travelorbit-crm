@@ -1955,8 +1955,9 @@ class BookingShow extends Component
 
     public function canComment(): bool
     {
-        $user = Auth::user();
-        return $user->id === $this->booking->user_id || $user->role === 'admin';
+        // Comments are open to everyone — any authenticated user viewing a
+        // booking can leave a note on it (the page itself already requires auth).
+        return Auth::check();
     }
 
     // ── Refunds ────────────────────────────────────────────────────────
