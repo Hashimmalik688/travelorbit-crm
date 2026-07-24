@@ -283,6 +283,53 @@ class BookingShow extends Component
         return ['dot'=>'#94A3B8','bg'=>'transparent','border'=>'rgba(148,163,184,.3)','label'=>'','full_row'=>false,'icon'=>'ph-circle'];
     }
 
+    /** Per-request cache for the live DP lookup (private => not hydrated by Livewire). */
+    private ?array $dpMapCache = null;
+
+    /**
+     * Every user's current profile photo, keyed by id AND by lowercased name.
+     * The users table is small, so one query beats per-entry lookups.
+     */
+    private function dpMaps(): array
+    {
+        if ($this->dpMapCache === null) {
+            $byId = [];
+            $byName = [];
+            foreach (\App\Models\User::select('id', 'name', 'profile_photo_path')->get() as $u) {
+                if (! $u->profile_photo_path) continue;
+                $url = asset('storage/' . $u->profile_photo_path);
+                $byId[$u->id] = $url;
+                $byName[mb_strtolower(trim($u->name))] = $url;
+            }
+            $this->dpMapCache = ['id' => $byId, 'name' => $byName];
+        }
+
+        return $this->dpMapCache;
+    }
+
+    /**
+     * Resolve an activity entry's avatar from the CURRENT user record rather
+     * than the URL snapshotted when the entry was written — otherwise anyone
+     * who set or changed their photo later shows no DP on older rows. Falls
+     * back to matching on agent name for legacy entries written before
+     * user_id was stored, then to the old snapshot, then to initials.
+     */
+    private function liveAvatarUrl($userId, ?string $agentName, ?string $snapshot): ?string
+    {
+        $maps = $this->dpMaps();
+
+        if ($userId && isset($maps['id'][$userId])) {
+            return $maps['id'][$userId];
+        }
+
+        $key = mb_strtolower(trim((string) $agentName));
+        if ($key !== '' && isset($maps['name'][$key])) {
+            return $maps['name'][$key];
+        }
+
+        return $snapshot;
+    }
+
     protected function buildActivityLog(Booking $booking): array
     {
         $entries = [];
@@ -314,8 +361,9 @@ class BookingShow extends Component
             $type      = $e['type'] ?? 'info';
             $agentName = $e['agent'] ?? 'System';
 
-            // Use the snapshotted avatar/initials stored at log time — never look up the current user record
-            $avatarUrl      = $e['avatar_url'] ?? null;
+            // Resolve the DP live so old entries show the user's current photo;
+            // the stored snapshot is only a fallback.
+            $avatarUrl      = $this->liveAvatarUrl($e['user_id'] ?? null, $agentName, $e['avatar_url'] ?? null);
             $avatarInitials = $e['avatar_initials'] ?? null;
             if (!$avatarInitials) {
                 $avatarInitials = strtoupper(substr($agentName, 0, 1));
@@ -362,9 +410,10 @@ class BookingShow extends Component
             $typeMap = ['created'=>'added','comment_added'=>'note','status_changed'=>'update','payment_requested'=>'update'];
             $type    = $typeMap[$rawAction] ?? 'info';
 
-            // Use stored snapshot — never look up current user record for old log entries
+            // Resolve the DP live so old comments show the user's current photo;
+            // the stored snapshot is only a fallback.
             $agentName      = $c->agent_name ?? ($c->user?->name ?? 'System');
-            $avatarUrl      = $c->avatar_url ?? null;
+            $avatarUrl      = $this->liveAvatarUrl($c->user_id ?? null, $agentName, $c->avatar_url ?? null);
             $avatarInitials = null;
             if (!$avatarInitials) {
                 $avatarInitials = strtoupper(substr($agentName, 0, 1));

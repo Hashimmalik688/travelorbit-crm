@@ -322,7 +322,8 @@
                     <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);"><span class="bv-pill" style="background:{{ $typeColor }}15;color:{{ $typeColor }};font-size:0.72rem;">{{ $this->passengerTypeLabel($p['type']) }}</span></td>
                     <td style="padding:8px 10px;border-color:rgba(51,46,158,.04);">
                       <div class="d-flex align-items-center gap-2">
-                        <span class="fw-semibold" style="color:#1E293B;cursor:pointer;" @click="open = !open">{{ $name ?: $this->passengerTypeFullName($p['type']).' '.$this->getPassengerNumber($i, $p['type']) }}</span>
+                        {{-- Name is plain text: only the pencil opens the edit panel. --}}
+                        <span class="fw-semibold" style="color:#1E293B;">{{ $name ?: $this->passengerTypeFullName($p['type']).' '.$this->getPassengerNumber($i, $p['type']) }}</span>
                         @php
                           $ageInfo = $this->computeAgeInfo($p['date_of_birth'] ?? '');
                         @endphp
