@@ -20,14 +20,14 @@
     <div class="sc-hdr">
       <div>
         <h5 class="fw-bold mb-0" style="font-size:1.02rem;color:#0F172A;">Status Change</h5>
-        <div style="font-size:0.78rem;color:#64748B;">Bookings in the issuance pipeline — queued through to issued.</div>
+        <div style="font-size:0.78rem;color:#64748B;">Every booking — set any status.</div>
       </div>
       <div class="ms-auto d-flex gap-2 align-items-center flex-wrap">
         <input type="text" wire:model.live.debounce.400ms="search" class="form-control form-control-sm"
           placeholder="Search booking no. or customer…" style="width:230px;">
         <select wire:model.live="statusFilter" class="form-select form-select-sm" style="width:190px;">
-          <option value="">All pipeline statuses</option>
-          @foreach ($pipelineStatuses as $s)
+          <option value="">All statuses</option>
+          @foreach ($filterStatuses as $s)
             <option value="{{ $s }}">{{ $statuses[$s] ?? $s }}</option>
           @endforeach
         </select>
@@ -98,7 +98,7 @@
         </div>
       @endif
     @empty
-      <div class="sc-empty">No bookings are currently in the issuance pipeline.</div>
+      <div class="sc-empty">No bookings found.</div>
     @endforelse
   </div>
 

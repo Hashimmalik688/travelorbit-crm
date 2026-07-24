@@ -9,9 +9,10 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Status Change page — lets issuance correct the status of a booking that is
- * somewhere in the issuance pipeline. Any status may be set as the target, but
- * only pipeline bookings may be acted on (see BookingStatusService).
+ * Status Change page — lets issuance set the status of ANY booking. The list
+ * shows every booking (searchable / filterable by status); any status may be
+ * selected as the new value, and BookingStatusService applies the matching
+ * date stamp plus the activity + audit entries.
  */
 class BookingStatusChange extends Component
 {
@@ -39,7 +40,6 @@ class BookingStatusChange extends Component
     {
         $this->guard();
         $booking = Booking::findOrFail($id);
-        abort_unless(BookingStatusService::isInPipeline($booking), 403);
 
         $this->editingId       = $id;
         $this->newStatus       = $booking->booking_status;
@@ -62,7 +62,6 @@ class BookingStatusChange extends Component
         $this->guard();
 
         $booking = Booking::findOrFail($this->editingId);
-        abort_unless(BookingStatusService::isInPipeline($booking), 403);
 
         $this->validate([
             'newStatus' => ['required', 'string', 'in:' . implode(',', BookingStatusService::selectableStatuses())],
@@ -91,7 +90,6 @@ class BookingStatusChange extends Component
     public function render()
     {
         $bookings = Booking::query()
-            ->whereIn('booking_status', BookingStatusService::PIPELINE_STATUSES)
             ->when($this->statusFilter, fn ($q) => $q->where('booking_status', $this->statusFilter))
             ->when($this->search, function ($q) {
                 $term = '%' . $this->search . '%';
@@ -105,9 +103,9 @@ class BookingStatusChange extends Component
             ->paginate(15);
 
         return view('livewire.booking-status-change', [
-            'bookings'         => $bookings,
-            'statuses'         => Booking::STATUS_LABELS,
-            'pipelineStatuses' => BookingStatusService::PIPELINE_STATUSES,
+            'bookings'       => $bookings,
+            'statuses'       => Booking::STATUS_LABELS,
+            'filterStatuses' => BookingStatusService::selectableStatuses(),
         ]);
     }
 }
