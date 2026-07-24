@@ -28,4 +28,9 @@ class SettingsController extends Controller
     {
         return view('content.settings.gds');
     }
+
+    public function attendance()
+    {
+        return view('content.settings.attendance');
+    }
 }

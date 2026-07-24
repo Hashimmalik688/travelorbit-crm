@@ -24,7 +24,7 @@
 return [
 
     // Display order for the checkbox matrix, grouped by the `group` field below.
-    'groups' => ['Bookings', 'Customers', 'Issuance', 'Accounts', 'Reports', 'Tools', 'Data', 'System'],
+    'groups' => ['Bookings', 'Customers', 'Issuance', 'Accounts', 'Reports', 'Tools', 'Attendance', 'Data', 'System'],
 
     'permissions' => [
         // ── Bookings ──────────────────────────────────────────────
@@ -218,6 +218,22 @@ return [
             'icon'        => 'ph ph-shield-check',
             'description' => 'Manage the IP / CIDR access whitelist.',
         ],
+        'settings.attendance' => [
+            'label'       => 'Attendance settings',
+            'group'       => 'System',
+            'icon'        => 'ph ph-sliders',
+            'description' => 'Set office hours, the late threshold, and company holidays.',
+        ],
+
+        // ── Attendance ────────────────────────────────────────────
+        // Note: every user can mark their own attendance ("My Attendance");
+        // this permission only gates the company-wide admin roster & history.
+        'attendance.view' => [
+            'label'       => 'View attendance records',
+            'group'       => 'Attendance',
+            'icon'        => 'ph ph-calendar-check',
+            'description' => "See the company-wide attendance roster and history for all staff.",
+        ],
     ],
 
     /*
@@ -275,7 +291,7 @@ return [
             'issuance.access', 'issuance.manage', 'accounts.access',
             'payments.charge', 'payments.invoice', 'payments.issue',
             'reports.view', 'reports.performance_all', 'reports.apply_deduction', 'refunds.manage', 'data.view_all',
-            'eticket.access', 'calldesk.access',
+            'eticket.access', 'calldesk.access', 'attendance.view',
         ],
         // admin is a hard-wired super-user; '*' just pre-ticks every box in the UI.
         'admin' => ['*'],

@@ -1504,13 +1504,21 @@
             'cash'            => ['label'=>'Cash',             'icon'=>'ph-money',        'color'=>'#15803D'],
           ];
         @endphp
+        {{-- Instant client-side highlight via the native radio's :checked state,
+             so selection no longer waits for the Livewire round-trip. --}}
+        <style>
+          .pm-radio:checked + div { border-color: var(--pm) !important; background: var(--pm-tint) !important; }
+          .pm-radio:checked + div i,
+          .pm-radio:checked + div span { color: var(--pm) !important; }
+          .pm-radio:checked + div span { font-weight: 700 !important; }
+        </style>
         <div class="row g-2 mb-4">
           @foreach($modalMethods as $val => $m)
             <div class="col-4 col-md-3">
               <label style="cursor:pointer;display:block;">
                 <input type="radio" wire:model.live="chargeMethod" value="{{ $val }}" style="display:none;" class="pm-radio">
                 <div class="px-3 py-3 d-flex flex-column align-items-center gap-2 text-center"
-                  style="border-radius:12px;border:2px solid {{ $chargeMethod === $val ? $m['color'] : 'rgba(51,46,158,.08)' }};background:{{ $chargeMethod === $val ? $m['color'].'12' : '#fff' }};transition:all .2s ease;cursor:pointer;"
+                  style="--pm:{{ $m['color'] }};--pm-tint:{{ $m['color'] }}12;border-radius:12px;border:2px solid {{ $chargeMethod === $val ? $m['color'] : 'rgba(51,46,158,.08)' }};background:{{ $chargeMethod === $val ? $m['color'].'12' : '#fff' }};transition:all .2s ease;cursor:pointer;"
                   onmouseover="if(!this.querySelector('input:checked')){this.style.borderColor='{{ $m['color'] }}';this.style.background='{{ $m['color'] }}08';}"
                   onmouseout="if(!this.querySelector('input:checked')){this.style.borderColor='rgba(51,46,158,.08)';this.style.background='#fff';}">
                   <i class="ph {{ $m['icon'] }}" style="font-size:1.32rem;color:{{ $chargeMethod === $val ? $m['color'] : '#94A3B8' }};flex-shrink:0;transition:all .2s ease;"></i>

@@ -12,6 +12,7 @@ use App\Http\Controllers\Mis\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Settings\UserController as UserManagementController;
 use App\Http\Controllers\CallCenter\CallCenterController;
+use App\Http\Controllers\AttendanceController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login');
@@ -108,7 +109,7 @@ Route::middleware(['auth'])->group(function () {
     // Settings — each sub-area is gated by its own delegatable permission.
     // Admin is a hard-wired super-user and passes every one of these.
     // The Settings Hub opens for anyone holding at least one Settings key.
-    Route::middleware('permission:settings.users,settings.activity,settings.vendors,settings.gds,settings.ip')->group(function () {
+    Route::middleware('permission:settings.users,settings.activity,settings.vendors,settings.gds,settings.ip,settings.attendance')->group(function () {
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     });
     Route::middleware('permission:settings.users')->group(function () {
@@ -129,6 +130,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/vendors', [SettingsController::class, 'vendors'])->name('settings.vendors')->middleware('permission:settings.vendors');
     Route::get('/settings/gds', [SettingsController::class, 'gds'])->name('settings.gds')->middleware('permission:settings.gds');
     Route::get('/settings/ip-whitelist', fn() => view('settings.ip-whitelist'))->name('settings.ip')->middleware('permission:settings.ip');
+    Route::get('/settings/attendance', [SettingsController::class, 'attendance'])->name('settings.attendance')->middleware('permission:settings.attendance');
 
     // Call Desk — gated by calldesk.access; managers/admins see all agents' data,
     // everyone else is scoped to their own (enforced in the Livewire components).
@@ -144,4 +146,19 @@ Route::middleware(['auth'])->group(function () {
     Route::redirect('/call-center/new-call', '/call-desk/new-call', 301);
     Route::redirect('/call-center/inquiries', '/call-desk/inquiries', 301);
     Route::redirect('/call-center/callbacks', '/call-desk/callbacks', 301);
+
+    // Attendance — self-service for every user; the roster/history are gated
+    // by attendance.view. Ported from taurus-crm.
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        // Self-service: any authenticated user marks their own attendance.
+        Route::get('/dashboard', [AttendanceController::class, 'dashboard'])->name('dashboard');
+        Route::post('/check-in', [AttendanceController::class, 'checkIn'])->name('checkin');
+        Route::post('/check-out', [AttendanceController::class, 'checkOut'])->name('checkout');
+
+        // Admin view: company-wide roster & history.
+        Route::middleware('permission:attendance.view')->group(function () {
+            Route::get('/', [AttendanceController::class, 'index'])->name('index');
+            Route::get('/history', [AttendanceController::class, 'history'])->name('history');
+        });
+    });
 });

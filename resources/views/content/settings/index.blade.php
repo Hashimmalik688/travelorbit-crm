@@ -60,6 +60,16 @@
         'meta'  => 'Booking',
         'perm'  => 'settings.gds',
       ],
+      [
+        'title' => 'Attendance',
+        'desc'  => 'Set office start & late times, shift length, weekend rules, and company holidays.',
+        'icon'  => 'ph ph-calendar-check',
+        'color' => '#0891B2',
+        'bg'    => 'rgba(8,145,178,.08)',
+        'url'   => route('settings.attendance'),
+        'meta'  => 'HR',
+        'perm'  => 'settings.attendance',
+      ],
     ];
   @endphp
   @foreach($cards as $c)
