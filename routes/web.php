@@ -160,5 +160,11 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [AttendanceController::class, 'index'])->name('index');
             Route::get('/history', [AttendanceController::class, 'history'])->name('history');
         });
+
+        // Admin edit: correct / add / remove records. Gated by attendance.edit.
+        Route::middleware('permission:attendance.edit')->group(function () {
+            Route::post('/save', [AttendanceController::class, 'save'])->name('save');
+            Route::delete('/{attendance}', [AttendanceController::class, 'destroy'])->name('destroy')->whereNumber('attendance');
+        });
     });
 });

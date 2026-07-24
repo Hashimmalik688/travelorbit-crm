@@ -109,7 +109,7 @@
                         @foreach ($week as $day)
                             @php
                                 $att = $day['attendance'];
-                                $isWeekend = in_array($day['date']->dayOfWeek, [\Carbon\Carbon::SATURDAY, \Carbon\Carbon::SUNDAY]);
+                                $isWeekend = \App\Services\AttendanceService::isWeekend($day['date']);
                                 $swc = $att ? $att->status_with_color : null;
                             @endphp
                             <td class="align-top {{ !$day['isCurrentMonth'] ? 'to-cal-off' : '' }} {{ $day['isToday'] ? 'to-cal-today' : '' }}"

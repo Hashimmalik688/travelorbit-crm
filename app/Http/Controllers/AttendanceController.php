@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 /**
  * Attendance — ported from taurus-crm (self-service + admin view scope).
@@ -112,7 +114,7 @@ class AttendanceController extends Controller
         $totalHours = 0;
 
         for ($d = $startOfMonth->copy(); $d->lte($endOfMonth); $d->addDay()) {
-            if (in_array($d->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY])
+            if (AttendanceService::isWeekend($d)
                 || AttendanceService::isHoliday($d)) {
                 continue;
             }
@@ -207,7 +209,7 @@ class AttendanceController extends Controller
             $presentCount = $selectedAttendances->where('status', Attendance::STATUS_PRESENT)->count();
             $lateCount = $selectedAttendances->where('status', Attendance::STATUS_LATE)->count();
 
-            $isWorkday = ! in_array($selectedDate->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY])
+            $isWorkday = ! AttendanceService::isWeekend($selectedDate)
                 && ! AttendanceService::isHoliday($selectedDate);
             $absentCount = $isWorkday ? max(0, $totalEmployees - $selectedAttendances->count()) : 0;
 
@@ -254,6 +256,88 @@ class AttendanceController extends Controller
         ));
     }
 
+    // ── Admin edit (gated by attendance.edit) ────────────────────────
+
+    /**
+     * Create or update a single attendance record (admin correction).
+     * Matches an existing row by id, or by (user, date) when adding one.
+     */
+    public function save(Request $request)
+    {
+        $data = $request->validate([
+            'id'          => ['nullable', 'integer', 'exists:attendances,id'],
+            'user_id'     => ['required', 'integer', 'exists:users,id'],
+            'date'        => ['required', 'date'],
+            'status'      => ['required', Rule::in([
+                Attendance::STATUS_PRESENT, Attendance::STATUS_LATE,
+                Attendance::STATUS_ABSENT, Attendance::STATUS_LEAVE,
+            ])],
+            'login_time'  => ['nullable', 'date_format:H:i'],
+            'logout_time' => ['nullable', 'date_format:H:i'],
+        ]);
+
+        $date = Carbon::parse($data['date'])->format('Y-m-d');
+
+        $attendance = ! empty($data['id'])
+            ? Attendance::findOrFail($data['id'])
+            : Attendance::firstOrNew(['user_id' => $data['user_id'], 'date' => $date]);
+
+        $isNew  = ! $attendance->exists;
+        $before = [
+            'status'      => $attendance->status,
+            'login_time'  => optional($attendance->login_time)->format('H:i'),
+            'logout_time' => optional($attendance->logout_time)->format('H:i'),
+        ];
+
+        $attendance->fill([
+            'user_id'     => $data['user_id'],
+            'date'        => $date,
+            'status'      => $data['status'],
+            'login_time'  => $data['login_time']  ? Carbon::parse($date . ' ' . $data['login_time'])  : null,
+            'logout_time' => $data['logout_time'] ? Carbon::parse($date . ' ' . $data['logout_time']) : null,
+        ]);
+        $attendance->save(); // working_hours is recalculated in the model's saving() hook
+
+        $staff = $attendance->user->name ?? ('user #' . $attendance->user_id);
+        AuditLog::logAction(
+            $isNew ? 'attendance_created' : 'attendance_updated',
+            $request->user(),
+            'Attendance',
+            $attendance->id,
+            ($isNew ? 'Added' : 'Edited') . ' attendance for ' . $staff . ' on '
+                . Carbon::parse($date)->format('D, d M Y') . ' — ' . ucfirst($data['status']),
+            ['before' => $before, 'after' => [
+                'status'      => $attendance->status,
+                'login_time'  => optional($attendance->login_time)->format('H:i'),
+                'logout_time' => optional($attendance->logout_time)->format('H:i'),
+            ]],
+        );
+
+        return redirect($request->input('return_to') ?: route('attendance.index'))
+            ->with('success', 'Attendance saved for ' . $staff . '.');
+    }
+
+    /** Delete a wrongly-created attendance record (admin correction). */
+    public function destroy(Request $request, Attendance $attendance)
+    {
+        $staff = $attendance->user->name ?? ('user #' . $attendance->user_id);
+        $when  = $attendance->date->format('D, d M Y');
+        $id    = $attendance->id;
+
+        $attendance->delete();
+
+        AuditLog::logAction(
+            'attendance_deleted',
+            $request->user(),
+            'Attendance',
+            $id,
+            'Removed attendance for ' . $staff . ' on ' . $when,
+        );
+
+        return redirect($request->input('return_to') ?: route('attendance.index'))
+            ->with('success', 'Attendance removed for ' . $staff . '.');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
 
     private function getWeeklyStats()
@@ -272,7 +356,7 @@ class AttendanceController extends Controller
                 })
                 ->get();
 
-            $isWorkday = ! in_array($date->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY])
+            $isWorkday = ! AttendanceService::isWeekend($date)
                 && ! AttendanceService::isHoliday($date);
             $absentCount = $isWorkday ? max(0, $totalEmployees - $dayAttendances->count()) : 0;
 

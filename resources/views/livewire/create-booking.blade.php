@@ -1272,7 +1272,7 @@
                     @endif
 
                     {{-- CC Charges (auto-applied for card payments, editable) --}}
-                    @if(in_array($payment_method, ['amex','credit_card','debit_card']))
+                    @if(in_array($payment_method, ['amex','credit_card','debit_card','klarna','clearpay']))
                     <div class="mb-3" style="border-radius:12px;border:1.5px solid rgba(220,38,38,.15);overflow:hidden;">
                       <div style="padding:10px 16px;background:rgba(220,38,38,.04);border-bottom:1px solid rgba(220,38,38,.10);display:flex;align-items:center;justify-content:space-between;">
                         <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#DC2626;">CC Charges</span>

@@ -1793,6 +1793,9 @@ class BookingShow extends Component
             'debit_card'   => 1.5,
             'credit_card'  => 2.5,
             'amex'         => 2.5,
+            // Travel Orbit: BNPL providers carry a flat 6% card charge.
+            'klarna'       => 6.0,
+            'clearpay'     => 6.0,
         ];
         if (isset($cardRates[$this->chargeMethod])) {
             $this->chargeCcRate = $cardRates[$this->chargeMethod];
@@ -1804,6 +1807,11 @@ class BookingShow extends Component
     }
 
     public function updatedChargeCcRate(): void
+    {
+        $this->recalculateChargeCcAmount();
+    }
+
+    public function updatedChargeAmount(): void
     {
         $this->recalculateChargeCcAmount();
     }

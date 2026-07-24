@@ -234,6 +234,12 @@ return [
             'icon'        => 'ph ph-calendar-check',
             'description' => "See the company-wide attendance roster and history for all staff.",
         ],
+        'attendance.edit' => [
+            'label'       => 'Edit attendance records',
+            'group'       => 'Attendance',
+            'icon'        => 'ph ph-pencil-simple',
+            'description' => "Correct staff attendance — edit check-in/out times and status, add a missing day, or remove a wrong entry.",
+        ],
     ],
 
     /*
@@ -291,7 +297,7 @@ return [
             'issuance.access', 'issuance.manage', 'accounts.access',
             'payments.charge', 'payments.invoice', 'payments.issue',
             'reports.view', 'reports.performance_all', 'reports.apply_deduction', 'refunds.manage', 'data.view_all',
-            'eticket.access', 'calldesk.access', 'attendance.view',
+            'eticket.access', 'calldesk.access', 'attendance.view', 'attendance.edit',
         ],
         // admin is a hard-wired super-user; '*' just pre-ticks every box in the UI.
         'admin' => ['*'],

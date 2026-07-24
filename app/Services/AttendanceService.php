@@ -20,6 +20,18 @@ use Illuminate\Support\Facades\Request;
 class AttendanceService
 {
     /**
+     * Whether a date falls on a non-working weekend day.
+     *
+     * Travel Orbit works Monday–Saturday, so Sunday is the only weekend / off
+     * day. This is the single source of truth for the working-week rule —
+     * change it here if the working week ever changes.
+     */
+    public static function isWeekend(Carbon $date): bool
+    {
+        return $date->dayOfWeek === Carbon::SUNDAY;
+    }
+
+    /**
      * Company-wide holidays, keyed by Y-m-d → name. Stored as a flat list in
      * settings (managed from Settings → Attendance), so no extra table.
      *
@@ -133,12 +145,12 @@ class AttendanceService
             ];
         }
 
-        // Weekend guard
+        // Weekend guard (Travel Orbit works Mon–Sat, so this only blocks Sundays)
         if (! Setting::getValue('allow_weekend_attendance', false)) {
-            if ($shiftDate->isWeekend()) {
+            if (self::isWeekend($shiftDate)) {
                 return [
                     'success' => false,
-                    'message' => 'Attendance marking is not allowed on weekends.',
+                    'message' => 'Attendance marking is not allowed on Sundays.',
                 ];
             }
         }

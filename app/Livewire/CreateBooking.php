@@ -258,6 +258,9 @@ class CreateBooking extends Component
             'debit_card'  => 1.5,
             'credit_card' => 2.5,
             'amex'        => 2.5,
+            // Travel Orbit: BNPL providers carry a flat 6% card charge.
+            'klarna'      => 6.0,
+            'clearpay'    => 6.0,
         ];
         if (isset($cardRates[$this->payment_method])) {
             $this->cc_charge_rate = $cardRates[$this->payment_method];
@@ -1615,6 +1618,8 @@ class CreateBooking extends Component
                 'epay_debit'  => 1.5, 'epay_credit' => 2.5,
                 'debit_card'  => 1.5, 'credit_card' => 2.5,
                 'amex'        => 2.5,
+                // Travel Orbit: BNPL providers carry a flat 6% card charge.
+                'klarna'      => 6.0, 'clearpay'    => 6.0,
             ];
             foreach ($historyEntries as $ph) {
                 $amt = (float)($ph['amount'] ?? 0);

@@ -1324,7 +1324,7 @@
           @endif
 
           @if($canRequestChargeButton)
-            <button type="button" wire:click="openChargeModal" class="w-100 mt-2" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <button type="button" x-data="{ open: @entangle('showChargeModal') }" @click="open = true" wire:click="openChargeModal" class="w-100 mt-2" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="ph ph-plus-circle"></i> Request Payment Charge
             </button>
           @endif
@@ -1478,12 +1478,11 @@
      silently dropped and the modal never appears. --}}
 
 {{-- REQUEST PAYMENT CHARGE MODAL --}}
-@if($showChargeModal)
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);" wire:click="closeChargeModal">
-    <div style="background:#fff;border-radius:20px;width:100%;max-width:600px;box-shadow:0 32px 96px rgba(0,0,0,.35),0 8px 32px rgba(51,46,158,.15);overflow:hidden;max-height:92vh;display:flex;flex-direction:column;" wire:click.stop="">
+<div x-data="{ open: @entangle('showChargeModal'), method: @entangle('chargeMethod'), get isCard(){ return ['debit_card','credit_card','amex'].includes(this.method) }, get isCc(){ return ['epay_credit','credit_card','debit_card','amex','klarna','clearpay'].includes(this.method) } }" x-show="open" x-cloak class="charge-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);" @click="open = false" @keydown.escape.window="open = false">
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:600px;box-shadow:0 32px 96px rgba(0,0,0,.35),0 8px 32px rgba(51,46,158,.15);overflow:hidden;max-height:92vh;display:flex;flex-direction:column;" @click.stop>
       <div style="padding:22px 28px;background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <h5 class="fw-bold mb-0" style="font-size:1.14rem;display:flex;align-items:center;gap:10px;"><i class="ph ph-credit-card" style="font-size:1.32rem;"></i> Request Payment Charge</h5>
-        <button type="button" wire:click="closeChargeModal" style="background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.08rem;transition:all .15s;">✕</button>
+        <button type="button" @click="open = false" style="background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.08rem;transition:all .15s;">✕</button>
       </div>
       <div style="overflow-y:auto;padding:24px 28px;">
 
@@ -1507,6 +1506,7 @@
         {{-- Instant client-side highlight via the native radio's :checked state,
              so selection no longer waits for the Livewire round-trip. --}}
         <style>
+          .charge-overlay { display:flex; align-items:center; justify-content:center; }
           .pm-radio:checked + div { border-color: var(--pm) !important; background: var(--pm-tint) !important; }
           .pm-radio:checked + div i,
           .pm-radio:checked + div span { color: var(--pm) !important; }
@@ -1516,7 +1516,7 @@
           @foreach($modalMethods as $val => $m)
             <div class="col-4 col-md-3">
               <label style="cursor:pointer;display:block;">
-                <input type="radio" wire:model.live="chargeMethod" value="{{ $val }}" style="display:none;" class="pm-radio">
+                <input type="radio" name="chargeMethod" wire:model.live="chargeMethod" value="{{ $val }}" style="display:none;" class="pm-radio">
                 <div class="px-3 py-3 d-flex flex-column align-items-center gap-2 text-center"
                   style="--pm:{{ $m['color'] }};--pm-tint:{{ $m['color'] }}12;border-radius:12px;border:2px solid {{ $chargeMethod === $val ? $m['color'] : 'rgba(51,46,158,.08)' }};background:{{ $chargeMethod === $val ? $m['color'].'12' : '#fff' }};transition:all .2s ease;cursor:pointer;"
                   onmouseover="if(!this.querySelector('input:checked')){this.style.borderColor='{{ $m['color'] }}';this.style.background='{{ $m['color'] }}08';}"
@@ -1530,9 +1530,8 @@
         </div>
         @error('chargeMethod') <small class="text-danger d-block mb-3" style="margin-top:-8px;">{{ $message }}</small> @enderror
 
-        {{-- Card details when debit/credit/amex selected --}}
-        @if(in_array($chargeMethod, ['debit_card','credit_card','amex']))
-          <div style="padding:16px;border-radius:14px;background:linear-gradient(135deg,#F8FAFF,#EEF2FF);border:1px solid rgba(51,46,158,.10);margin-bottom:16px;">
+        {{-- Card details when debit/credit/amex selected — toggled client-side for instant show/hide --}}
+        <div x-show="isCard" x-cloak style="padding:16px;border-radius:14px;background:linear-gradient(135deg,#F8FAFF,#EEF2FF);border:1px solid rgba(51,46,158,.10);margin-bottom:16px;">
             <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#332E9E;margin-bottom:12px;">Card Details</div>
             <div class="mb-3">
               <label class="bv-label">Card Number</label>
@@ -1547,49 +1546,35 @@
               <input type="text" wire:model="card_holder_name" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:0.984rem;" placeholder="Name on card">
             </div>
           </div>
-        @endif
 
-        {{-- Amount & Receipt --}}
-        <div class="row g-3 mb-2" wire:key="charge-amt-row">
-          @if(in_array($chargeMethod, ['epay_credit','credit_card','debit_card','amex']))
-            <div class="col-3" wire:key="chg-amt-col">
-              <label class="bv-label">Amount (&pound;)</label>
-              <input type="number" wire:model="chargeAmount" step="0.01" min="1" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:1.02rem;font-weight:700;" placeholder="0.00">
-              @error('chargeAmount') <small class="text-danger">{{ $message }}</small> @enderror
-            </div>
-            <div class="col-3" wire:key="chg-rate-col">
-              <label class="bv-label">CC Charge Rate (%)</label>
-              <input type="number" wire:model.live.debounce.500ms="chargeCcRate" step="0.1" min="0" max="100" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:0.984rem;" placeholder="2.5">
-            </div>
-            <div class="col-3" wire:key="chg-cc-col">
-              <label class="bv-label">CC Charge (&pound;)</label>
-              <div style="padding:8px 12px;font-size:1.02rem;font-weight:700;color:#DC2626;background:#FFF1F0;border-radius:10px;border:1px solid rgba(220,38,38,.12);">&pound;{{ number_format((float)$chargeCcAmount, 2) }}</div>
-            </div>
-            <div class="col-3" wire:key="chg-rec-col">
-              <label class="bv-label">Receipt # (optional)</label>
-              <input type="text" wire:model="chargeReceipt" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:0.984rem;" placeholder="Receipt number">
-            </div>
-          @else
-            <div class="col-6" wire:key="chg-amt-col">
-              <label class="bv-label">Amount (&pound;)</label>
-              <input type="number" wire:model="chargeAmount" step="0.01" min="1" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:1.02rem;font-weight:700;" placeholder="0.00">
-              @error('chargeAmount') <small class="text-danger">{{ $message }}</small> @enderror
-            </div>
-            <div class="col-6" wire:key="chg-rec-col">
-              <label class="bv-label">Receipt # (optional)</label>
-              <input type="text" wire:model="chargeReceipt" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:0.984rem;" placeholder="Receipt number">
-            </div>
-          @endif
+        {{-- Amount & Receipt — CC columns toggle client-side so the layout reflows instantly --}}
+        <div class="row g-3 mb-2">
+          <div :class="isCc ? 'col-3' : 'col-6'">
+            <label class="bv-label">Amount (&pound;)</label>
+            <input type="number" wire:model.live.debounce.500ms="chargeAmount" step="0.01" min="1" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:1.02rem;font-weight:700;" placeholder="0.00">
+            @error('chargeAmount') <small class="text-danger">{{ $message }}</small> @enderror
+          </div>
+          <div class="col-3" x-show="isCc" x-cloak>
+            <label class="bv-label">CC Charge Rate (%)</label>
+            <input type="number" wire:model.live.debounce.500ms="chargeCcRate" step="0.1" min="0" max="100" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:0.984rem;" placeholder="2.5">
+          </div>
+          <div class="col-3" x-show="isCc" x-cloak>
+            <label class="bv-label">CC Charge (&pound;)</label>
+            <div style="padding:8px 12px;font-size:1.02rem;font-weight:700;color:#DC2626;background:#FFF1F0;border-radius:10px;border:1px solid rgba(220,38,38,.12);">&pound;{{ number_format((float)$chargeCcAmount, 2) }}</div>
+          </div>
+          <div :class="isCc ? 'col-3' : 'col-6'">
+            <label class="bv-label">Receipt # (optional)</label>
+            <input type="text" wire:model="chargeReceipt" class="bv-input-inline" style="width:100%;padding:8px 12px;font-size:0.984rem;" placeholder="Receipt number">
+          </div>
         </div>
 
         <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.08);">
-          <button type="button" wire:click="closeChargeModal" style="background:transparent;border:1.5px solid rgba(51,46,158,.18);color:#475569;border-radius:10px;padding:9px 24px;font-size:0.936rem;font-weight:600;cursor:pointer;transition:all .15s;">Cancel</button>
+          <button type="button" @click="open = false" style="background:transparent;border:1.5px solid rgba(51,46,158,.18);color:#475569;border-radius:10px;padding:9px 24px;font-size:0.936rem;font-weight:600;cursor:pointer;transition:all .15s;">Cancel</button>
           <button type="button" wire:click="requestPaymentCharge" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;border:none;border-radius:10px;padding:9px 28px;font-size:0.936rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(255,107,53,.3);transition:all .15s;">Request Charge</button>
         </div>
       </div>
     </div>
   </div>
-@endif
 
 {{-- REQUEST REFUND MODAL --}}
 @if($showRefundModal)

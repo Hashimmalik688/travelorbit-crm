@@ -268,8 +268,8 @@ class Attendance extends Model
                 continue;
             }
 
-            // Skip weekends and company holidays
-            if (in_array($cursor->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY])
+            // Skip weekends (Sunday only — Saturday is a working day) and holidays
+            if (\App\Services\AttendanceService::isWeekend($cursor)
                 || \App\Services\AttendanceService::isHoliday($cursor)) {
                 $cursor->addDay();
                 continue;
