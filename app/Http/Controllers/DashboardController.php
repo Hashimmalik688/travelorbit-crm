@@ -325,8 +325,20 @@ class DashboardController extends Controller
     {
         $issueQueueBookings = Booking::where('booking_status', 'ticket_in_process')
             ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
-        $invoiceQueueBookings = Booking::where('booking_status', 'issued')
-            ->orderByDesc('updated_at')->take(15)->with(['user', 'payment'])->get();
+        // Ready to Invoice = issued & fully paid. Includes bookings issued on
+        // Payment Awaiting / Payment Plan once their balance is settled, so
+        // "fully paid" is evaluated in PHP via Booking::canInvoice().
+        $invoiceQueueBookings = Booking::whereIn('booking_status', [
+                Booking::STATUS_ISSUED,
+                Booking::STATUS_ISSUED_PAYMENT_AWAITING,
+                Booking::STATUS_ISSUED_PAYMENT_PLAN,
+            ])
+            ->orderByDesc('updated_at')
+            ->with(['user', 'payment', 'paymentHistory'])
+            ->get()
+            ->filter(fn (Booking $b) => $b->canInvoice())
+            ->take(15)
+            ->values();
 
         return view('content.dashboard.accounts-dashboard', compact(
             'issueQueueBookings', 'invoiceQueueBookings'

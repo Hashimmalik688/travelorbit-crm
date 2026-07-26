@@ -146,7 +146,26 @@ class Booking extends Model
 
     public function canInvoice(): bool
     {
-        return $this->booking_status === self::STATUS_ISSUED;
+        // A booking is invoiceable once it's issued AND fully paid. The plain
+        // 'issued' status is only reached on full payment, so it's always
+        // invoiceable; bookings issued on Payment Awaiting or a Payment Plan
+        // become invoiceable the moment their balance is settled.
+        return match ($this->booking_status) {
+            self::STATUS_ISSUED => true,
+            self::STATUS_ISSUED_PAYMENT_AWAITING,
+            self::STATUS_ISSUED_PAYMENT_PLAN => $this->isFullyPaid(),
+            default => false,
+        };
+    }
+
+    /**
+     * Fully paid = approved payments cover the full sale price. Uses the
+     * approved-payments ledger (same source as BookingShow's "Balance Due"),
+     * with a small epsilon for float rounding.
+     */
+    public function isFullyPaid(): bool
+    {
+        return ($this->total_sale_price - $this->totalReceived()) <= 0.005;
     }
 
     public function canIssue(): bool
