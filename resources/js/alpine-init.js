@@ -6,6 +6,19 @@ document.addEventListener('alpine:init', () => {
     return (rect.bottom + ddHeight + 12) > window.innerHeight && (rect.top - ddHeight - 4) > 0;
   };
 
+  // The booking page's auto-save only fires from a native 'input'/'change' DOM
+  // event bubbling up to its wrapper (see the x-data on the page root) — it
+  // has no way to know a Livewire property changed otherwise. These custom
+  // select/date widgets update the property via $wire.set() directly, which
+  // is a real network round-trip but dispatches no DOM event, so a field
+  // edited ONLY through one of these controls looked saved (the new value
+  // shows in the UI) but was silently never written to the database. Firing
+  // a synthetic bubbling 'change' from the widget's own root right after
+  // $wire.set() makes it indistinguishable from a real form control to that
+  // listener, so auto-save now fires the same way it already does for plain
+  // text inputs.
+  const announceChange = (el) => el.dispatchEvent(new Event('change', { bubbles: true }));
+
   Alpine.data('initSelect', (modelName, options, placeholder, forceDropUp = false, searchable = false) => ({
     open: false,
     selected: null,
@@ -71,6 +84,7 @@ document.addEventListener('alpine:init', () => {
       this.searchQuery = '';
       this.updateLabel();
       this.$wire.set(modelName, val);
+      announceChange(this.$el);
     },
 
     toggle() {
@@ -211,6 +225,7 @@ document.addEventListener('alpine:init', () => {
         this.typedInput = displayVal;
       }
       this.$wire.set(modelKey, dbVal);
+      announceChange(this.$el);
     },
 
     parseAndSet(val) {
@@ -237,6 +252,7 @@ document.addEventListener('alpine:init', () => {
 
     clear() {
       this.selectedDate = null; this.display = ''; this.typedInput = ''; this.$wire.set(modelKey, ''); this.open = false;
+      announceChange(this.$el);
     },
 
     toggle() {

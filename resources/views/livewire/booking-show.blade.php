@@ -167,8 +167,11 @@
   @endif
 </div>
 
-{{-- BOOKING CARD --}}
-<div style="background:#fff;border-radius:14px;border:1px solid rgba(51,46,158,.08);padding:18px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+{{-- BOOKING CARD — three-column grid (not flex space-between) so the
+     INVOICED seal sits truly centered on the card regardless of how long the
+     left meta or right button group are, rather than wherever flex leftover
+     space happens to land it. --}}
+<div style="background:#fff;border-radius:14px;border:1px solid rgba(51,46,158,.08);padding:18px 24px;margin-bottom:16px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;">
   <div class="d-flex align-items-center gap-20" style="gap:24px;">
     <div>
       <div class="bv-label">Booking</div>
@@ -182,11 +185,30 @@
           <i class="ph ph-calendar" style="font-size:0.96rem;color:#475569;"></i>
           {{ $booking->created_at->format('d M Y') }}
         </span>
+
+        @if($booking->last_payment_date)
+          <span style="font-size:0.768rem;font-weight:500;color:#0369A1;background:rgba(3,105,161,.08);display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;">
+            <i class="ph ph-money" style="font-size:0.84rem;"></i>
+            Last Payment: {{ $booking->last_payment_date->format('d M Y') }}
+          </span>
+        @endif
+
+        @if($booking->last_issue_date)
+          <span style="font-size:0.768rem;font-weight:500;color:#047857;background:rgba(4,120,87,.08);display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;">
+            <i class="ph ph-check-fat" style="font-size:0.84rem;"></i>
+            Last Issue: {{ $booking->last_issue_date->format('d M Y') }}
+          </span>
+        @endif
       </div>
     </div>
   </div>
-  @if($booking->invoiced_at)
-    <div style="position:relative;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+  {{-- Always rendered, even with nothing inside — a CSS Grid column is only
+       ever assigned to children that actually exist in the DOM. When the
+       @if below produced no seal, this whole slot vanished and the button
+       group got auto-placed into column 2 (the seal's own "auto" track)
+       instead of column 3, landing mid-row instead of pushed to the right. --}}
+  <div style="position:relative;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+    @if($booking->invoiced_at)
       <div style="transform:rotate(-12deg);border:4px double #D4A017;border-radius:10px;padding:10px 28px;background:linear-gradient(135deg,rgba(212,160,23,.08),rgba(255,215,0,.05));">
         <div style="display:flex;align-items:center;gap:8px;">
           <i class="ph ph-seal-check" style="font-size:1.6rem;color:#D4A017;"></i>
@@ -196,9 +218,9 @@
           </div>
         </div>
       </div>
-    </div>
-  @endif
-  <div class="d-flex gap-2 align-items-center flex-wrap">
+    @endif
+  </div>
+  <div class="d-flex gap-2 align-items-center flex-wrap" style="justify-content:flex-end;">
 
     {{-- ── Action buttons: REQUEST dispositions only. Approvals/marking happen on dedicated dashboards. ── --}}
 
