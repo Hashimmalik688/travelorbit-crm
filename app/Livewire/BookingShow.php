@@ -2107,12 +2107,33 @@ class BookingShow extends Component
                 'type'            => 'update',
             ];
 
-            $b->update([
+            $coreUpdate = [
                 'booking_type' => $this->booking_type,
                 'passenger_count' => count($this->passengers),
                 'booking_status' => $this->bookingStatus,
                 'activity_log' => $activityLog,
-            ]);
+            ];
+            // Lead Source / Lead Nature / Caller Details are only ever rendered
+            // as editable when 'locked'=>!$isPrivileged is false (see the
+            // corresponding editable-field calls in booking-show.blade.php) —
+            // mirror that boundary server-side rather than trusting whatever a
+            // non-privileged client sent, and don't persist stale mount()
+            // values from other roles that never had the edit control at all.
+            if (Auth::user()->hasPermission('bookings.edit_any')) {
+                $coreUpdate += [
+                    'lead_source'       => $this->lead_source ?: null,
+                    'lead_nature'       => $this->lead_nature ?: null,
+                    'booker_title'      => $this->booker_title ?: null,
+                    'booker_first_name' => $this->booker_first_name ?: null,
+                    'booker_last_name'  => $this->booker_last_name ?: null,
+                    'booker_mobile'     => $this->booker_mobile ?: null,
+                    'booker_landline'   => $this->booker_landline ?: null,
+                    'booker_email'      => $this->booker_email ?: null,
+                    'booker_address'    => $this->booker_address ?: null,
+                    'booker_postcode'   => $this->booker_postcode ?: null,
+                ];
+            }
+            $b->update($coreUpdate);
             // Keep in-memory entries in sync with what was just written; dehydrate() will see dirty=false.
             $this->activity_log_entries = array_values($activityLog);
             $this->activityLogDirty = false;
@@ -2434,10 +2455,29 @@ class BookingShow extends Component
             $oldTransfers = $b->transfers()->get()->toArray();
 
             if (!$this->isLocked || Auth::user()->hasPermission('bookings.edit_any')) {
-                $b->update([
+                $coreUpdate = [
                     'booking_type' => $this->booking_type,
                     'passenger_count' => count($this->passengers),
-                ]);
+                ];
+                // Same boundary as save() above: Lead Source / Lead Nature /
+                // Caller Details are only ever editable for bookings.edit_any
+                // holders (see 'locked'=>!$isPrivileged in the blade), so only
+                // they get persisted here.
+                if (Auth::user()->hasPermission('bookings.edit_any')) {
+                    $coreUpdate += [
+                        'lead_source'       => $this->lead_source ?: null,
+                        'lead_nature'       => $this->lead_nature ?: null,
+                        'booker_title'      => $this->booker_title ?: null,
+                        'booker_first_name' => $this->booker_first_name ?: null,
+                        'booker_last_name'  => $this->booker_last_name ?: null,
+                        'booker_mobile'     => $this->booker_mobile ?: null,
+                        'booker_landline'   => $this->booker_landline ?: null,
+                        'booker_email'      => $this->booker_email ?: null,
+                        'booker_address'    => $this->booker_address ?: null,
+                        'booker_postcode'   => $this->booker_postcode ?: null,
+                    ];
+                }
+                $b->update($coreUpdate);
 
                 // Passengers
                 $updatedIds = [];
