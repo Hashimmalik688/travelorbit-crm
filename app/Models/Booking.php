@@ -146,6 +146,14 @@ class Booking extends Model
 
     public function canInvoice(): bool
     {
+        // Invoicing lands the booking on plain 'issued' (see
+        // BookingWorkflowController::invoice), so the status alone can no longer
+        // tell an invoiced booking from a not-yet-invoiced one — invoiced_at is
+        // the record of it, and it makes invoicing a one-way step.
+        if ($this->invoiced_at) {
+            return false;
+        }
+
         // A booking is invoiceable once it's issued AND fully paid. The plain
         // 'issued' status is only reached on full payment, so it's always
         // invoiceable; bookings issued on Payment Awaiting or a Payment Plan

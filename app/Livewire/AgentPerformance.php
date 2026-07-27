@@ -97,11 +97,12 @@ class AgentPerformance extends Component
     }
 
     /**
-     * Performance only counts bookings issued as full payment. "Invoiced" is
-     * included because a booking can only be invoiced after it was issued as
-     * full payment (see Booking::canInvoice / BookingPolicy) — it's the same
-     * fully-settled sale, just further along in accounts' pipeline. Payment
-     * plan / payment awaiting (still owed) are excluded on purpose.
+     * Performance only counts bookings whose money is all in: plain "Issued"
+     * (issued on full payment, or issued on a plan and since invoiced —
+     * invoicing moves a booking to Issued, see BookingWorkflowController::invoice)
+     * and the legacy "Invoiced" status for bookings invoiced before that rule.
+     * Payment plan / payment awaiting are still owed money and earn no margin
+     * in this or any month until they're invoiced.
      */
     private function soldStatuses(): array
     {

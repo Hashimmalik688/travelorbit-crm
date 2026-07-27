@@ -328,11 +328,14 @@ class DashboardController extends Controller
         // Ready to Invoice = issued & fully paid. Includes bookings issued on
         // Payment Awaiting / Payment Plan once their balance is settled, so
         // "fully paid" is evaluated in PHP via Booking::canInvoice().
+        // Already-invoiced bookings sit on plain 'issued' too, so they're
+        // excluded by invoiced_at — otherwise they'd never leave this queue.
         $invoiceQueueBookings = Booking::whereIn('booking_status', [
                 Booking::STATUS_ISSUED,
                 Booking::STATUS_ISSUED_PAYMENT_AWAITING,
                 Booking::STATUS_ISSUED_PAYMENT_PLAN,
             ])
+            ->whereNull('invoiced_at')
             ->orderByDesc('updated_at')
             ->with(['user', 'payment', 'paymentHistory'])
             ->get()
@@ -354,7 +357,15 @@ class DashboardController extends Controller
         // company-wide instead of scoped to one agent — Fresh is the whole
         // month's margin, Issued and Pending are the two slices of it.
         $deadStatuses = ['cancelled', 'refund_queue'];
+        // "Has been issued at all" — drives the Pending slice, which is labelled
+        // "not yet issued" and so must exclude every issued disposition.
         $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan', 'invoiced'];
+        // Margin actually banked. Only plain Issued and Invoiced count: a
+        // booking on a Payment Plan / Payment Awaiting is still owed money and
+        // earns no margin until it's invoiced, at which point invoicing moves it
+        // to plain Issued. 'invoiced' stays in the list for bookings invoiced
+        // before that rule (they kept the old status).
+        $marginStatuses = ['issued', 'invoiced'];
         $netMargin = fn (Booking $b) => $b->netMargin();
 
         // ── FRESH: all margin generated this month, issued or still pending,
@@ -366,9 +377,9 @@ class DashboardController extends Controller
         $freshMarginThisMonth = (float) $freshBookings->sum($netMargin);
         $freshCountThisMonth  = $freshBookings->count();
 
-        // ── ISSUED: net margin from issued bookings that are FULLY PAID,
-        //    created this month. ──
-        $issuedBookingsThisMonth = Booking::whereIn('booking_status', $issuedStatuses)
+        // ── ISSUED: net margin from issued & invoiced bookings that are FULLY
+        //    PAID, created this month. ──
+        $issuedBookingsThisMonth = Booking::whereIn('booking_status', $marginStatuses)
             ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
             ->get()
@@ -462,13 +473,16 @@ class DashboardController extends Controller
         $startOfMonth = now()->startOfMonth();
         $endOfMonth   = now()->endOfMonth();
         $deadStatuses   = ['cancelled', 'refund_queue'];
-        $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan', 'invoiced'];
+        // Only banked margin counts here — plain Issued and Invoiced. Payment
+        // Plan / Payment Awaiting are still owed money and stay out until
+        // invoicing settles them onto plain Issued.
+        $marginStatuses = ['issued', 'invoiced'];
         $cutoffPassed   = now()->day >= 20;
 
         $agentsPerformance = \App\Models\User::where('role', 'agent')
             ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())])
             ->orderBy('name')->get()
-            ->map(function ($agent) use ($startOfMonth, $endOfMonth, $deadStatuses, $issuedStatuses, $cutoffPassed) {
+            ->map(function ($agent) use ($startOfMonth, $endOfMonth, $deadStatuses, $marginStatuses, $cutoffPassed) {
                 $bookingsThisMonth = Booking::where('user_id', $agent->id)
                     ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
                     ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
@@ -477,11 +491,11 @@ class DashboardController extends Controller
                 // The commission window flips on the 20th. Both the count and
                 // the margin come from the SAME set so they always agree:
                 //   days 1-19  → every live booking this month (Fresh)
-                //   day 20 on  → only issued-and-fully-paid bookings (Issued)
+                //   day 20 on  → only issued/invoiced, fully-paid bookings (Issued)
                 // On the 1st the month window is empty, so everything is 0
                 // until new bookings land — the monthly reset is automatic.
                 if ($cutoffPassed) {
-                    $relevant = $bookingsThisMonth->whereIn('booking_status', $issuedStatuses)
+                    $relevant = $bookingsThisMonth->whereIn('booking_status', $marginStatuses)
                         ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
                 } else {
                     $relevant = $bookingsThisMonth->whereNotIn('booking_status', $deadStatuses);
@@ -520,9 +534,17 @@ class DashboardController extends Controller
         $myTotalBookings = Booking::where('user_id', $userId)->whereBetween('created_at', [$som, $eom])->count();
         $myTodayBookings = Booking::where('user_id', $userId)->whereDate('created_at', today())->count();
 
-        // 'invoiced' is included because invoicing only happens after a booking is
-        // issued and fully paid — it must not be miscounted as "Fresh".
+        // "Has been issued at all" — used only to exclude issued bookings from
+        // the two Pending figures, both of which are labelled "not yet issued".
         $issuedStatuses = ['issued', 'issued_payment_awaiting', 'issued_payment_plan', 'invoiced'];
+
+        // Margin actually banked, and the only thing the Issued KPI counts:
+        // plain Issued (full payment) and Invoiced. A booking on a Payment Plan
+        // / Payment Awaiting is still owed money, so it earns the agent no
+        // margin in this or any month until it's invoiced — invoicing settles it
+        // onto plain Issued. 'invoiced' remains for bookings invoiced before
+        // that rule, which kept the old status.
+        $marginStatuses = ['issued', 'invoiced'];
 
         // Net margin = gross margin (sale - cost) minus CC charges — always used for these figures.
         $netMargin = fn (Booking $b) => $b->netMargin();
@@ -542,13 +564,14 @@ class DashboardController extends Controller
         $myFresh = (float) $freshBookings->sum($netMargin);
         $myFreshCount = $freshBookings->count();
 
-        // ── ISSUED: net margin from issued bookings that are FULLY PAID, created this month ──
+        // ── ISSUED: net margin from issued & invoiced bookings that are FULLY
+        //    PAID, created this month ──
         // "Fully paid" is checked against the live approved-payments ledger
         // (Booking::totalReceived()), not booking_payments.balance_remaining —
         // that column is a stale creation-time snapshot and doesn't reflect
         // instalments/charges approved afterwards.
         $issuedBookings = Booking::where('user_id', $userId)
-            ->whereIn('booking_status', $issuedStatuses)
+            ->whereIn('booking_status', $marginStatuses)
             ->whereBetween('created_at', [$som, $eom])
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'paymentHistory'])
             ->get()

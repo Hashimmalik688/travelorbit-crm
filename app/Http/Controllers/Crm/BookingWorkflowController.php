@@ -100,22 +100,33 @@ class BookingWorkflowController extends Controller
         return back()->with('success', "Booking #{$booking->booking_number} marked as Ticket in Process.");
     }
 
+    /**
+     * Invoicing always lands the booking on plain "Issued", never on a
+     * still-owing disposition: a booking can only be invoiced once the money is
+     * all in (Booking::canInvoice), so leaving it on "Issued - Payment Plan" or
+     * "Issued - Payment Awaiting" would misreport a settled sale as outstanding.
+     * The invoice itself is recorded by the invoiced_at stamp — that's what the
+     * INVOICED seal on the booking page and canInvoice() both read.
+     */
     public function invoice(Booking $booking)
     {
         $this->authorize('invoice', $booking);
+        $wasStatus = $booking->booking_status;
         $booking->update([
-            'booking_status' => Booking::STATUS_INVOICED,
+            'booking_status' => Booking::STATUS_ISSUED,
             'invoiced_at'    => now(),
         ]);
-        $this->appendBookingActivity($booking, 'status_changed', 'Invoiced');
+        $wasLabel = Booking::STATUS_LABELS[$wasStatus] ?? $wasStatus;
+        $detail = 'Invoiced' . ($wasStatus !== Booking::STATUS_ISSUED ? " — status changed: {$wasLabel} → Issued" : '');
+        $this->appendBookingActivity($booking, 'status_changed', $detail);
         AuditLog::logAction(
             action: 'booking_invoiced',
             user: Auth::user(),
             model: 'Booking',
             model_id: $booking->id,
-            description: "Booking #{$booking->booking_number} invoiced",
+            description: "Booking #{$booking->booking_number} invoiced — status set to Issued (was {$wasStatus})",
         );
-        return back()->with('success', "Booking #{$booking->booking_number} invoiced.");
+        return back()->with('success', "Booking #{$booking->booking_number} invoiced — status set to Issued.");
     }
 
     public function issue(Booking $booking, Request $request)

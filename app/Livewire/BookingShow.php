@@ -225,7 +225,7 @@ class BookingShow extends Component
         return 'PNR ' . ($index + 1);
     }
 
-    public function getActivityColorConfig(string $action, string $type = 'info'): array
+    public function getActivityColorConfig(string $action, string $type = 'info', string $detail = ''): array
     {
         // Full-row highlight for major lifecycle events
         if (stripos($action, 'created a new booking') !== false) {
@@ -241,7 +241,26 @@ class BookingShow extends Component
             return ['dot'=>'#0369A1','bg'=>'rgba(3,105,161,.11)','border'=>'#0369A1','label'=>'Processing','full_row'=>true,'icon'=>'ph-airplane-takeoff'];
         }
         if (stripos($action, 'issued') !== false || stripos($action, 'ticket issued') !== false) {
-            return ['dot'=>'#047857','bg'=>'rgba(4,120,87,.11)','border'=>'#047857','label'=>'Issued','full_row'=>true,'icon'=>'ph-check-fat'];
+            // Colour and badge mirror the disposition actually set — same
+            // palette as Booking::STATUS_COLORS — so "Issued", "Issued -
+            // Payment Plan" and "Issued - Payment Awaiting" read as distinct
+            // events instead of three identical green "Issued" rows.
+            //
+            // Matched at the END of the string, not anywhere in it: an
+            // invoicing entry's detail reads "... status changed: Issued -
+            // Payment Awaiting → Issued" — the OLD disposition it's leaving,
+            // not the one it lands on — so a plain substring match would
+            // wrongly paint invoicing orange. Invoicing always lands on plain
+            // Issued (Booking::canInvoice requires full payment), so anchoring
+            // on the tail correctly falls through to the green default below.
+            return match (true) {
+                preg_match('/payment awaiting\s*$/i', $detail) === 1
+                    => ['dot'=>'#C2410C','bg'=>'rgba(194,65,12,.11)','border'=>'#C2410C','label'=>'Payment Awaiting','full_row'=>true,'icon'=>'ph-hourglass'],
+                preg_match('/payment plan\s*$/i', $detail) === 1
+                    => ['dot'=>'#0E7490','bg'=>'rgba(14,116,144,.11)','border'=>'#0E7490','label'=>'Payment Plan','full_row'=>true,'icon'=>'ph-calendar-check'],
+                default
+                    => ['dot'=>'#047857','bg'=>'rgba(4,120,87,.11)','border'=>'#047857','label'=>'Issued','full_row'=>true,'icon'=>'ph-check-fat'],
+            };
         }
         if (stripos($action, 'request payment charge') !== false || stripos($action, 'payment charge') !== false) {
             return ['dot'=>'#FF6B35','bg'=>'rgba(255,107,53,.11)','border'=>'#FF6B35','label'=>'Payment Req.','full_row'=>true,'icon'=>'ph-credit-card'];
@@ -348,10 +367,19 @@ class BookingShow extends Component
                 'payment_requested'=> 'Request Payment Charge',
                 'payment_approved' => 'Payment Approved',
                 'payment_rejected' => 'Payment Declined',
+                // Entries written before the rename stored the heading verbatim —
+                // map it so the feed reads the same way top to bottom.
+                'Ticket Issued'    => 'Booking Issued',
                 'status_changed'   => match(true) {
                     str_contains($comment, 'Issuance Queue')                                                       => 'Request Issuance',
                     str_contains($comment, 'Ticket In Process') || str_contains($comment, 'Ticket in Process')     => 'Ticket In Process',
-                    str_contains($comment, 'Issued')                                                               => 'Ticket Issued',
+                    // Invoicing lands the booking back on "Issued" too (see
+                    // BookingWorkflowController::invoice), so it reads as the same
+                    // event heading — "Invoiced" only shows in the detail line
+                    // below, not as its own heading/badge. "Booking", not
+                    // "Ticket" — non-flight bookings also flow through here,
+                    // where "ticket" would read wrong.
+                    str_contains($comment, 'Issued') || str_contains($comment, 'Invoiced')                         => 'Booking Issued',
                     str_contains($comment, 'Refund')                                                               => 'Refund Requested',
                     str_contains($comment, 'Cancelled')                                                            => 'Booking Cancelled',
                     default                                                                                        => 'Status Changed',
@@ -382,7 +410,7 @@ class BookingShow extends Component
                 'ts_raw'          => $e['timestamp'] ?? '',
                 'timestamp'       => $e['timestamp'] ? \Carbon\Carbon::parse($e['timestamp'])->format('d M Y, H:i') : null,
                 'ts_sort'         => strtotime($e['timestamp'] ?? '0'),
-                'color'           => $this->getActivityColorConfig($action, $type),
+                'color'           => $this->getActivityColorConfig($action, $type, $comment),
                 'is_json'         => true,
             ];
         }
@@ -397,10 +425,11 @@ class BookingShow extends Component
                 'Note'             => 'added a note',
                 'updated'          => 'saved booking changes',
                 'payment_requested'=> 'Request Payment Charge',
+                'Ticket Issued'    => 'Booking Issued',
                 'status_changed'   => match(true) {
                     str_contains($cComment, 'Issuance Queue')   => 'Request Issuance',
                     str_contains($cComment, 'Ticket In Process') => 'Ticket In Process',
-                    str_contains($cComment, 'Issued')            => 'Ticket Issued',
+                    str_contains($cComment, 'Issued') || str_contains($cComment, 'Invoiced') => 'Booking Issued',
                     str_contains($cComment, 'Refund')            => 'Refund Requested',
                     str_contains($cComment, 'Cancelled')         => 'Booking Cancelled',
                     default                                      => 'Status Changed',
@@ -431,7 +460,7 @@ class BookingShow extends Component
                 'ts_raw'          => '',
                 'timestamp'       => $c->created_at?->format('d M Y, H:i'),
                 'ts_sort'         => $c->created_at?->timestamp ?? 0,
-                'color'           => $this->getActivityColorConfig($action, $type),
+                'color'           => $this->getActivityColorConfig($action, $type, $cComment),
                 'preset'          => BookingComment::PRESETS[$c->preset] ?? null,
                 'is_json'         => false,
             ];
@@ -1490,7 +1519,7 @@ class BookingShow extends Component
             'type'            => $type,
             'timestamp'       => $ts->format('d M Y, H:i'),
             'ts_sort'         => $ts->timestamp,
-            'color'           => $this->getActivityColorConfig($action, $type),
+            'color'           => $this->getActivityColorConfig($action, $type, $detail),
             'json_index'      => $jsonIndex,
             'is_json'         => true,
             'reasons'         => [],
@@ -1666,7 +1695,7 @@ class BookingShow extends Component
         $this->bookingStatus = $paymentType;
         $label = \App\Models\Booking::STATUS_LABELS[$paymentType] ?? 'Issued';
         AuditLogger::log(Auth::user(), $this->booking, 'status_changed', "Booking issued — {$label}", ['booking_status' => $oldStatus], ['booking_status' => $paymentType]);
-        $this->logActivity('Ticket Issued', "Status set to: {$label}", 'update');
+        $this->logActivity('Booking Issued', "Status set to: {$label}", 'update');
     }
 
     // Correction action, manager/admin only: undoes a mistaken "Issued -
