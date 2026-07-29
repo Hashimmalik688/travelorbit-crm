@@ -6,6 +6,7 @@
     { "url": "/eticket",        "name": "E-Ticket Builder",  "icon": "menu-icon icon-base ph ph-ticket",          "slug": "eticket.builder",  "target": "_blank", "permissions": ["eticket.access"] },
     { "url": "/attendance/dashboard", "name": "My Attendance", "icon": "menu-icon icon-base ph ph-clock-user",     "slug": "attendance.dashboard" },
     { "url": "/attendance",           "name": "Attendance",    "icon": "menu-icon icon-base ph ph-calendar-check", "slug": "attendance.index",     "permissions": ["attendance.view"] },
+    { "url": "/notepad",              "name": "Notepad",       "icon": "menu-icon icon-base ph ph-note-pencil",    "slug": "notepad.index",     "target": "_blank" },
 
     { "menuHeader": "Bookings", "permissions": ["bookings.view_all","bookings.create","customers.view"] },
     { "url": "/bookings",        "name": "All Bookings",     "icon": "menu-icon icon-base ph ph-list",            "slug": "bookings.index",   "permissions": ["bookings.view_all"] },

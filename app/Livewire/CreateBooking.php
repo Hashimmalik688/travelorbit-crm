@@ -1578,26 +1578,31 @@ class CreateBooking extends Component
             // Payment
             $total = $this->totalFlightSold + collect($this->hotels)->sum(fn($h) => (float) ($h['selling_price'] ?? 0))
                    + collect($this->visas)->sum(fn($v) => (float) ($v['selling_price'] ?? 0));
+            // The create wizard has no payment-structure step of its own (that's
+            // set afterwards on the booking's own Payment Structure panel), so
+            // booking_plan is never populated here — default it to Full Payment
+            // rather than leaving new bookings on an unset "Pending" structure.
+            $bookingPlan = $this->booking_plan ?: 'full';
             $a = 0; $b = 0; $d = 0;
-            if ($this->booking_plan === 'full')             { $a = (float)($this->amount_paid ?: 0); }
-            elseif ($this->booking_plan === 'awaiting')     { $a = (float)($this->amount_paid ?: 0); $b = $total - $a; }
-            elseif ($this->booking_plan === 'payment_plan') { $a = (float)($this->instalments[0]['amount'] ?? 0); $b = $total - $a; }
-            elseif ($this->booking_plan === 'dnpl')         { $d = (float)($this->deposit_amount ?: 0); $b = $total; }
+            if ($bookingPlan === 'full')             { $a = (float)($this->amount_paid ?: 0); }
+            elseif ($bookingPlan === 'awaiting')     { $a = (float)($this->amount_paid ?: 0); $b = $total - $a; }
+            elseif ($bookingPlan === 'payment_plan') { $a = (float)($this->instalments[0]['amount'] ?? 0); $b = $total - $a; }
+            elseif ($bookingPlan === 'dnpl')         { $d = (float)($this->deposit_amount ?: 0); $b = $total; }
 
             $primaryMethod = $this->payment_method ?: ($this->instalments[0]['method'] ?? null);
 
             BookingPayment::create([
                 'booking_id'     => $booking->id,
-                'booking_plan'   => $this->booking_plan,
+                'booking_plan'   => $bookingPlan,
                 'amount_paid'    => $a,
                 'total_amount'   => $total,
                 'balance_remaining' => $b,
                 'due_date'       => $this->due_date ?: null,
-                'installment_period' => $this->booking_plan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
+                'installment_period' => $bookingPlan === 'payment_plan' ? ($this->installment_period !== 'none' ? $this->installment_period : '30_days') : 'none',
                 'installment_first_amount' => $this->instalments[0]['amount'] ?? null,
                 'debit_card_change' => false,
                 'deposit_amount' => $d,
-                'is_deposit_nonrefundable' => $this->booking_plan === 'dnpl',
+                'is_deposit_nonrefundable' => $bookingPlan === 'dnpl',
                 'payment_mode'   => $primaryMethod ?: 'none',
                 'payment_mode_2' => null,
                 'cc_charges'     => $this->cc_charges ?: 0,
@@ -1605,12 +1610,12 @@ class CreateBooking extends Component
             ]);
 
             // Auto-build payment history from form data
-            $historyEntries = $this->booking_plan === 'payment_plan'
+            $historyEntries = $bookingPlan === 'payment_plan'
                 ? $this->instalments
                 : [[
                     'date'    => $this->payment_date ?: now()->toDateString(),
                     'method'  => $this->payment_method,
-                    'amount'  => $this->booking_plan === 'dnpl' ? $this->deposit_amount : $this->amount_paid,
+                    'amount'  => $bookingPlan === 'dnpl' ? $this->deposit_amount : $this->amount_paid,
                     'receipt' => $this->receipt_number,
                 ]];
 

@@ -12,22 +12,27 @@ class BookingIndex extends Component
     use WithPagination;
 
     // Filters
-    public string $search       = '';
-    public string $statusFilter = '';
-    public string $typeFilter   = '';
-    public string $dateFrom     = '';
-    public string $dateTo       = '';
+    public string $search        = '';
+    // Filters on payment.booking_plan (Full Payment / Payment Awaiting / Payment
+    // Plan / DNPL), not booking_status — 'pending' means no payment structure
+    // has been chosen yet (see BookingPayment::booking_plan, empty by default
+    // until CreateBooking::save() or the booking's own Payment Structure panel
+    // sets it).
+    public string $paymentFilter = '';
+    public string $typeFilter    = '';
+    public string $dateFrom      = '';
+    public string $dateTo        = '';
 
     // Context: 'all' or 'mine'
     public string $context      = 'all';
     public ?int  $filterUserId  = null;
 
     protected $queryString = [
-        'search'       => ['except' => ''],
-        'statusFilter' => ['except' => ''],
-        'typeFilter'   => ['except' => ''],
-        'dateFrom'     => ['except' => ''],
-        'dateTo'       => ['except' => ''],
+        'search'        => ['except' => ''],
+        'paymentFilter' => ['except' => ''],
+        'typeFilter'    => ['except' => ''],
+        'dateFrom'      => ['except' => ''],
+        'dateTo'        => ['except' => ''],
     ];
 
     public function mount(?int $filterUserId = null, bool $myBookingsOnly = false): void
@@ -41,15 +46,15 @@ class BookingIndex extends Component
         }
     }
 
-    public function updatingSearch(): void        { $this->resetPage(); }
-    public function updatingStatusFilter(): void  { $this->resetPage(); }
-    public function updatingTypeFilter(): void    { $this->resetPage(); }
-    public function updatingDateFrom(): void      { $this->resetPage(); }
-    public function updatingDateTo(): void        { $this->resetPage(); }
+    public function updatingSearch(): void         { $this->resetPage(); }
+    public function updatingPaymentFilter(): void  { $this->resetPage(); }
+    public function updatingTypeFilter(): void     { $this->resetPage(); }
+    public function updatingDateFrom(): void       { $this->resetPage(); }
+    public function updatingDateTo(): void         { $this->resetPage(); }
 
     public function clearFilters(): void
     {
-        $this->search = $this->statusFilter = $this->typeFilter = '';
+        $this->search = $this->paymentFilter = $this->typeFilter = '';
         if ($this->context === 'mine') {
             $this->dateFrom = now()->startOfMonth()->format('Y-m-d');
             $this->dateTo   = now()->endOfMonth()->format('Y-m-d');
@@ -70,11 +75,22 @@ class BookingIndex extends Component
                   ->orWhere('booker_last_name', 'ILIKE', "%{$s}%")
                   ->orWhere('booker_mobile',    'ILIKE', "%{$s}%");
             }))
-            ->when($this->statusFilter, fn($q) => $q->where('booking_status', $this->statusFilter))
+            ->when($this->paymentFilter, function ($q) {
+                if ($this->paymentFilter === 'pending') {
+                    // No payment structure chosen yet — either no payment row
+                    // at all, or one whose booking_plan was never set.
+                    $q->where(function ($qq) {
+                        $qq->whereDoesntHave('payment')
+                           ->orWhereHas('payment', fn ($p) => $p->where('booking_plan', ''));
+                    });
+                } else {
+                    $q->whereHas('payment', fn ($p) => $p->where('booking_plan', $this->paymentFilter));
+                }
+            })
             ->when($this->typeFilter,   fn($q) => $q->where('booking_type',   $this->typeFilter))
             ->when($this->dateFrom,     fn($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->dateTo,       fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
-            ->with(['payment', 'passengers', 'flightDetail'])
+            ->with(['payment', 'passengers', 'flightDetail', 'user'])
             ->orderByDesc('created_at')
             ->paginate(20);
 

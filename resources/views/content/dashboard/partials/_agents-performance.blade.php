@@ -31,13 +31,18 @@
    photo therefore has to round its own top corners — the tile can no longer
    clip them for it. position:relative anchors the crown to the tile corner. */
 .neo-ap-tile { border-radius:10px;background:var(--to-page);border:2px solid var(--to-border);box-shadow:none;padding:0;overflow:visible;position:relative;text-align:center; }
-.neo-ap-photo { width:100%;aspect-ratio:3/4;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:8px 8px 0 0; }
+.neo-ap-photo { width:100%;aspect-ratio:1/1;position:relative;background:linear-gradient(135deg,#4F46E5 0%,#8B5CF6 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:8px 8px 0 0; }
 .neo-ap-dot { position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;border:2px solid #FFFFFF; }
 .neo-ap-name { font-size:0.75rem;font-weight:700;color:#1E293B;padding:6px 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 /* Margin is shown to the penny, so on a 92px tile a four-figure one can no
    longer sit beside the count pill — wrap lets the pill drop to its own line
    instead of spilling out of the tile. */
 .neo-ap-metric { font-size:0.72rem;font-weight:800;padding:0 4px 7px;white-space:nowrap;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px; }
+/* Margin is the number a manager actually cares about on this wall — it
+   gets its own line, a bigger size and the boldest weight so it reads
+   before the booking-count pill underneath it. */
+.neo-ap-metric.has-margin { flex-direction:column;gap:2px;padding-bottom:8px; }
+.neo-ap-metric.has-margin .neo-ap-margin { font-size:0.96rem;font-weight:900;letter-spacing:-.01em; }
 /* Booking count reads as a number, not a footnote. The ticket glyph carries
    the meaning so the word "bookings" isn't needed on a 92px tile. */
 .neo-ap-count { display:inline-flex;align-items:center;gap:3px;font-size:0.78rem;font-weight:800;color:var(--to-indigo);background:rgba(79,70,229,.10);border:1px solid rgba(79,70,229,.22);border-radius:20px;padding:1px 7px; }
@@ -137,8 +142,8 @@
         </div>
         <div class="neo-ap-name">{{ $apFirstName }}</div>
         @if ($showMargin)
-          <div class="neo-ap-metric" style="color:{{ $ap->margin >= 0 ? '#16A34A' : '#DC2626' }};">
-            £{{ number_format($ap->margin, 2) }}
+          <div class="neo-ap-metric has-margin">
+            <span class="neo-ap-margin" style="color:{{ $ap->margin >= 0 ? '#16A34A' : '#DC2626' }};">£{{ number_format($ap->margin, 2) }}</span>
             <span class="neo-ap-count"><i class="ph ph-ticket"></i>{{ $ap->count }}</span>
           </div>
         @else

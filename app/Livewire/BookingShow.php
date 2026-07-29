@@ -1196,6 +1196,15 @@ class BookingShow extends Component
         $this->abortIfViewer();
         if (count($this->hotels) > 0) {
             $name = $this->hotels[$index]['hotel_name'] ?: 'Hotel #'.($index+1);
+            // Delete immediately, like removeVisa() — a plain array unset only
+            // lives in Livewire's in-memory state, so the hotel reappeared on
+            // reload unless a later autoSave()/save() happened to run the
+            // keptHotelIds diff. The button click itself fires neither (no
+            // native input/change event for the Alpine autosave listener to
+            // catch), so removal has to be persisted right here.
+            if (!empty($this->hotels[$index]['hotel_id'])) {
+                BookingHotel::find($this->hotels[$index]['hotel_id'])?->delete();
+            }
             unset($this->hotels[$index]);
             $this->hotels = array_values($this->hotels);
             $this->logActivity('Removed Hotel', $name.' removed', 'update');

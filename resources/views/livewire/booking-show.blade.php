@@ -1352,23 +1352,11 @@
           @endif
         </div>
 
-        {{-- DOCUMENTS --}}
-        <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);" x-data="{
-            preview: null,
-            loading: false,
-            docs: {{ Js::from($booking->documents->map(fn($d) => [
-                'id' => $d->id,
-                'file_name' => $d->file_name,
-                'file_path' => Storage::disk('public')->url($d->file_path),
-                'document_type' => $d->document_type,
-                'ext' => strtolower(pathinfo($d->file_name, PATHINFO_EXTENSION)),
-            ])->values()) }},
-            openDoc(doc) { this.loading = true; this.preview = doc; },
-            closeDoc() { this.loading = false; this.preview = null; },
-            isImage(doc) { return ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(doc.ext); },
-            isPdf(doc) { return doc.ext === 'pdf'; },
-            isAudio(doc) { return ['mp3','wav','m4a','ogg','aac','flac','webm','opus'].includes(doc.ext); }
-        }">
+        {{-- DOCUMENTS — each one just opens in a new tab (native <a target="_blank">).
+             Used to be an Alpine-driven inline preview modal (image/PDF/audio
+             viewers, load-state tracking, per-type branching); a new tab does
+             the same job with none of that client-side state to maintain. --}}
+        <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
           <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:6px;">Documents</div>
 
           {{-- Existing documents --}}
@@ -1394,10 +1382,10 @@
                   $bvDocC = $bvDocColors[$doc->document_type] ?? '#94A3B8';
                 @endphp
                 <div class="d-flex align-items-center justify-content-between mb-1 px-2 py-1" style="background:#F8FAFF;border-radius:7px;">
-                  <button type="button" @click="openDoc(docs.find(d => d.id === {{ $doc->id }}))" style="background:none;border:none;font-size:0.864rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;">
-                    <i class="ph {{ in_array($docExt, $audioExts) ? 'ph-waveform' : 'ph-file' }} me-1" style="color:#7C3AED;"></i>{{ $doc->file_name }}
-                    <span style="font-size:0.66rem;font-weight:700;margin-left:6px;padding:2px 8px;border-radius:20px;background:{{ $bvDocC }}1A;color:{{ $bvDocC }};border:1px solid {{ $bvDocC }}33;white-space:nowrap;">{{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</span>
-                  </button>
+                  <a href="{{ Storage::disk('public')->url($doc->file_path) }}" target="_blank" rel="noopener" style="background:none;border:none;font-size:0.864rem;color:#332E9E;cursor:pointer;padding:0;text-align:left;text-decoration:none;">
+                    <i class="ph {{ in_array($docExt, $audioExts) ? 'ph-waveform' : 'ph-file' }} me-1" style="color:#7C3AED;"></i>
+                    <span style="font-size:0.66rem;font-weight:700;padding:2px 8px;border-radius:20px;background:{{ $bvDocC }}1A;color:{{ $bvDocC }};border:1px solid {{ $bvDocC }}33;white-space:nowrap;">{{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</span>
+                  </a>
                   @if(Auth::user()->role === 'admin')
                     <button type="button" wire:click="deleteDocument({{ $doc->id }})" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:5px;padding:1px 7px;font-size:0.72rem;cursor:pointer;">✕</button>
                   @endif
@@ -1435,59 +1423,6 @@
             <i class="ph ph-upload-simple"></i> Upload Document
           </button>
           @endif
-
-        {{-- Alpine-driven preview modal (instant open/close, no server round-trip) --}}
-        <template x-if="preview">
-          <div style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:32px;"
-               @click="closeDoc()">
-            <div style="background:#fff;border-radius:20px;width:100%;max-width:1400px;max-height:95vh;display:flex;flex-direction:column;box-shadow:0 32px 96px rgba(0,0,0,.4);overflow:hidden;"
-                 @click.stop="">
-              <div style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(51,46,158,.08);flex-shrink:0;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <i class="ph ph-file-text" style="font-size:1.32rem;color:#332E9E;"></i>
-                  <div>
-                    <div style="font-size:0.96rem;font-weight:700;color:#0F172A;" x-text="preview.file_name"></div>
-                    <div style="font-size:0.768rem;color:#475569;" x-text="preview.document_type ? preview.document_type.charAt(0).toUpperCase() + preview.document_type.slice(1).replace(/_/g,' ') : 'Document'"></div>
-                  </div>
-                </div>
-                <div class="d-flex gap-2">
-                  <a :href="preview.file_path" target="_blank" style="background:rgba(51,46,158,.08);color:#332E9E;border:none;border-radius:8px;padding:6px 14px;font-size:0.816rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download</a>
-                  <button type="button" @click="closeDoc()" style="background:rgba(0,0,0,.06);color:#475569;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.08rem;">✕</button>
-                </div>
-              </div>
-              <div style="overflow-y:auto;flex:1;background:#F1F5F9;display:flex;align-items:center;justify-content:center;padding:24px;min-height:300px;">
-                <template x-if="isImage(preview)">
-                  <img :src="preview.file_path" :alt="preview.file_name" loading="lazy"
-                       style="max-width:100%;max-height:88vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);"
-                       x-on:load="loading = false" x-on:error="loading = false">
-                </template>
-                <template x-if="isPdf(preview)">
-                  <iframe :src="preview.file_path" loading="lazy"
-                          style="width:100%;height:88vh;border:none;border-radius:12px;"
-                          x-on:load="loading = false"></iframe>
-                </template>
-                <template x-if="isAudio(preview)">
-                  <div style="text-align:center;padding:40px;">
-                    <i class="ph ph-waveform" style="font-size:3rem;color:#332E9E;display:block;margin-bottom:16px;"></i>
-                    <audio controls :src="preview.file_path" style="width:100%;max-width:480px;" x-on:loadeddata="loading = false" x-on:error="loading = false"></audio>
-                  </div>
-                </template>
-                <template x-if="!isImage(preview) && !isPdf(preview) && !isAudio(preview)">
-                  <div style="text-align:center;padding:40px;color:#475569;">
-                    <i class="ph ph-file-x" style="font-size:3rem;color:#64748B;display:block;margin-bottom:12px;"></i>
-                    <div style="font-size:1.08rem;font-weight:600;color:#1E293B;margin-bottom:4px;">Preview not available</div>
-                    <div style="font-size:0.864rem;margin-bottom:16px;">This file type cannot be previewed inline.</div>
-                    <a :href="preview.file_path" target="_blank" style="background:#332E9E;color:#fff;border:none;border-radius:10px;padding:8px 20px;font-size:0.876rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;"><i class="ph ph-download-simple"></i> Download to View</a>
-                  </div>
-                </template>
-                <div x-show="loading" style="position:absolute;display:flex;flex-direction:column;align-items:center;gap:12px;color:#475569;">
-                  <div style="width:40px;height:40px;border:3px solid rgba(51,46,158,.12);border-top:3px solid #332E9E;border-radius:50%;" class="spinning"></div>
-                  <div style="font-size:0.864rem;font-weight:600;">Loading document…</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
         </div>
       </div>
     </div>

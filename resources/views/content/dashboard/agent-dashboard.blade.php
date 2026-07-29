@@ -132,14 +132,33 @@
   <div class="col-lg-3">
     <div class="ad-up d3" style="max-width:300px;margin-left:auto;background:#FFFFFF;border-radius:14px;border:1px solid var(--to-border);box-shadow:0 1px 2px rgba(15,23,42,0.04);"
       x-data="{
-        cur: @js($allMonthData[$currentKey])
+        cur: @js($allMonthData[$currentKey]),
+        // Days with no booking at all, counting only up to today for the
+        // current month (future days aren't blank yet — they just haven't
+        // happened) and the full month for past ones. Sunday is the one
+        // scheduled day off (Travel Orbit runs Mon–Sat), so it never counts
+        // as a blank day.
+        get blankDays() {
+          const upTo = this.cur.isCurrent ? {{ $today }} : this.cur.daysInMonth;
+          let blanks = 0;
+          for (let d = 1; d <= upTo; d++) {
+            if (new Date(this.cur.year, this.cur.month - 1, d).getDay() === 0) continue;
+            const key = this.cur.year + '-' + String(this.cur.month).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+            if (!this.cur.days[key]) blanks++;
+          }
+          return blanks;
+        }
       }">
 
       {{-- Header --}}
-      <div class="px-3 pt-3 pb-1 d-flex align-items-center justify-content-between">
-        <div class="fw-bold" style="font-size:0.912rem;color:#0F172A;" x-text="cur.label"></div>
-        <div style="font-size:0.72rem;" x-text="cur.total + ' sale' + (cur.total!==1?'s':'')"
-          :style="cur.total>0?'color:#16A34A;font-weight:700;':'color:#64748B;'"></div>
+      <div class="px-3 pt-3 pb-1">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="fw-bold" style="font-size:0.912rem;color:#0F172A;" x-text="cur.label"></div>
+          <div style="font-size:0.72rem;" x-text="cur.total + ' sale' + (cur.total!==1?'s':'')"
+            :style="cur.total>0?'color:#16A34A;font-weight:700;':'color:#64748B;'"></div>
+        </div>
+        <div style="font-size:0.66rem;font-weight:700;color:#DC2626;background:rgba(220,38,38,.08);padding:2px 9px;border-radius:20px;display:inline-block;margin-top:3px;"
+          x-text="blankDays + ' blank day' + (blankDays!==1?'s':'')"></div>
       </div>
 
       {{-- Day headers --}}

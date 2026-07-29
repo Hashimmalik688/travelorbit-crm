@@ -22,6 +22,12 @@
         <div class="d-flex gap-3 align-items-center flex-wrap">
           <div style="font-size:0.84rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;">Filter</div>
 
+          <div class="d-flex align-items-center gap-2" style="background:#fff;border:1.5px solid rgba(51,46,158,.15);border-radius:20px;padding:4px 12px;min-width:220px;">
+            <i class="ph ph-magnifying-glass" style="font-size:0.96rem;color:#475569;"></i>
+            <input type="text" wire:model.live.debounce.400ms="search" placeholder="Search booking #, name, mobile…"
+              style="border:none;outline:none;font-size:0.912rem;color:#374151;background:transparent;flex:1;min-width:0;">
+          </div>
+
           {{-- Date range - only for My Bookings --}}
           @if($context === 'mine')
             <div class="d-flex align-items-center gap-2" style="background:#fff;border:1.5px solid rgba(51,46,158,.15);border-radius:20px;padding:4px 12px;">
@@ -33,14 +39,21 @@
           @endif
 
           <div>
-            @php $statusOpts = array_merge([['value'=>'','label'=>'All Statuses']], collect(\App\Models\Booking::STATUS_LABELS)->map(fn($lbl,$val)=>['value'=>$val,'label'=>$lbl])->values()->toArray()); @endphp
-            <x-styled-select-sm modelName="statusFilter" :options="$statusOpts" placeholder="All Statuses" :live="true" />
+            @php $paymentOpts = [
+                ['value'=>'',             'label'=>'All Payment'],
+                ['value'=>'pending',      'label'=>'Pending'],
+                ['value'=>'dnpl',         'label'=>'DNPL'],
+                ['value'=>'full',         'label'=>'Full Payment'],
+                ['value'=>'awaiting',     'label'=>'Payment Awaiting'],
+                ['value'=>'payment_plan', 'label'=>'Payment Plan'],
+            ]; @endphp
+            <x-styled-select-sm modelName="paymentFilter" :options="$paymentOpts" placeholder="All Payment" :live="true" />
           </div>
           <div>
             <x-styled-select-sm modelName="typeFilter" :options="[['value'=>'','label'=>'All Types'],['value'=>'flight','label'=>'Flight'],['value'=>'hotel','label'=>'Hotel'],['value'=>'umrah','label'=>'Umrah'],['value'=>'holiday','label'=>'Holiday'],['value'=>'visa','label'=>'Visa'],['value'=>'transfers','label'=>'Transfers'],['value'=>'excursion','label'=>'Excursion']]" placeholder="All Types" :live="true" />
           </div>
-          @if($statusFilter || $typeFilter || $search)
-            <button wire:click="$set('search',''); $set('statusFilter',''); $set('typeFilter','')"
+          @if($paymentFilter || $typeFilter || $search)
+            <button wire:click="$set('search',''); $set('paymentFilter',''); $set('typeFilter','')"
               style="background:none;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:20px;padding:4px 12px;font-size:0.888rem;font-weight:600;cursor:pointer;">
               ✕ Clear
             </button>
@@ -56,6 +69,7 @@
                     <tr>
                         <th>Booking #</th>
                         <th>Booker</th>
+                        <th>Agent</th>
                         <th>Pax</th>
                         <th>Route</th>
                         <th>Departure</th>
@@ -85,6 +99,7 @@
                                     </div>
                                 </div>
                             </td>
+                            <td>{{ $booking->user->name ?? '-' }}</td>
                             <td class="text-center">{{ $booking->passengers->count() }}</td>
                             <td>
                                 @php $fd = $booking->flightDetail; @endphp
@@ -103,11 +118,17 @@
                             </td>
                             <td>
                                 @php
+                                    // Invoicing doesn't change booking_status (invoiced_at is the
+                                    // record of it — see Booking::canInvoice()), so the badge has
+                                    // to check invoiced_at directly or an invoiced booking shows
+                                    // as merely "Issued". displayStatus() does that normalization.
                                     $colorMap = ['pending' => 'warning', 'confirmed' => 'primary', 'issued' => 'success',
-                                                 'cancelled' => 'danger', 'refund_queue' => 'danger', 'awaiting_issuance' => 'info'];
+                                                 'invoiced' => 'success', 'cancelled' => 'danger', 'refund_queue' => 'danger',
+                                                 'awaiting_issuance' => 'info'];
+                                    $displayStatus = $booking->displayStatus();
                                 @endphp
-                                <span class="badge bg-label-{{ $colorMap[$booking->booking_status] ?? 'secondary' }}">
-                                    {{ ucfirst(str_replace('_', ' ', $booking->booking_status)) }}
+                                <span class="badge bg-label-{{ $colorMap[$displayStatus] ?? 'secondary' }}">
+                                    {{ ucfirst(str_replace('_', ' ', $displayStatus)) }}
                                 </span>
                             </td>
                             <td>
@@ -144,12 +165,12 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10">
+                            <td colspan="11">
                                 <div class="to-empty">
                                     <div class="to-empty-icon"><i class="ph ph-book-open"></i></div>
                                     <h5>No bookings found</h5>
-                                    <p>{{ ($search || $statusFilter || $typeFilter) ? 'Try adjusting your filters.' : 'Create your first booking to get started.' }}</p>
-                                    @if (!$search && !$statusFilter && !$typeFilter)
+                                    <p>{{ ($search || $paymentFilter || $typeFilter) ? 'Try adjusting your filters.' : 'Create your first booking to get started.' }}</p>
+                                    @if (!$search && !$paymentFilter && !$typeFilter)
                                         <a href="{{ route('bookings.create') }}" class="btn btn-orange btn-sm">
                                             <i class="ph ph-plus me-1"></i> New Booking
                                         </a>

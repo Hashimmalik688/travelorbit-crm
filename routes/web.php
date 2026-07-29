@@ -13,6 +13,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Settings\UserController as UserManagementController;
 use App\Http\Controllers\CallCenter\CallCenterController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\NotepadController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login');
@@ -166,5 +167,12 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/save', [AttendanceController::class, 'save'])->name('save');
             Route::delete('/{attendance}', [AttendanceController::class, 'destroy'])->name('destroy')->whereNumber('attendance');
         });
+    });
+
+    // Notepad — one note per user, no permission gate; managers/admins read
+    // everyone else's via canViewAllData() (see NotepadController::index).
+    Route::prefix('notepad')->name('notepad.')->group(function () {
+        Route::get('/', [NotepadController::class, 'index'])->name('index');
+        Route::put('/', [NotepadController::class, 'update'])->name('update');
     });
 });

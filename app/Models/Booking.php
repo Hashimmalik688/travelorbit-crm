@@ -121,14 +121,28 @@ class Booking extends Model
         return false;
     }
 
+    /**
+     * The status a booking should DISPLAY as. Invoicing no longer changes
+     * booking_status (see canInvoice()) — invoiced_at is the only record of
+     * it — so anything reading booking_status directly renders "Issued" for
+     * a booking that's genuinely been invoiced. This normalizes both routes
+     * (the legacy literal 'invoiced' status, and the current invoiced_at-only
+     * flow) onto the same displayed value.
+     */
+    public function displayStatus(): string
+    {
+        return $this->invoiced_at ? self::STATUS_INVOICED : $this->booking_status;
+    }
+
     public function statusLabel(): string
     {
-        return self::STATUS_LABELS[$this->booking_status] ?? ucfirst($this->booking_status);
+        $status = $this->displayStatus();
+        return self::STATUS_LABELS[$status] ?? ucfirst($status);
     }
 
     public function statusBadgeHtml(): string
     {
-        $colors = self::STATUS_COLORS[$this->booking_status] ?? ['badge_bg' => 'rgba(148,163,184,0.12)', 'badge_color' => '#64748B'];
+        $colors = self::STATUS_COLORS[$this->displayStatus()] ?? ['badge_bg' => 'rgba(148,163,184,0.12)', 'badge_color' => '#64748B'];
         $label  = $this->statusLabel();
         return "<span style=\"background:{$colors['badge_bg']};color:{$colors['badge_color']};padding:2px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;\">{$label}</span>";
     }
