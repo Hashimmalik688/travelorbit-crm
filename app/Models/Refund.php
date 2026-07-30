@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Refund extends Model
 {
@@ -33,6 +34,11 @@ class Refund extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function passengers(): HasMany
+    {
+        return $this->hasMany(RefundPassenger::class);
     }
 
     public function requestedBy(): BelongsTo

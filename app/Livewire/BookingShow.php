@@ -37,7 +37,12 @@ class BookingShow extends Component
     public $showRefundModal = false;
     public $refundAmount = '';
     public $refundReason = '';
-    public $refundMethod = 'bank_transfer';
+    public array $refundLines = []; // one row per passenger being refunded: passenger_id, e_ticket_number, gds_locator, airline_locator
+
+    // Void payment modal — accounts undoing an accidental approval
+    public $showVoidModal = false;
+    public $voidPaymentId = null;
+    public $voidReason = '';
 
     public array $activityLog = [];
 
@@ -1339,6 +1344,65 @@ class BookingShow extends Component
         session()->flash('success', 'Payment record deleted.');
     }
 
+    /**
+     * Void an accidentally-approved payment. Approving is otherwise a one-way
+     * step (see Booking::canInvoice()'s reliance on invoiced_at, and the fact
+     * nothing ever downgrades status='approved' back to pending) — this is
+     * the correction path for "accounts clicked approve on the wrong one".
+     * Sets status='voided' rather than deleting, so the record (and the
+     * reason) stays visible in Payment History instead of vanishing.
+     */
+    public function confirmVoidPayment(int $historyId): void
+    {
+        if (!Auth::user()->hasPermission('payments.charge')) return;
+
+        $ph = BookingPaymentHistory::where('booking_id', $this->booking->id)->find($historyId);
+        if (!$ph || $ph->status !== 'approved') return;
+
+        $this->voidPaymentId = $historyId;
+        $this->voidReason = '';
+        $this->showVoidModal = true;
+    }
+
+    public function closeVoidModal(): void
+    {
+        $this->reset('showVoidModal', 'voidPaymentId', 'voidReason');
+    }
+
+    public function executeVoidPayment(): void
+    {
+        if (!Auth::user()->hasPermission('payments.charge')) {
+            $this->closeVoidModal();
+            return;
+        }
+
+        $this->validate(['voidReason' => 'required|string|max:500']);
+
+        $ph = BookingPaymentHistory::where('booking_id', $this->booking->id)->find($this->voidPaymentId);
+        if (!$ph || $ph->status !== 'approved') {
+            $this->closeVoidModal();
+            return;
+        }
+
+        $details = $ph->payment_details ?? [];
+        $details['void_reason'] = $this->voidReason;
+        $ph->update([
+            'status'           => 'voided',
+            'payment_details'  => $details,
+            'voided_by'        => Auth::id(),
+            'voided_at'        => now(),
+        ]);
+
+        AuditLogger::log(Auth::user(), $this->booking, 'payment_voided', "Payment #{$ph->id} (£" . number_format($ph->amount, 2) . ") voided — {$this->voidReason}");
+        $this->logActivity('Payment Voided', '£' . number_format($ph->amount, 2) . ' payment voided — ' . $this->voidReason, 'update', bypassViewerCheck: true);
+
+        $this->booking->load('paymentHistory');
+        $this->refreshCcChargesFromHistory();
+
+        $this->closeVoidModal();
+        session()->flash('success', 'Payment voided.');
+    }
+
     // ── Margin sharing ─────────────────────────────────────────────────
     /** Other agents this booking's margin can be shared with (agents only — not managers/other roles). */
     public function getShareCandidateUsersProperty()
@@ -2010,10 +2074,34 @@ class BookingShow extends Component
     public function requestRefund(): void
     {
         $this->abortIfViewer();
-        $this->refundAmount = $this->booking->total_sale_price ?? '';
+        $this->refundAmount = ''; // the amount being requested back, not the booking's full sale price
         $this->refundReason = '';
-        $this->refundMethod = 'bank_transfer';
+        $this->refundLines = [$this->blankRefundLine(0)];
         $this->showRefundModal = true;
+    }
+
+    /** Pre-fills from the matching passenger/segment (by position) as a convenience — all four fields stay editable. */
+    private function blankRefundLine(int $index): array
+    {
+        $seg = $this->flightSegments[$index] ?? null;
+        return [
+            'passenger_id' => $this->passengers[$index]['id'] ?? ($this->passengers[0]['id'] ?? null),
+            'e_ticket_number' => $this->passengers[$index]['e_ticket_number'] ?? '',
+            'gds_locator' => $seg['locator'] ?? '',
+            'airline_locator' => $seg['airline_locator'] ?? '',
+        ];
+    }
+
+    public function addRefundLine(): void
+    {
+        $this->refundLines[] = $this->blankRefundLine(count($this->refundLines));
+    }
+
+    public function removeRefundLine(int $index): void
+    {
+        if (count($this->refundLines) <= 1) return;
+        unset($this->refundLines[$index]);
+        $this->refundLines = array_values($this->refundLines);
     }
 
     public function submitRefund(): void
@@ -2021,18 +2109,30 @@ class BookingShow extends Component
         $this->validate([
             'refundAmount' => 'required|numeric|min:0.01',
             'refundReason' => 'required|string|max:1000',
-            'refundMethod' => 'required|in:cash,bank_transfer,stripe,klarna',
+            'refundLines' => 'required|array|min:1',
+            'refundLines.*.passenger_id' => 'required',
         ]);
+
         $oldStatus = $this->booking->booking_status;
-        Refund::create([
+
+        $refund = Refund::create([
             'booking_id' => $this->booking->id,
             'requested_by' => Auth::id(),
             'refund_amount' => $this->refundAmount,
             'reason' => $this->refundReason,
-            'refund_method' => $this->refundMethod,
             'requested_at' => now(),
             'status' => 'requested',
         ]);
+
+        foreach ($this->refundLines as $line) {
+            $refund->passengers()->create([
+                'passenger_id' => $line['passenger_id'],
+                'e_ticket_number' => $line['e_ticket_number'] ?: null,
+                'gds_locator' => $line['gds_locator'] ?: null,
+                'airline_locator' => $line['airline_locator'] ?: null,
+            ]);
+        }
+
         $this->booking->update(['booking_status' => 'refund_queue']);
         $this->bookingStatus = 'refund_queue';
         $this->booking->refresh();

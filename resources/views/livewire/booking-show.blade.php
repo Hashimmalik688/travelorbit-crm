@@ -26,6 +26,10 @@
 .bv-input-inline { border:1.5px solid #332E9E;border-radius:7px;padding:3px 7px;font-size:0.888rem;background:#fff;outline:none;width:100%; }
 .bv-input-inline:focus { box-shadow:0 0 0 3px rgba(51,46,158,.10); }
 .bv-select-inline { border:1.5px solid #332E9E;border-radius:7px;padding:3px 7px;font-size:0.888rem;background:#fff;outline:none;width:100%; }
+.refund-overlay { display:flex; align-items:center; justify-content:center; }
+.rf-input { border:1.5px solid #332E9E;border-radius:6px;padding:4px 8px;font-size:0.8rem;background:#fff;outline:none;width:100%;height:30px; }
+.rf-input:focus { box-shadow:0 0 0 3px rgba(51,46,158,.10); }
+textarea.rf-input { height:auto; }
 .bv-lock-badge { display:inline-flex;align-items:center;gap:2px;font-size:0.672rem;color:#475569;background:rgba(148,163,184,.08);padding:1px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em; }
 .bv-pax-counter { display:flex;align-items:center;gap:6px;background:rgba(51,46,158,.03);border:1px solid rgba(51,46,158,.08);border-radius:12px;padding:6px 14px; }
 .bv-pax-counter .bv-pax-type { font-size:0.78rem;font-weight:800;letter-spacing:.06em;min-width:24px; }
@@ -233,7 +237,7 @@
 
     {{-- Request Refund: when ticket has been issued or booking is active --}}
     @if(in_array($status, ['pending','confirmed','issued','issued_payment_awaiting','issued_payment_plan']) && !in_array($role, ['accounts','issuance']))
-      <button type="button" wire:click="requestRefund" class="bv-action" style="background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2);color:#DC2626;">
+      <button type="button" x-data="{ open: @entangle('showRefundModal') }" @click="open = true" wire:click="requestRefund" class="bv-action" style="background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2);color:#DC2626;">
         <i class="ph ph-arrows-counter-clockwise"></i> Request Refund
       </button>
     @endif
@@ -1327,15 +1331,27 @@
               @php
                 $paymentNum++;
                 $status = $ph->status ?? 'pending';
-                $statusLabel = ['pending'=>'Pending Approval','approved'=>'Approved'][$status] ?? 'Pending Approval';
+                $statusLabel = ['pending'=>'Pending Approval','approved'=>'Approved','voided'=>'Voided'][$status] ?? 'Pending Approval';
+                $statusStyle = match($status) {
+                  'approved' => 'color:#16A34A;background:rgba(22,163,74,.08);',
+                  'voided'   => 'color:#DC2626;background:rgba(220,38,38,.08);',
+                  default    => 'color:#F59E0B;background:rgba(245,158,11,.08);',
+                };
+                $voidReason = $ph->payment_details['void_reason'] ?? null;
               @endphp
-              <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1" style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);">
+              <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1" style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);{{ $status==='voided' ? 'opacity:.7;' : '' }}">
                 <span style="width:20px;height:20px;border-radius:50%;background:rgba(51,46,158,.06);display:inline-flex;align-items:center;justify-content:center;font-size:0.696rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $paymentNum }}</span>
                 <div class="flex-grow-1">
-                  <span class="fw-semibold" style="font-size:0.84rem;color:#1E293B;">&pound;{{ number_format($ph->amount,2) }}</span>
+                  <span class="fw-semibold" style="font-size:0.84rem;color:#1E293B;{{ $status==='voided' ? 'text-decoration:line-through;' : '' }}">&pound;{{ number_format($ph->amount,2) }}</span>
                   <span class="d-block" style="font-size:0.72rem;color:#475569;">{{ ucfirst(str_replace('_',' ',$ph->payment_method ?? 'N/A')) }} · {{ \Carbon\Carbon::parse($ph->payment_date)->format('d M Y') }}</span>
+                  @if($status==='voided' && $voidReason)
+                    <span class="d-block" style="font-size:0.708rem;color:#DC2626;">Voided by {{ $ph->voidedBy?->name ?? 'accounts' }} — {{ $voidReason }}</span>
+                  @endif
                 </div>
-                <span style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;{{ $status==='approved' ? 'color:#16A34A;background:rgba(22,163,74,.08);' : 'color:#F59E0B;background:rgba(245,158,11,.08);' }}">{{ $statusLabel }}</span>
+                <span style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;{{ $statusStyle }}">{{ $statusLabel }}</span>
+                @if($status==='approved' && Auth::user()->hasPermission('payments.charge'))
+                  <button type="button" wire:click="confirmVoidPayment({{ $ph->id }})" title="Void this payment" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:5px;padding:1px 8px;font-size:0.696rem;font-weight:700;cursor:pointer;flex-shrink:0;">Void</button>
+                @endif
                 @if(Auth::user()->role === 'admin')
                   <button type="button" wire:click="deletePaymentHistory({{ $ph->id }})" onclick="return confirm('Delete this payment record?')" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:5px;padding:1px 7px;font-size:0.72rem;cursor:pointer;flex-shrink:0;">✕</button>
                 @endif
@@ -1534,37 +1550,101 @@
   </div>
 
 {{-- REQUEST REFUND MODAL --}}
-@if($showRefundModal)
+<div x-data="{ open: @entangle('showRefundModal') }" x-show="open" x-cloak class="refund-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);" @click="open = false" @keydown.escape.window="open = false">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);" @click.stop>
+      <div style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1;">
+        <h5 class="fw-bold mb-0" style="font-size:1.02rem;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-arrows-counter-clockwise" style="font-size:1.14rem;"></i> Request Refund</h5>
+        <button type="button" @click="open = false" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;">✕</button>
+      </div>
+      <div class="p-3">
+        <div class="mb-3 px-3 py-2" style="background:#FAFBFF;border-radius:10px;border:1px solid rgba(51,46,158,.08);font-size:0.8rem;color:#475569;">
+          <strong style="color:#1E293B;">{{ $booking->customer->full_name ?? 'N/A' }}</strong>
+          <span class="text-muted"> · Booking #{{ $booking->booking_number ?? $booking->id }}</span>
+        </div>
+
+        <div class="mb-2">
+          <span style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Total Expected Refund</span>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <label class="bv-label">Amount (£) <span style="color:#DC2626;">*</span></label>
+            <input type="number" wire:model="refundAmount" class="rf-input" placeholder="0.00" min="0.01" step="0.01">
+            @error('refundAmount') <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Passenger(s) On This Refund</span>
+          <button type="button" wire:click="addRefundLine" style="background:rgba(51,46,158,.06);border:1.5px dashed rgba(51,46,158,.25);color:#332E9E;border-radius:7px;padding:2px 9px;font-size:0.72rem;font-weight:600;cursor:pointer;">+ Add Person</button>
+        </div>
+
+        @foreach($refundLines as $li => $line)
+          <div class="mb-2 p-2" style="background:#FAFBFF;border-radius:10px;border:1px solid rgba(51,46,158,.06);">
+            <div class="row g-2">
+              <div class="col-md-5">
+                <label class="bv-label">Passenger <span style="color:#DC2626;">*</span></label>
+                <select wire:model="refundLines.{{ $li }}.passenger_id" class="rf-input">
+                  @foreach($passengers as $pax)
+                    <option value="{{ $pax['id'] }}">{{ trim(($pax['first_name'] ?? '').' '.($pax['last_name'] ?? '')) ?: 'Passenger '.$loop->iteration }} ({{ ucfirst($pax['type'] ?? 'adult') }})</option>
+                  @endforeach
+                </select>
+                @error("refundLines.{$li}.passenger_id") <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+              </div>
+              <div class="col-md-7">
+                <label class="bv-label">E-Ticket Number</label>
+                <div class="d-flex gap-2 align-items-center">
+                  <input type="text" wire:model="refundLines.{{ $li }}.e_ticket_number" class="rf-input" placeholder="e.g. 176-2345678901">
+                  @if(count($refundLines) > 1)
+                    <button type="button" wire:click="removeRefundLine({{ $li }})" title="Remove passenger" style="background:rgba(220,38,38,.08);border:none;color:#DC2626;border-radius:6px;width:26px;height:26px;flex-shrink:0;cursor:pointer;">✕</button>
+                  @endif
+                </div>
+              </div>
+            </div>
+            <div class="row g-2 mt-1">
+              <div class="col-md-6">
+                <label class="bv-label">GDS Locator</label>
+                <input type="text" wire:model="refundLines.{{ $li }}.gds_locator" class="rf-input" placeholder="e.g. H8821K">
+              </div>
+              <div class="col-md-6">
+                <label class="bv-label">Airline Locator</label>
+                <input type="text" wire:model="refundLines.{{ $li }}.airline_locator" class="rf-input" placeholder="e.g. VS2PLA">
+              </div>
+            </div>
+          </div>
+        @endforeach
+
+        <div class="mb-3 mt-3">
+          <label class="bv-label">Penalties <span style="color:#DC2626;">*</span></label>
+          <textarea wire:model="refundReason" rows="3" class="rf-input" style="resize:vertical;transition:border-color .15s;" onfocus="this.style.borderColor='#4A45B5'" onblur="this.style.borderColor='#332E9E'" placeholder="Describe any cancellation penalties applied and the reason for this refund…"></textarea>
+          @error('refundReason') <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
+          <button type="button" @click="open = false" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:600;cursor:pointer;">Cancel</button>
+          <button type="button" wire:click="submitRefund" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Submit Refund Request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{{-- VOID PAYMENT MODAL --}}
+@if($showVoidModal)
   <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
     <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
-        <h5 class="fw-bold mb-0" style="font-size:1.08rem;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-arrows-counter-clockwise" style="font-size:1.2rem;"></i> Request Refund</h5>
-        <button type="button" wire:click="$set('showRefundModal',false)" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.96rem;">✕</button>
+        <h5 class="fw-bold mb-0" style="font-size:1.08rem;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-prohibit" style="font-size:1.2rem;"></i> Void Payment</h5>
+        <button type="button" wire:click="closeVoidModal" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.96rem;">✕</button>
       </div>
       <div class="p-4">
+        <p style="font-size:0.876rem;color:#475569;margin-bottom:16px;">This marks the payment as voided — it drops out of the received/balance totals but stays visible in Payment History with your reason attached. This can't be undone.</p>
         <div class="mb-3">
-          <label class="bv-label">Refund Amount (£) <span style="color:#DC2626;">*</span></label>
-          <input type="number" wire:model="refundAmount" class="bv-input-inline" style="width:100%;font-size:0.936rem;" placeholder="0.00" min="0.01" step="0.01">
-          @error('refundAmount') <div style="font-size:0.816rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
-        </div>
-        <div class="mb-3">
-          <label class="bv-label">Refund Method <span style="color:#DC2626;">*</span></label>
-          <select wire:model="refundMethod" class="bv-select-inline" style="width:100%;font-size:0.936rem;">
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="cash">Cash</option>
-            <option value="stripe">Stripe</option>
-            <option value="klarna">Klarna</option>
-          </select>
-          @error('refundMethod') <div style="font-size:0.816rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
-        </div>
-        <div class="mb-3">
-          <label class="bv-label">Reason for Refund <span style="color:#DC2626;">*</span></label>
-          <textarea wire:model="refundReason" rows="3" class="bv-input-inline" style="width:100%;font-size:0.936rem;" placeholder="Explain the reason for this refund…"></textarea>
-          @error('refundReason') <div style="font-size:0.816rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+          <label class="bv-label">Reason for Voiding <span style="color:#DC2626;">*</span></label>
+          <textarea wire:model="voidReason" rows="3" class="bv-input-inline" style="width:100%;font-size:0.936rem;" placeholder="e.g. Approved by mistake, wrong booking..."></textarea>
+          @error('voidReason') <div style="font-size:0.816rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
         </div>
         <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
-          <button type="button" wire:click="$set('showRefundModal',false)" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:8px 22px;font-size:0.876rem;font-weight:600;cursor:pointer;">Cancel</button>
-          <button type="button" wire:click="submitRefund" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px 22px;font-size:0.876rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Submit Refund Request</button>
+          <button type="button" wire:click="closeVoidModal" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:8px 22px;font-size:0.876rem;font-weight:600;cursor:pointer;">Cancel</button>
+          <button type="button" wire:click="executeVoidPayment" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px 22px;font-size:0.876rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Void Payment</button>
         </div>
       </div>
     </div>
