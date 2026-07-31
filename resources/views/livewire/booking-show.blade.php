@@ -169,6 +169,13 @@ textarea.rf-input { height:auto; }
       <i class="ph ph-hourglass-medium"></i> Charge Requested
     </span>
   @endif
+  {{-- A refund request is a Refund row, not a booking_status — the booking keeps
+       its real status and this badge is the prominent sign one is in flight. --}}
+  @if($this->activeRefund)
+    <span style="font-size:0.744rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#DC2626;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px;box-shadow:0 0 0 3px rgba(220,38,38,.25);">
+      <i class="ph ph-arrows-counter-clockwise"></i> Refund Requested — &pound;{{ number_format($this->activeRefund->refund_amount, 2) }}
+    </span>
+  @endif
 </div>
 
 {{-- BOOKING CARD — three-column grid (not flex space-between) so the
@@ -235,8 +242,12 @@ textarea.rf-input { height:auto; }
       </button>
     @endif
 
-    {{-- Request Refund: when ticket has been issued or booking is active --}}
-    @if(in_array($status, ['pending','confirmed','issued','issued_payment_awaiting','issued_payment_plan']) && !in_array($role, ['accounts','issuance']))
+    {{-- Request Refund: when ticket has been issued or booking is active.
+         A refund already in flight is a Refund row, not a booking_status — so
+         the booking keeps its real status (issued/invoiced/etc.) and the
+         prominent "Refund Requested" badge in the status banner above carries
+         that signal instead; this button just steps aside while one's active. --}}
+    @if(in_array($status, ['pending','confirmed','issued','issued_payment_awaiting','issued_payment_plan']) && !in_array($role, ['accounts','issuance']) && !$this->activeRefund)
       <button type="button" x-data="{ open: @entangle('showRefundModal') }" @click="open = true" wire:click="requestRefund" class="bv-action" style="background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2);color:#DC2626;">
         <i class="ph ph-arrows-counter-clockwise"></i> Request Refund
       </button>
@@ -765,7 +776,7 @@ textarea.rf-input { height:auto; }
               $isFullRow = !empty($c['full_row']);
             @endphp
             @php $grouped = ($entry['group_count'] ?? 1) > 1; @endphp
-            <div x-data="{ open: false, text: '', grp: false }" style="display:flex;gap:0;">
+            <div x-data="{ open: false, text: '', grp: false }" style="display:flex;gap:0;{{ $loop->last ? '' : 'border-bottom:1.5px solid #CBD5E1;margin-bottom:4px;' }}">
               {{-- Rail column: avatar circle + connecting line --}}
               <div style="display:flex;flex-direction:column;align-items:center;width:60px;flex-shrink:0;">
                 @if(!empty($entry['avatar_url']))
@@ -1311,6 +1322,15 @@ textarea.rf-input { height:auto; }
           </div>
         </div>
 
+        {{-- CHARGE REFUND PAYMENT: shown above Payment History while a refund is queued --}}
+        @if($this->activeRefund)
+          <div class="px-4 pt-3">
+            <button type="button" x-data="{ open: @entangle('showRefundChargeModal') }" @click="open = true" wire:click="openRefundChargeModal" class="w-100" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i class="ph ph-arrows-counter-clockwise"></i> Charge Refund Payment
+            </button>
+          </div>
+        @endif
+
         {{-- PAYMENT HISTORY --}}
         <div class="px-4 py-3" style="border-top:1px solid rgba(51,46,158,.06);">
           @php
@@ -1338,12 +1358,17 @@ textarea.rf-input { height:auto; }
                   default    => 'color:#F59E0B;background:rgba(245,158,11,.08);',
                 };
                 $voidReason = $ph->payment_details['void_reason'] ?? null;
+                $isRefundPayout = (bool) ($ph->payment_details['refund_payout'] ?? false);
+                $refundComment = $ph->payment_details['comment'] ?? null;
               @endphp
               <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1" style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);{{ $status==='voided' ? 'opacity:.7;' : '' }}">
                 <span style="width:20px;height:20px;border-radius:50%;background:rgba(51,46,158,.06);display:inline-flex;align-items:center;justify-content:center;font-size:0.696rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $paymentNum }}</span>
                 <div class="flex-grow-1">
-                  <span class="fw-semibold" style="font-size:0.84rem;color:#1E293B;{{ $status==='voided' ? 'text-decoration:line-through;' : '' }}">&pound;{{ number_format($ph->amount,2) }}</span>
-                  <span class="d-block" style="font-size:0.72rem;color:#475569;">{{ ucfirst(str_replace('_',' ',$ph->payment_method ?? 'N/A')) }} · {{ \Carbon\Carbon::parse($ph->payment_date)->format('d M Y') }}</span>
+                  <span class="fw-semibold" style="font-size:0.84rem;{{ $isRefundPayout ? 'color:#DC2626;' : 'color:#1E293B;' }}{{ $status==='voided' ? 'text-decoration:line-through;' : '' }}">{{ $isRefundPayout ? '−' : '' }}&pound;{{ number_format(abs($ph->amount),2) }}</span>
+                  <span class="d-block" style="font-size:0.72rem;color:#475569;">{{ $isRefundPayout ? 'Refund' : ucfirst(str_replace('_',' ',$ph->payment_method ?? 'N/A')) }} · {{ \Carbon\Carbon::parse($ph->payment_date)->format('d M Y') }}</span>
+                  @if($isRefundPayout && $refundComment)
+                    <span class="d-block" style="font-size:0.708rem;color:#DC2626;">{{ $refundComment }}</span>
+                  @endif
                   @if($status==='voided' && $voidReason)
                     <span class="d-block" style="font-size:0.708rem;color:#DC2626;">Voided by {{ $ph->voidedBy?->name ?? 'accounts' }} — {{ $voidReason }}</span>
                   @endif
@@ -1622,6 +1647,33 @@ textarea.rf-input { height:auto; }
         <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
           <button type="button" @click="open = false" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:600;cursor:pointer;">Cancel</button>
           <button type="button" wire:click="submitRefund" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Submit Refund Request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{{-- CHARGE REFUND PAYMENT MODAL --}}
+<div x-data="{ open: @entangle('showRefundChargeModal') }" x-show="open" x-cloak class="refund-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);" @click="open = false" @keydown.escape.window="open = false">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.2);" @click.stop>
+      <div style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;">
+        <h5 class="fw-bold mb-0" style="font-size:1.02rem;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-arrows-counter-clockwise" style="font-size:1.14rem;"></i> Charge Refund Payment</h5>
+        <button type="button" @click="open = false" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;">✕</button>
+      </div>
+      <div class="p-3">
+        <p style="font-size:0.8rem;color:#475569;margin-bottom:14px;">Records the refund as paid out to the customer — it appears in Payment History as a deduction and closes this booking's refund.</p>
+        <div class="mb-3">
+          <label class="bv-label">Amount (£) <span style="color:#DC2626;">*</span></label>
+          <input type="number" wire:model="refundChargeAmount" class="rf-input" placeholder="0.00" min="0.01" step="0.01">
+          @error('refundChargeAmount') <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="mb-3">
+          <label class="bv-label">Comment <span style="color:#DC2626;">*</span></label>
+          <textarea wire:model="refundChargeComment" rows="3" class="rf-input" placeholder="e.g. paid via bank transfer, ref ABC123"></textarea>
+          @error('refundChargeComment') <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div> @enderror
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
+          <button type="button" @click="open = false" style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:600;cursor:pointer;">Cancel</button>
+          <button type="button" wire:click="submitRefundChargePayment" style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Confirm Refund Paid</button>
         </div>
       </div>
     </div>

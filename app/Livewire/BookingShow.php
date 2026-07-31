@@ -20,7 +20,9 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use App\Mail\RefundRequestMail;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -38,6 +40,11 @@ class BookingShow extends Component
     public $refundAmount = '';
     public $refundReason = '';
     public array $refundLines = []; // one row per passenger being refunded: passenger_id, e_ticket_number, gds_locator, airline_locator
+
+    // Charge Refund Payment modal — accounts recording the outgoing refund payout
+    public $showRefundChargeModal = false;
+    public $refundChargeAmount = '';
+    public $refundChargeComment = '';
 
     // Void payment modal — accounts undoing an accidental approval
     public $showVoidModal = false;
@@ -2113,8 +2120,6 @@ class BookingShow extends Component
             'refundLines.*.passenger_id' => 'required',
         ]);
 
-        $oldStatus = $this->booking->booking_status;
-
         $refund = Refund::create([
             'booking_id' => $this->booking->id,
             'requested_by' => Auth::id(),
@@ -2133,12 +2138,100 @@ class BookingShow extends Component
             ]);
         }
 
-        $this->booking->update(['booking_status' => 'refund_queue']);
-        $this->bookingStatus = 'refund_queue';
-        $this->booking->refresh();
-        AuditLogger::log(Auth::user(), $this->booking, 'status_changed', "Refund requested", ['booking_status' => $oldStatus], ['booking_status' => 'refund_queue']);
+        // Deliberately does NOT touch booking_status — a refund being requested
+        // is a flag layered on top of the booking's real workflow state (still
+        // "issued"/"invoiced"/etc.), not a status of its own. getActiveRefund
+        // (this Refund row's status) is the single source of truth for "is a
+        // refund currently in flight", both for this button and the Charge
+        // Refund Payment button.
+        $amountLabel = '£' . number_format($this->refundAmount, 2);
+        AuditLogger::log(Auth::user(), $this->booking, 'refund_requested', "Refund of {$amountLabel} requested — {$this->refundReason}");
+        $this->logActivity('Refund Requested', "{$amountLabel} refund requested — {$this->refundReason}", 'update', bypassViewerCheck: true);
+
         $this->showRefundModal = false;
-        session()->flash('success', 'Refund request submitted.');
+
+        $refund->load('passengers.passenger', 'requestedBy', 'booking.customer');
+        try {
+            Mail::mailer('refund_smtp')
+                ->to(env('REFUND_MAIL_TO', 'accounts@travelorbit.co.uk'))
+                ->send(new RefundRequestMail($refund));
+            session()->flash('success', 'Refund request submitted and emailed to accounts.');
+        } catch (\Throwable $e) {
+            report($e);
+            session()->flash('success', 'Refund request submitted — but the email to accounts could not be sent (mail is not fully configured yet).');
+        }
+    }
+
+    /** The refund this booking is currently queued against, if any (drives the "Charge Refund Payment" button). */
+    public function getActiveRefundProperty()
+    {
+        return Refund::where('booking_id', $this->booking->id)
+            ->whereIn('status', ['requested', 'under_review', 'approved'])
+            ->latest()
+            ->first();
+    }
+
+    public function openRefundChargeModal(): void
+    {
+        // Deliberately not gated behind payments.charge — recording that a
+        // refund was paid out is open to anyone, unlike other payment actions.
+        $refund = $this->activeRefund;
+        if (!$refund) return;
+
+        $this->refundChargeAmount = $refund->refund_amount;
+        $this->refundChargeComment = '';
+        $this->showRefundChargeModal = true;
+    }
+
+    public function closeRefundChargeModal(): void
+    {
+        $this->reset('showRefundChargeModal', 'refundChargeAmount', 'refundChargeComment');
+    }
+
+    public function submitRefundChargePayment(): void
+    {
+        $refund = $this->activeRefund;
+        if (!$refund) {
+            $this->closeRefundChargeModal();
+            return;
+        }
+
+        $this->validate([
+            'refundChargeAmount' => 'required|numeric|min:0.01',
+            'refundChargeComment' => 'required|string|max:500',
+        ]);
+
+        BookingPaymentHistory::create([
+            'booking_id' => $this->booking->id,
+            'user_id' => Auth::id(),
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'refund',
+            'amount' => -abs((float) $this->refundChargeAmount),
+            'payment_details' => ['refund_payout' => true, 'refund_id' => $refund->id, 'comment' => $this->refundChargeComment],
+            'status' => 'approved',
+            'approved_by' => Auth::id(),
+        ]);
+
+        $refund->update([
+            'status' => 'processed',
+            'processed_by' => Auth::id(),
+            'processed_at' => now(),
+        ]);
+
+        $oldStatus = $this->booking->booking_status;
+        $this->booking->update(['booking_status' => 'cancelled']);
+        $this->bookingStatus = 'cancelled';
+        $this->booking->refresh();
+
+        $amountLabel = '£' . number_format($this->refundChargeAmount, 2);
+        AuditLogger::log(Auth::user(), $this->booking, 'status_changed', "Refund payment of {$amountLabel} charged — {$this->refundChargeComment}", ['booking_status' => $oldStatus], ['booking_status' => 'cancelled']);
+        $this->logActivity('Refund Paid', "{$amountLabel} refund paid — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
+
+        $this->booking->load('paymentHistory');
+        $this->refreshCcChargesFromHistory();
+
+        $this->closeRefundChargeModal();
+        session()->flash('success', 'Refund payment recorded.');
     }
 
     // ── Country list ───────────────────────────────────────────────────

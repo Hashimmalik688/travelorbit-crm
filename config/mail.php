@@ -49,6 +49,21 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        // Dedicated mailer for the refund-request notification to accounts —
+        // separate from MAIL_* on purpose, so wiring up SMTP here can't affect
+        // whatever the rest of the app already relies on the default mailer for.
+        // Scheme is auto-detected from the port (465 => implicit TLS "smtps",
+        // else STARTTLS "smtp") unless REFUND_MAIL_SCHEME forces one.
+        'refund_smtp' => [
+            'transport' => 'smtp',
+            'scheme' => env('REFUND_MAIL_SCHEME'),
+            'host' => env('REFUND_MAIL_HOST', 'smtp.gmail.com'),
+            'port' => env('REFUND_MAIL_PORT', 587),
+            'username' => env('REFUND_MAIL_USERNAME'),
+            'password' => env('REFUND_MAIL_PASSWORD'),
+            'timeout' => null,
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],
