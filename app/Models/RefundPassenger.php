@@ -13,6 +13,7 @@ class RefundPassenger extends Model
         'e_ticket_number',
         'gds_locator',
         'airline_locator',
+        'airline_waiver_code',
     ];
 
     public function refund(): BelongsTo

@@ -1626,13 +1626,17 @@ textarea.rf-input { height:auto; }
               </div>
             </div>
             <div class="row g-2 mt-1">
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="bv-label">GDS Locator</label>
                 <input type="text" wire:model="refundLines.{{ $li }}.gds_locator" class="rf-input" placeholder="e.g. H8821K">
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="bv-label">Airline Locator</label>
                 <input type="text" wire:model="refundLines.{{ $li }}.airline_locator" class="rf-input" placeholder="e.g. VS2PLA">
+              </div>
+              <div class="col-md-4">
+                <label class="bv-label">Airline Waiver Code</label>
+                <input type="text" wire:model="refundLines.{{ $li }}.airline_waiver_code" class="rf-input" placeholder="e.g. N/A">
               </div>
             </div>
           </div>

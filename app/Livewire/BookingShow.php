@@ -2096,6 +2096,7 @@ class BookingShow extends Component
             'e_ticket_number' => $this->passengers[$index]['e_ticket_number'] ?? '',
             'gds_locator' => $seg['locator'] ?? '',
             'airline_locator' => $seg['airline_locator'] ?? '',
+            'airline_waiver_code' => '',
         ];
     }
 
@@ -2135,6 +2136,7 @@ class BookingShow extends Component
                 'e_ticket_number' => $line['e_ticket_number'] ?: null,
                 'gds_locator' => $line['gds_locator'] ?: null,
                 'airline_locator' => $line['airline_locator'] ?: null,
+                'airline_waiver_code' => $line['airline_waiver_code'] ?: null,
             ]);
         }
 
@@ -2153,7 +2155,7 @@ class BookingShow extends Component
         $refund->load('passengers.passenger', 'requestedBy', 'booking.customer');
         try {
             Mail::mailer('refund_smtp')
-                ->to(env('REFUND_MAIL_TO', 'accounts@travelorbit.co.uk'))
+                ->to(env('REFUND_MAIL_TO', 'support@travelorbit.co.uk'))
                 ->send(new RefundRequestMail($refund));
             session()->flash('success', 'Refund request submitted and emailed to accounts.');
         } catch (\Throwable $e) {
