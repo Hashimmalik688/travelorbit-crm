@@ -27,7 +27,7 @@ class RefundRequestMail extends Mailable
                 env('REFUND_MAIL_FROM_ADDRESS') ?: config('mail.from.address'),
                 env('REFUND_MAIL_FROM_NAME', config('mail.from.name')),
             ),
-            subject: "Flight Refund Request — Booking #{$booking->booking_number} — " . ($booking->customer->full_name ?? ''),
+            subject: "Flight Refund Request — Booking #{$booking->booking_number} — " . ($booking->booker_name ?: ''),
         );
     }
 

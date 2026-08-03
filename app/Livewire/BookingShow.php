@@ -40,6 +40,8 @@ class BookingShow extends Component
     public $refundAmount = '';
     public $refundReason = '';
     public array $refundLines = []; // one row per passenger being refunded: passenger_id, e_ticket_number, gds_locator, airline_locator
+    public array $refundGdsLocatorOptions = [];
+    public array $refundAirlineLocatorOptions = [];
 
     // Charge Refund Payment modal — accounts recording the outgoing refund payout
     public $showRefundChargeModal = false;
@@ -628,6 +630,20 @@ class BookingShow extends Component
                 'arrival_airport' => '', 'departure_date' => '', 'return_date' => '',
             ]];
         }
+
+        $this->refundGdsLocatorOptions = collect($this->flightSegments)
+            ->pluck('locator')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->refundAirlineLocatorOptions = collect($this->flightSegments)
+            ->pluck('airline_locator')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         foreach ($b->flightCosts as $c) {
             $this->flight_costs[$c->cost_type] = [
@@ -2087,17 +2103,39 @@ class BookingShow extends Component
         $this->showRefundModal = true;
     }
 
-    /** Pre-fills from the matching passenger/segment (by position) as a convenience — all four fields stay editable. */
+    /**
+     * Initialise a refund line with only the passenger selected.
+     * Locator and ticket details are left blank so the user can choose them.
+     */
     private function blankRefundLine(int $index): array
     {
-        $seg = $this->flightSegments[$index] ?? null;
         return [
             'passenger_id' => $this->passengers[$index]['id'] ?? ($this->passengers[0]['id'] ?? null),
-            'e_ticket_number' => $this->passengers[$index]['e_ticket_number'] ?? '',
-            'gds_locator' => $seg['locator'] ?? '',
-            'airline_locator' => $seg['airline_locator'] ?? '',
+            'e_ticket_number' => '',
+            'gds_locator' => '',
+            'airline_locator' => '',
             'airline_waiver_code' => '',
         ];
+    }
+
+    public function getRefundGdsLocatorOptionsProperty(): array
+    {
+        return collect($this->flightSegments)
+            ->pluck('locator')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function getRefundAirlineLocatorOptionsProperty(): array
+    {
+        return collect($this->flightSegments)
+            ->pluck('airline_locator')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function addRefundLine(): void
