@@ -30,8 +30,9 @@
              entry point (no sidebar item); hidden without calldesk.access so
              it can't bounce the user off the permission-gated route. --}}
         @if(auth()->user()?->hasPermission('calldesk.access'))
-        <a href="{{ route('calldesk.dashboard') }}" target="_blank" rel="noopener" class="to-nav-btn" title="Call Desk">
+        <a href="{{ route('calldesk.dashboard') }}" target="_blank" rel="noopener" class="to-calldesk-pill" title="Call Desk">
             <i class="ph ph-headset"></i>
+            <span>Call Desk</span>
             @if($callDeskPendingCallbacks > 0)
                 <span class="to-nav-badge" style="min-width:16px;height:16px;border-radius:8px;font-size:0.696rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;top:3px;right:3px;">
                     {{ $callDeskPendingCallbacks > 9 ? '9+' : $callDeskPendingCallbacks }}

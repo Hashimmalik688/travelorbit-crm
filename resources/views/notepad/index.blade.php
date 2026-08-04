@@ -191,6 +191,75 @@ body {
     line-height: 1.7;
 }
 .np-team-empty { padding: 2.5rem 1rem; text-align: center; font-size: 0.8rem; color: var(--text-muted); opacity: .55; }
+
+/* ── Team note full-view modal ── */
+.np-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.66);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1050;
+}
+.np-modal {
+    /* Hardcoded (not var(--bg-card) etc.) — this markup is teleported to
+       <body> via x-teleport, outside the #npShell scope those custom
+       properties are defined on, so they'd resolve to nothing here and
+       leave the card transparent. */
+    background: #FFFFFF;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px -20px rgba(15,23,42,.35);
+    width: 100%;
+    max-width: 640px;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.np-modal-hdr {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(51,46,158,.09);
+    flex-shrink: 0;
+}
+.np-modal-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7C3AED, #C026D3);
+    color: #fff;
+    font-size: 0.86rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.np-modal-name { font-size: 1.02rem; font-weight: 700; color: #0F172A; }
+.np-modal-meta { font-size: 0.76rem; color: #94A3B8; font-weight: 500; margin-top: 1px; }
+.np-modal-close {
+    margin-left: auto;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: #F8FAFF;
+    color: #475569;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.np-modal-close:hover { background: rgba(51,46,158,.09); }
+.np-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    font-size: 0.94rem;
+    line-height: 1.85;
+    color: #0F172A;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 </style>
 @endsection
 
@@ -257,7 +326,7 @@ body {
     </div>
 
     @if($teamNotes !== null)
-      <div class="np-card np-team-card" x-data="{ open: null }">
+      <div class="np-card np-team-card" x-data="{ selected: null }">
         <div class="np-team-hdr">Team Notes</div>
         <div class="np-team-list">
           @forelse($teamNotes as $tn)
@@ -265,21 +334,45 @@ body {
               $tnName = $tn->user->name ?? 'Unknown';
               $tnParts = explode(' ', trim($tnName));
               $tnInitials = strtoupper(mb_substr($tnParts[0] ?? '?', 0, 1) . (count($tnParts) > 1 ? mb_substr(end($tnParts), 0, 1) : ''));
+              $tnMeta = [
+                'id' => $tn->id,
+                'name' => $tnName,
+                'initials' => $tnInitials,
+                'meta' => $tn->updated_at->diffForHumans(),
+                'content' => $tn->content ?: '(empty)',
+              ];
             @endphp
             <div class="np-team-item">
-              <div class="np-team-item-hdr" @click="open = open === {{ $tn->id }} ? null : {{ $tn->id }}">
+              <div class="np-team-item-hdr" @click="selected = {{ Js::from($tnMeta) }}">
                 <div class="np-team-avatar">{{ $tnInitials }}</div>
                 <div class="flex-grow-1 min-width-0">
                   <div class="np-team-item-name">{{ $tnName }}</div>
                   <div class="np-team-item-meta">{{ $tn->updated_at->diffForHumans() }}</div>
                 </div>
               </div>
-              <div class="np-team-item-body" x-show="open === {{ $tn->id }}">{{ $tn->content ?: '(empty)' }}</div>
             </div>
           @empty
             <div class="np-team-empty">No other users yet.</div>
           @endforelse
         </div>
+
+        <template x-teleport="body">
+          <div class="np-modal-overlay" x-show="selected" x-cloak @click.self="selected = null" @keydown.window.escape="selected = null">
+            <div class="np-modal" x-show="selected">
+              <template x-if="selected">
+                <div class="np-modal-hdr">
+                  <div class="np-modal-avatar" x-text="selected.initials"></div>
+                  <div class="flex-grow-1 min-width-0">
+                    <div class="np-modal-name" x-text="selected.name"></div>
+                    <div class="np-modal-meta" x-text="selected.meta"></div>
+                  </div>
+                  <button type="button" class="np-modal-close" @click="selected = null"><i class="ph ph-x"></i></button>
+                </div>
+              </template>
+              <div class="np-modal-body" x-text="selected ? selected.content : ''"></div>
+            </div>
+          </div>
+        </template>
       </div>
     @endif
   </div>

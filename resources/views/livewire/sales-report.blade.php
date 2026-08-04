@@ -116,7 +116,7 @@
                 </thead>
                 <tbody>
                     @forelse ($bookings as $booking)
-                        <tr>
+                        <tr @if($booking->booking_status === \App\Models\Booking::STATUS_REFUND_QUEUE) style="background:rgba(239,68,68,0.08);" @endif>
                             <td>
                                 <a href="{{ route('bookings.show', $booking) }}" class="fw-semibold">
                                     #{{ $booking->booking_number }}
@@ -131,7 +131,7 @@
                                 £{{ number_format($booking->total_margin ?? 0, 0) }}
                             </td>
                             <td>
-                                <span class="badge bg-label-{{ match($booking->booking_status) {'confirmed' => 'primary', 'issued' => 'success', 'pending' => 'warning', 'cancelled' => 'danger', default => 'secondary'} }}">
+                                <span class="badge bg-label-{{ match($booking->booking_status) {'confirmed' => 'primary', 'issued' => 'success', 'pending' => 'warning', 'cancelled', 'refund_queue' => 'danger', default => 'secondary'} }}">
                                     {{ ucfirst(str_replace('_', ' ', $booking->booking_status)) }}
                                 </span>
                             </td>

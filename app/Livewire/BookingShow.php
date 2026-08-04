@@ -14,6 +14,7 @@ use App\Models\BookingPassenger;
 use App\Models\BookingPayment;
 use App\Models\BookingMarginShare;
 use App\Models\BookingPaymentHistory;
+use App\Models\BookingReassignment;
 use App\Models\BookingTransfer;
 use App\Models\Refund;
 use App\Models\User;
@@ -32,7 +33,6 @@ class BookingShow extends Component
 
     public Booking $booking;
     public $newComment = '';
-    public $commentPreset = '';   // key from BookingComment::PRESETS, '' = plain comment
     public $bookingStatus;
 
     // Refund modal
@@ -182,12 +182,18 @@ class BookingShow extends Component
     public $shareAmount = '';
     public $shareNote = '';
 
+    // Transfer booking (reassign ownership to another user)
+    public bool $transferBookingOpen = false;
+    public $transferToUserId = '';
+    public $transferNote = '';
+
     public function mount(Booking $booking)
     {
         $this->booking = $booking->load([
             'passengers', 'payment', 'paymentHistory', 'documents',
             'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
             'marginShares.sharedWith', 'marginShares.sharedBy',
+            'reassignments.fromUser', 'reassignments.toUser', 'reassignments.transferredBy',
             'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
         ]);
         $this->bookingStatus = $booking->booking_status;
@@ -221,8 +227,15 @@ class BookingShow extends Component
             }
         }
 
-        // Always log "Opened Booking" — every view is tracked
-        $this->logActivity('Opened Booking', 'Booking opened for viewing', 'navigated', bypassViewerCheck: true);
+        // Log "Opened Booking" — but only once per 10-minute window per user, so
+        // repeated opens (refreshes, re-navigation) don't spam the comment feed.
+        $lastView = collect($this->activity_log_entries)
+            ->filter(fn ($e) => ($e['action'] ?? null) === 'Opened Booking' && ($e['user_id'] ?? null) === Auth::id())
+            ->last();
+
+        if (!$lastView || now()->diffInMinutes(\Carbon\Carbon::parse($lastView['timestamp'])) >= 10) {
+            $this->logActivity('Opened Booking', 'Booking opened for viewing', 'navigated', bypassViewerCheck: true);
+        }
     }
 
     public function getPnrLabel(int $index): string
@@ -290,6 +303,12 @@ class BookingShow extends Component
         }
         if (stripos($action, 'cancelled') !== false || stripos($action, 'cancel') !== false) {
             return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.08)','border'=>'#DC2626','label'=>'Cancelled','full_row'=>true,'icon'=>'ph-x-circle'];
+        }
+        // Ownership transfer — matched BEFORE the generic ground-transfer/hotel
+        // "Service" rule below, which would otherwise catch it on the word
+        // "transfer" and bury it as an unhighlighted row.
+        if (stripos($action, 'booking transferred') !== false) {
+            return ['dot'=>'#B45309','bg'=>'rgba(217,119,6,.12)','border'=>'#B45309','label'=>'Transferred','full_row'=>true,'icon'=>'ph-arrows-left-right'];
         }
         // Subtle highlights for field edits and notes
         if (stripos($action, 'added a note') !== false || $type === 'note') {
@@ -1493,6 +1512,67 @@ class BookingShow extends Component
         session()->flash('success', 'Margin share removed.');
     }
 
+    // ── Transfer booking ownership ───────────────────────────────────────
+    /** Users this booking can be handed to — anyone who can create bookings, excluding the current owner. */
+    public function getTransferCandidateUsersProperty()
+    {
+        return User::where(function ($q) {
+                $q->where('role', User::ROLE_ADMIN)
+                    ->orWhereJsonContains('permissions', 'bookings.create');
+            })
+            ->where('id', '!=', $this->booking->user_id)
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function openTransferBooking(): void
+    {
+        abort_unless(Auth::user()->hasPermission('bookings.transfer'), 403);
+
+        $this->transferToUserId = '';
+        $this->transferNote = '';
+        $this->resetErrorBag();
+        $this->transferBookingOpen = true;
+    }
+
+    public function saveTransferBooking(): void
+    {
+        abort_unless(Auth::user()->hasPermission('bookings.transfer'), 403);
+
+        $this->validate([
+            'transferToUserId' => 'required|exists:users,id',
+            'transferNote'      => 'nullable|string|max:255',
+        ]);
+
+        if ((int) $this->transferToUserId === (int) $this->booking->user_id) {
+            $this->addError('transferToUserId', 'Booking already belongs to this user.');
+            return;
+        }
+
+        $newOwner = User::find($this->transferToUserId);
+        abort_unless($newOwner && $newOwner->canCreateBooking(), 403, 'Selected user cannot own bookings.');
+
+        $previousOwner = $this->booking->user;
+
+        BookingReassignment::create([
+            'booking_id'      => $this->booking->id,
+            'from_user_id'    => $this->booking->user_id,
+            'to_user_id'      => $newOwner->id,
+            'transferred_by'  => Auth::id(),
+            'note'            => $this->transferNote ?: null,
+        ]);
+
+        $this->booking->update(['user_id' => $newOwner->id]);
+
+        $description = ($previousOwner?->name ?? '—') . ' → ' . $newOwner->name . ($this->transferNote ? " — {$this->transferNote}" : '');
+        AuditLogger::log(Auth::user(), $this->booking, 'booking_transferred', "Booking transferred: {$description}", ['user_id' => $previousOwner?->id], ['user_id' => $newOwner->id]);
+        $this->logActivity('Booking Transferred', $description, 'update', bypassViewerCheck: true);
+
+        $this->refreshBooking();
+        $this->transferBookingOpen = false;
+        session()->flash('success', "Booking transferred to {$newOwner->name}.");
+    }
+
     private function refreshBooking(): void
     {
         $this->booking->refresh();
@@ -1500,6 +1580,7 @@ class BookingShow extends Component
             'passengers', 'payment', 'paymentHistory', 'documents',
             'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas',
             'marginShares.sharedWith', 'marginShares.sharedBy',
+            'reassignments.fromUser', 'reassignments.toUser', 'reassignments.transferredBy',
             'comments' => fn($q) => $q->with('user')->orderBy('created_at'),
         ]);
         $this->activityLog = $this->buildActivityLog($this->booking);
@@ -1569,6 +1650,21 @@ class BookingShow extends Component
     // ── Activity log helpers ───────────────────────────────────────────
     protected array $fieldSnapshot = [];
     protected bool $suppressLogging = false;
+
+    /**
+     * Flight costs, hotels, visas and transfers are all persisted via a
+     * delete-then-recreate pattern, so id/created_at/updated_at always
+     * differ between the pre- and post-save snapshot even when nothing the
+     * user actually entered changed. Strip those columns before diffing so
+     * "Pricing Updated" only fires on a real value change.
+     */
+    private function stripVolatileRowKeys(array $rows): array
+    {
+        return array_map(function ($row) {
+            unset($row['id'], $row['booking_id'], $row['created_at'], $row['updated_at']);
+            return $row;
+        }, $rows);
+    }
 
     private function logActivity(string $action, string $detail = '', string $type = 'info', bool $bypassViewerCheck = false): void
     {
@@ -2003,29 +2099,26 @@ class BookingShow extends Component
     }
 
     // ── Comments ───────────────────────────────────────────────────────
-    /** Header presets available when commenting. */
+    /** Header presets available when commenting. The manager-only preset is hidden from regular agents. */
     public function getCommentPresetsProperty(): array
     {
-        return BookingComment::PRESETS;
+        $presets = BookingComment::PRESETS;
+        if (!Auth::user()->hasPermission('bookings.edit_any')) {
+            unset($presets['manager_info']);
+        }
+        return $presets;
     }
 
-    /** Clicking the same bubble again clears it, so a preset is never sticky by accident. */
-    public function toggleCommentPreset(string $key): void
-    {
-        if (!array_key_exists($key, $this->commentPresets)) return;
-        $this->commentPreset = $this->commentPreset === $key ? '' : $key;
-    }
-
-    public function addComment()
+    /** $presetKey is client-chosen (Alpine state) — never trust it, re-check against what this user may use. */
+    public function addComment(string $presetKey = '')
     {
         if (!$this->canComment()) return;
         // Column is TEXT (unlimited); 20k is a sanity bound that still allows
         // pasting long multi-line content (PNR dumps, policy text) intact.
         $this->validate(['newComment' => 'required|string|max:20000']);
 
-        // Never trust the posted preset — re-check it against what this user may use.
-        $preset = array_key_exists($this->commentPreset, $this->commentPresets)
-            ? $this->commentPreset
+        $preset = array_key_exists($presetKey, $this->commentPresets)
+            ? $presetKey
             : null;
 
         $user = Auth::user();
@@ -2043,47 +2136,14 @@ class BookingShow extends Component
         AuditLogger::log(Auth::user(), $this->booking, 'comment_added', 'Comment added', null, ['comment' => $label . $this->newComment]);
 
         $this->newComment = '';
-        $this->commentPreset = '';
         $this->booking->load(['comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
         $this->activityLog = $this->buildActivityLog($this->booking);
     }
 
+    // Replies to individual log entries are disabled — comments are top-level only.
     public function saveLogEntryComment(int $jsonIndex, string $comment): void
     {
-        $comment = trim($comment);
-        if (!$comment) return;
-
-        $logs = $this->activity_log_entries;
-        if (!isset($logs[$jsonIndex])) return;
-
-        $user    = Auth::user();
-        $reasons = $logs[$jsonIndex]['reasons'] ?? (isset($logs[$jsonIndex]['reason'])
-            ? [['text' => $logs[$jsonIndex]['reason'], 'agent' => null, 'at' => null]]
-            : []);
-
-        $avatarUrl      = $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null;
-        $avatarInitials = strtoupper(substr($user->name, 0, 1));
-        if (($sp = strpos($user->name, ' ')) !== false) $avatarInitials .= strtoupper(substr($user->name, $sp + 1, 1));
-
-        $reasons[] = [
-            'text'            => $comment,
-            'agent'           => $user->name,
-            'avatar_url'      => $avatarUrl,
-            'avatar_initials' => $avatarInitials,
-            'at'              => now()->format('d M Y, H:i'),
-        ];
-
-        $logs[$jsonIndex]['reasons'] = $reasons;
-        unset($logs[$jsonIndex]['reason']); // migrate old single-reason field
-
-        $this->activity_log_entries = $logs;
-        $this->booking->update(['activity_log' => array_values($logs)]);
-
-        // Also create a new timeline entry so the comment is visible in the log
-        $parentAction = $logs[$jsonIndex]['action'] ?? 'entry';
-        $this->logActivity('added a comment', "On: {$parentAction} — {$comment}", 'note');
-
-        $this->activityLog = $this->buildActivityLog($this->booking->fresh());
+        return;
     }
 
     public function canComment(): bool
@@ -2608,22 +2668,22 @@ class BookingShow extends Component
 
                 $priceChanges = [];
 
-                if ($oldFlightCosts != $newFlightCosts) {
+                if ($this->stripVolatileRowKeys($oldFlightCosts) != $this->stripVolatileRowKeys($newFlightCosts)) {
                     $priceChanges[] = 'flight costs';
                 }
                 if ((float)($oldFlightSellingPrice ?? 0) != (float)($newFlightSellingPrice ?? 0)) {
                     $priceChanges[] = 'flight selling price (' . number_format((float)$newFlightSellingPrice, 2) . ')';
                 }
-                if ($oldHotels != $newHotels) {
+                if ($this->stripVolatileRowKeys($oldHotels) != $this->stripVolatileRowKeys($newHotels)) {
                     $priceChanges[] = 'hotel costs';
                 }
-                if ($oldVisas != $newVisas) {
+                if ($this->stripVolatileRowKeys($oldVisas) != $this->stripVolatileRowKeys($newVisas)) {
                     $priceChanges[] = 'visa costs';
                 }
                 if (($oldExcursion ?? []) != ($newExcursion ?? [])) {
                     $priceChanges[] = 'excursion pricing';
                 }
-                if ($oldTransfers != $newTransfers) {
+                if ($this->stripVolatileRowKeys($oldTransfers) != $this->stripVolatileRowKeys($newTransfers)) {
                     $priceChanges[] = 'transfer costs';
                 }
 
@@ -2938,12 +2998,12 @@ class BookingShow extends Component
                 $newTransfers = $b->transfers()->get()->toArray();
 
                 $priceChanges = [];
-                if ($oldFlightCosts != $newFlightCosts) $priceChanges[] = 'flight costs';
+                if ($this->stripVolatileRowKeys($oldFlightCosts) != $this->stripVolatileRowKeys($newFlightCosts)) $priceChanges[] = 'flight costs';
                 if ((float)($oldFlightSellingPrice ?? 0) != (float)($newFlightSellingPrice ?? 0)) $priceChanges[] = 'flight selling price (' . number_format((float)$newFlightSellingPrice, 2) . ')';
-                if ($oldHotels != $newHotels) $priceChanges[] = 'hotel costs';
-                if ($oldVisas != $newVisas) $priceChanges[] = 'visa costs';
+                if ($this->stripVolatileRowKeys($oldHotels) != $this->stripVolatileRowKeys($newHotels)) $priceChanges[] = 'hotel costs';
+                if ($this->stripVolatileRowKeys($oldVisas) != $this->stripVolatileRowKeys($newVisas)) $priceChanges[] = 'visa costs';
                 if (($oldExcursion ?? []) != ($newExcursion ?? [])) $priceChanges[] = 'excursion pricing';
-                if ($oldTransfers != $newTransfers) $priceChanges[] = 'transfer costs';
+                if ($this->stripVolatileRowKeys($oldTransfers) != $this->stripVolatileRowKeys($newTransfers)) $priceChanges[] = 'transfer costs';
 
                 if (!empty($priceChanges)) {
                     AuditLogger::log(

@@ -355,6 +355,12 @@ class Booking extends Model
         return $this->hasMany(Refund::class);
     }
 
+    /** Ownership-transfer history — reassigning this booking to another user's sales. */
+    public function reassignments(): HasMany
+    {
+        return $this->hasMany(BookingReassignment::class)->latest();
+    }
+
     public function flightDetail(): HasOne
     {
         return $this->hasOne(BookingFlightDetail::class);

@@ -2204,12 +2204,18 @@
               @php
                 $c = $entry['color'] ?? $this->getActivityColorConfig($entry['action'] ?? '', $entry['type'] ?? 'info');
                 $isFullRow = !empty($c['full_row']);
+                // Comments/events with a real lifecycle status (full_row events like
+                // Issued, Processing, Cancelled...) get the same background tint as their
+                // badge colour. Routine events (View, Note, Edit, Docs...) stay plain —
+                // a preset note (General/Manager Info/...) only tints its own detail
+                // box below, not the whole row.
+                $statusColor = $isFullRow ? $c['border'] : null;
               @endphp
               @php $grouped = ($entry['group_count'] ?? 1) > 1; @endphp
-              <div x-data="{ open: false, text: '', grp: false }"
-                style="display:flex;gap:0;{{ $loop->last ? '' : 'border-bottom:1.5px solid #CBD5E1;margin-bottom:4px;' }}">
+              <div x-data="{ grp: false }"
+                style="display:flex;gap:0;box-sizing:border-box;width:100%;{{ $statusColor ? 'background:' . $statusColor . '1F;border-left:3px solid ' . $statusColor . ';border-radius:8px;padding-left:2px;padding-top:8px;padding-bottom:8px;' : '' }}{{ $loop->last ? '' : 'border-bottom:1.5px solid #CBD5E1;margin-bottom:4px;' }}">
                 {{-- Rail column: avatar circle + connecting line --}}
-                <div style="display:flex;flex-direction:column;align-items:center;width:60px;flex-shrink:0;">
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:{{ $statusColor ? 'center' : 'flex-start' }};width:60px;flex-shrink:0;">
                   @if (!empty($entry['avatar_url']))
                     <img src="{{ $entry['avatar_url'] }}" alt="{{ $entry['avatar_initials'] ?? '?' }}"
                       style="width:{{ $isFullRow ? '52px' : '46px' }};height:{{ $isFullRow ? '52px' : '46px' }};border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid {{ $c['border'] }};box-shadow:0 1px 5px {{ $c['border'] }}33;position:relative;z-index:1;">
@@ -2249,16 +2255,15 @@
                   </div>
                   {{-- Agent + timestamp. A folded run shows its span, first → last. --}}
                   @if ($isFullRow)
-                    <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:6px;">
                       <span style="font-size:0.78rem;font-weight:600;color:#475569;">{{ $entry['agent'] }}</span>
-                      <span style="font-size:0.72rem;color:#64748B;">·</span>
-                      <span style="font-size:0.744rem;color:#475569;">{{ $entry['timestamp'] }}@if ($grouped)
+                      <span style="font-size:0.744rem;color:#475569;text-align:right;">{{ $entry['timestamp'] }}@if ($grouped)
                           → {{ $entry['group_last_ts'] }}
                         @endif
                       </span>
                     </div>
                   @else
-                    <div style="font-size:0.72rem;color:#475569;margin-top:1px;">{{ $entry['timestamp'] }}
+                    <div style="display:flex;justify-content:flex-end;font-size:0.72rem;color:#475569;margin-top:5px;">{{ $entry['timestamp'] }}
                       @if ($grouped)
                         → {{ $entry['group_last_ts'] }}
                       @endif
@@ -2290,15 +2295,15 @@
                         <div
                           style="font-size:0.66rem;font-weight:800;color:{{ $pc }};text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">
                           {{ $entry['preset']['label'] }}</div>
-                        {{-- pre-wrap keeps pasted line breaks + indentation intact --}}
+                        {{-- pre-wrap keeps pasted line breaks + indentation intact; content
+                             sits right after the tag (no leading newline) so pre-wrap doesn't
+                             render that whitespace as a visible blank space before the text. --}}
                         <div
-                          style="font-size:0.78rem;color:#334155;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;">
-                          {{ $entry['detail'] }}</div>
+                          style="font-size:0.78rem;color:#334155;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
                       </div>
                     @else
                       <div
-                        style="font-size:0.756rem;color:#475569;margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;">
-                        {{ $entry['detail'] }}</div>
+                        style="font-size:0.756rem;color:#475569;margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
                     @endif
                   @endif
                   {{-- Comments --}}
@@ -2315,42 +2320,20 @@
                         @endif
                         <div
                           style="flex:1;min-width:0;background:rgba(51,46,158,.04);border:1px solid rgba(51,46,158,.1);border-radius:8px;padding:5px 9px;">
-                          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
+                          <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
                             @if ($r['agent'])
                               <span
                                 style="font-size:0.744rem;font-weight:700;color:#332E9E;">{{ $r['agent'] }}</span>
                             @endif
                             @if ($r['at'])
-                              <span style="font-size:0.696rem;color:#475569;">{{ $r['at'] }}</span>
+                              <span style="font-size:0.696rem;color:#475569;margin-left:auto;">{{ $r['at'] }}</span>
                             @endif
                           </div>
                           <div
-                            style="font-size:0.78rem;color:#374151;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">
-                            {{ $r['text'] }}</div>
+                            style="font-size:0.78rem;color:#374151;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $r['text'] }}</div>
                         </div>
                       </div>
                     @endforeach
-                    <div style="margin-top:6px;">
-                      <button type="button" @click="open = !open"
-                        style="font-size:0.72rem;color:#475569;background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;gap:3px;line-height:1;">
-                        <i class="ph ph-chat-circle-plus" style="font-size:0.84rem;"></i>
-                        <span x-text="open ? 'Cancel' : 'Add Comment'"></span>
-                      </button>
-                      <div x-show="open" x-transition
-                        style="display:flex;flex-direction:column;gap:5px;margin-top:6px;" x-cloak>
-                        <textarea x-model="text" placeholder="Add a comment..."
-                          @keydown.ctrl.enter="if(text.trim()){ $wire.saveLogEntryComment({{ $entry['json_index'] }}, text); open=false; text=''; }"
-                          style="width:100%;font-size:0.84rem;border:1px solid rgba(51,46,158,.2);border-radius:8px;padding:7px 9px;outline:none;background:#fff;resize:vertical;min-height:58px;line-height:1.5;"
-                          rows="3"></textarea>
-                        <div style="display:flex;justify-content:flex-end;gap:6px;">
-                          <button type="button" @click="open=false;text=''"
-                            style="background:none;color:#475569;border:1px solid rgba(148,163,184,.3);border-radius:7px;padding:3px 11px;font-size:0.768rem;font-weight:600;cursor:pointer;">Cancel</button>
-                          <button type="button"
-                            @click="if(text.trim()){ $wire.saveLogEntryComment({{ $entry['json_index'] }}, text); open=false; text=''; }"
-                            style="background:#332E9E;color:#fff;border:none;border-radius:7px;padding:3px 11px;font-size:0.768rem;font-weight:600;cursor:pointer;">Save</button>
-                        </div>
-                      </div>
-                    </div>
                   @endif
                 </div>
               </div>
@@ -2358,41 +2341,44 @@
           @endif
         </div>
         @if ($this->canComment())
-          {{-- Header preset bubbles: pick one to prepend a coloured heading to the comment --}}
-          <div class="d-flex gap-1 align-items-center flex-wrap px-4 pt-2"
-            style="border-top:1px solid rgba(51,46,158,.06);background:#FAFBFF;">
-            @foreach ($this->commentPresets as $key => $p)
-              @php $on = $commentPreset === $key; @endphp
-              <button type="button" wire:click="toggleCommentPreset('{{ $key }}')"
-                title="{{ $p['label'] }}"
-                style="font-size:0.69rem;font-weight:700;padding:3px 10px;border-radius:20px;cursor:pointer;transition:all .12s;
-                   border:1.5px solid {{ $on ? $p['color'] : $p['color'] . '55' }};
-                   background:{{ $on ? $p['color'] : $p['color'] . '12' }};
-                   color:{{ $on ? '#fff' : $p['color'] }};">
-                {{ $p['short'] }}
-              </button>
-            @endforeach
-            @if ($commentPreset)
-              <button type="button" wire:click="$set('commentPreset','')"
+          {{-- Preset picking is pure client-side state (Alpine) — toggling a bubble
+           used to round-trip to the server just to flip a style, which felt laggy.
+           The chosen key rides along in the addComment() call and is re-validated
+           server-side against $this->commentPresets there, same as before. --}}
+          <div x-data="{
+            preset: '',
+            presets: {{ Js::from($this->commentPresets) }},
+          }">
+            {{-- Header preset bubbles: pick one to prepend a coloured heading to the comment --}}
+            <div class="d-flex gap-1 align-items-center flex-wrap px-4 pt-2"
+              style="border-top:1px solid rgba(51,46,158,.06);background:#FAFBFF;">
+              @foreach ($this->commentPresets as $key => $p)
+                <button type="button" @click="preset = (preset === '{{ $key }}' ? '' : '{{ $key }}')"
+                  title="{{ $p['label'] }}"
+                  :style="`font-size:0.69rem;font-weight:700;padding:3px 10px;border-radius:20px;cursor:pointer;transition:all .12s;border:1.5px solid ${preset === '{{ $key }}' ? '{{ $p['color'] }}' : '{{ $p['color'] }}55'};background:${preset === '{{ $key }}' ? '{{ $p['color'] }}' : '{{ $p['color'] }}12'};color:${preset === '{{ $key }}' ? '#fff' : '{{ $p['color'] }}'}`">
+                  {{ $p['short'] }}
+                </button>
+              @endforeach
+              <button type="button" x-show="preset" x-cloak @click="preset = ''"
                 style="font-size:0.66rem;font-weight:600;color:#64748B;background:none;border:none;cursor:pointer;padding:3px 4px;">✕
                 clear</button>
-            @endif
-          </div>
-          {{-- Textarea (not <input>): an input silently strips newlines, so pasted
-           multi-line text would collapse onto one line. Enter inserts a newline;
-           Ctrl/Cmd+Enter submits. --}}
-          <div class="d-flex gap-2 align-items-end px-4 py-2" style="background:#FAFBFF;">
-            @php $ap = $commentPreset ? ($this->commentPresets[$commentPreset] ?? null) : null; @endphp
-            <textarea wire:model="newComment" rows="1"
-              placeholder="{{ $ap ? $ap['label'] . ' — add details...' : 'Add a comment...' }}"
-              class="form-control form-control-sm" x-data x-init="$el.style.height = 'auto';
-              $el.style.height = Math.min($el.scrollHeight, 220) + 'px'"
-              @input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,220)+'px'"
-              @keydown.ctrl.enter.prevent="$wire.addComment()" @keydown.meta.enter.prevent="$wire.addComment()"
-              style="border-radius:14px;font-size:0.84rem;line-height:1.5;resize:vertical;overflow-y:auto;min-height:34px;max-height:220px;white-space:pre-wrap;border-color:{{ $ap ? $ap['color'] . '66' : 'rgba(51,46,158,.12)' }};"></textarea>
-            <button type="button" wire:click="addComment" class="btn btn-sm flex-shrink-0"
-              style="background:{{ $ap ? $ap['color'] : 'linear-gradient(135deg,#332E9E,#4A45B5)' }};color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:0.816rem;font-weight:600;">Add
-              Comment</button>
+            </div>
+            {{-- Textarea (not <input>): an input silently strips newlines, so pasted
+             multi-line text would collapse onto one line. Enter inserts a newline;
+             Ctrl/Cmd+Enter submits. --}}
+            <div class="d-flex gap-2 align-items-end px-4 py-2" style="background:#FAFBFF;">
+              <textarea wire:model="newComment" rows="1"
+                :placeholder="preset ? presets[preset].label + ' — add details...' : 'Add a comment...'"
+                class="form-control form-control-sm" x-init="$el.style.height = 'auto';
+                $el.style.height = Math.min($el.scrollHeight, 220) + 'px'"
+                @input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,220)+'px'"
+                @keydown.ctrl.enter.prevent="$wire.addComment(preset)"
+                @keydown.meta.enter.prevent="$wire.addComment(preset)"
+                :style="`border-radius:14px;font-size:0.84rem;line-height:1.5;resize:vertical;overflow-y:auto;min-height:34px;max-height:220px;white-space:pre-wrap;border-color:${preset ? presets[preset].color + '66' : 'rgba(51,46,158,.12)'}`"></textarea>
+              <button type="button" @click="$wire.addComment(preset); preset = ''" class="btn btn-sm flex-shrink-0"
+                :style="`background:${preset ? presets[preset].color : 'linear-gradient(135deg,#332E9E,#4A45B5)'};color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:0.816rem;font-weight:600;`">Add
+                Comment</button>
+            </div>
           </div>
         @endif
       </div>
@@ -2935,6 +2921,16 @@
                   <button type="button" wire:click="openShareMargin" class="w-100"
                     style="background:rgba(51,46,158,.06);color:#332E9E;border:1px solid rgba(51,46,158,.15);border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
                     <i class="ph ph-share-network"></i> Share Margin
+                  </button>
+                </div>
+              @endif
+
+              {{-- Transfer booking ownership --}}
+              @if (Auth::user()->hasPermission('bookings.transfer'))
+                <div style="margin-top:10px;">
+                  <button type="button" wire:click="openTransferBooking" class="w-100"
+                    style="background:rgba(217,119,6,.08);color:#B45309;border:1px solid rgba(217,119,6,.2);border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                    <i class="ph ph-arrows-left-right"></i> Transfer Booking
                   </button>
                 </div>
               @endif
@@ -3604,6 +3600,94 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
         }
       }
     </style>
+  @endif
+
+  {{-- TRANSFER BOOKING MODAL --}}
+  @if ($transferBookingOpen)
+    <div
+      style="position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:bvFadeIn .15s ease-out;">
+      <div
+        style="background:#fff;border-radius:20px;width:100%;max-width:460px;box-shadow:0 24px 70px rgba(15,23,42,.28);overflow:hidden;animation:bvPopIn .18s cubic-bezier(.34,1.56,.64,1);">
+        <div
+          style="background:linear-gradient(135deg,#B45309 0%,#D97706 60%,#F59E0B 100%);padding:22px 26px;position:relative;overflow:hidden;">
+          <div
+            style="position:absolute;top:-30px;right:-20px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);">
+          </div>
+          <div
+            style="position:absolute;bottom:-40px;right:40px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.06);">
+          </div>
+          <div class="d-flex align-items-start justify-content-between" style="position:relative;">
+            <div class="d-flex align-items-center gap-3">
+              <div
+                style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="ph ph-arrows-left-right" style="font-size:1.32rem;color:#fff;"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-0" style="font-size:1.104rem;color:#fff;">Transfer Booking</h5>
+                <div style="font-size:0.792rem;color:rgba(255,255,255,.75);">Booking #{{ $booking->booking_number }}
+                  · Currently owned by {{ $booking->user?->name }}</div>
+              </div>
+            </div>
+            <button type="button" wire:click="$set('transferBookingOpen',false)"
+              style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.96rem;flex-shrink:0;">✕</button>
+          </div>
+        </div>
+        <div class="p-4" style="padding:24px 26px 26px !important;">
+          <div class="mb-3" style="background:#FFF7ED;border:1px solid rgba(217,119,6,.15);border-radius:10px;padding:10px 12px;">
+            <span style="font-size:0.78rem;color:#92400E;line-height:1.4;">
+              The booking moves in full — its sale, margin and refunds will count toward the new owner from now on.
+              Nothing already logged is changed; this transfer is recorded as a new entry.
+            </span>
+          </div>
+          @if ($this->transferCandidateUsers->isEmpty())
+            <div class="text-center" style="padding:18px 8px;">
+              <i class="ph ph-users" style="font-size:1.8rem;color:#94A3B8;"></i>
+              <p class="mb-0 mt-2" style="font-size:0.876rem;color:#64748B;">No other users available to transfer
+                this booking to.</p>
+            </div>
+          @else
+            <div class="mb-3">
+              <label class="bv-label">Transfer To <span style="color:#DC2626;">*</span></label>
+              <div style="position:relative;">
+                <i class="ph ph-user"
+                  style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#B45309;font-size:1rem;pointer-events:none;"></i>
+                <select wire:model="transferToUserId" class="bv-select-inline"
+                  style="width:100%;font-size:0.936rem;padding-left:32px;">
+                  <option value="">Select a user…</option>
+                  @foreach ($this->transferCandidateUsers as $u)
+                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                  @endforeach
+                </select>
+              </div>
+              @error('transferToUserId')
+                <div style="font-size:0.816rem;color:#DC2626;margin-top:4px;display:flex;align-items:center;gap:4px;"><i
+                    class="ph ph-warning-circle"></i>{{ $message }}</div>
+              @enderror
+            </div>
+            <div class="mb-1">
+              <label class="bv-label">Reason (optional)</label>
+              <textarea wire:model="transferNote" rows="2" class="bv-input-inline"
+                style="width:100%;font-size:0.912rem;resize:none;" placeholder="Why is this booking being transferred?"></textarea>
+              @error('transferNote')
+                <div style="font-size:0.816rem;color:#DC2626;margin-top:4px;display:flex;align-items:center;gap:4px;"><i
+                    class="ph ph-warning-circle"></i>{{ $message }}</div>
+              @enderror
+            </div>
+          @endif
+          <div class="d-flex gap-2 justify-content-end mt-4 pt-3" style="border-top:1px solid rgba(217,119,6,.1);">
+            <button type="button" wire:click="$set('transferBookingOpen',false)"
+              style="background:transparent;border:1.5px solid rgba(217,119,6,.2);color:#475569;border-radius:10px;padding:9px 22px;font-size:0.876rem;font-weight:600;cursor:pointer;">Cancel</button>
+            @if ($this->transferCandidateUsers->isNotEmpty())
+              <button type="button" wire:click="saveTransferBooking"
+                onclick="return confirm('Transfer this booking? Its sale, margin and refunds will count toward the new owner.')"
+                style="background:linear-gradient(135deg,#B45309,#D97706);color:#fff;border:none;border-radius:10px;padding:9px 24px;font-size:0.876rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(217,119,6,.3);display:flex;align-items:center;gap:6px;">
+                <i class="ph ph-check-circle"></i> Transfer
+              </button>
+            @endif
+          </div>
+        </div>
+      </div>
+    </div>
   @endif
 
 </div>

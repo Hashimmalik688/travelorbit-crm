@@ -64,6 +64,12 @@ return [
             'icon'        => 'ph ph-share-network',
             'description' => 'Share part of a booking\'s margin with another user.',
         ],
+        'bookings.transfer' => [
+            'label'       => 'Transfer booking ownership',
+            'group'       => 'Bookings',
+            'icon'        => 'ph ph-arrows-left-right',
+            'description' => "Move a booking to another user — its sale, margin and refunds count toward the new owner from then on. Works at any stage, no workflow lock applies.",
+        ],
         'bookings.own_issued' => [
             'label'       => 'Own issued Payment lists',
             'group'       => 'Bookings',

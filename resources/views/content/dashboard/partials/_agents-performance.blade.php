@@ -55,6 +55,7 @@
    The crown is a child of the TILE (not the photo) — the photo clips its
    own overflow, so a crown inside it could never hang past the corner. */
 .neo-ap-tile.is-top { box-shadow:0 0 0 3px rgba(245,158,11,.45); }
+.neo-ap-tile.is-second { box-shadow:0 0 0 3px rgba(148,163,184,.55); }
 /* Sits ABOVE the tile's top edge, centred — the tile wears it. Drawn as an
    SVG rather than the crown emoji so the gold is actually gold: the emoji is
    a colour font the page cannot restyle, and it renders grey-blue on some
@@ -74,6 +75,11 @@
   to   { transform:translateX(-50%) rotate(-8deg); opacity:1 }
 }
 @media (prefers-reduced-motion: reduce) { .neo-ap-crown { animation:none; } }
+/* Runner-up — same shape, silver gradient, slightly smaller so gold still reads first. */
+.neo-ap-crown.is-silver {
+  width:26px;height:19px;
+  filter:drop-shadow(0 2px 2px rgba(15,23,42,.3)) drop-shadow(0 0 4px rgba(148,163,184,.55));
+}
 </style>
 {{-- Gold gradient defined ONCE. Tied leaders all get a crown, so putting the
      <defs> inside the loop would emit duplicate element IDs. --}}
@@ -84,6 +90,12 @@
       <stop offset="35%"  stop-color="#FBBF24"/>
       <stop offset="70%"  stop-color="#D97706"/>
       <stop offset="100%" stop-color="#92400E"/>
+    </linearGradient>
+    <linearGradient id="toCrownSilver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#F8FAFC"/>
+      <stop offset="35%"  stop-color="#E2E8F0"/>
+      <stop offset="70%"  stop-color="#94A3B8"/>
+      <stop offset="100%" stop-color="#475569"/>
     </linearGradient>
   </defs>
 </svg>
@@ -97,16 +109,36 @@
     @endif
   </div>
   @php
-    // It's a booking-count competition — the crown goes to whoever has the most
-    // bookings this month, matching the order the controller sorted by. Margin
-    // never enters into it. Ties are all crowned, since picking one arbitrarily
-    // would be a lie. Nobody is crowned at zero: a crown for no sales is noise.
+    // It's a booking-count competition — the crowns go to whoever has the most
+    // (gold) and second-most (silver) bookings this month, matching the order
+    // the controller sorted by. Margin never enters into it.
+    //
+    // Exactly one gold and one silver — never two people wearing the same
+    // crown. On a tied count the controller has already broken the tie by
+    // earliest booking timestamp (see agentsPerformanceData()), so within a
+    // tied group the earliest agent is the FIRST one this loop encounters;
+    // these two flags make sure only that first one gets crowned and the
+    // rest of the tied group gets nothing rather than a duplicate crown.
+    // Nobody is crowned at zero: a crown for no sales is noise.
     $apTopValue = $agentsPerformance->max('count') ?? 0;
+    $apSecondValue = $apTopValue > 0
+        ? ($agentsPerformance->where('count', '<', $apTopValue)->max('count') ?? 0)
+        : 0;
+    $apGoldGiven = false;
+    $apSilverGiven = false;
   @endphp
   <div class="neo-ap-grid">
     @forelse ($agentsPerformance as $ap)
       @php
-        $apIsTop = $apTopValue > 0 && $ap->count === $apTopValue;
+        $apIsTop = false;
+        $apIsSecond = false;
+        if (!$apGoldGiven && $apTopValue > 0 && $ap->count === $apTopValue) {
+            $apIsTop = true;
+            $apGoldGiven = true;
+        } elseif (!$apSilverGiven && $apSecondValue > 0 && $ap->count === $apSecondValue) {
+            $apIsSecond = true;
+            $apSilverGiven = true;
+        }
         $apParts     = explode(' ', $ap->name);
         $apFirstName = $apParts[0];
         $apInitials  = strtoupper(mb_substr($apParts[0], 0, 1) . (count($apParts) > 1 ? mb_substr(end($apParts), 0, 1) : ''));
@@ -116,9 +148,9 @@
         $apBookings  = $ap->count . ' booking' . ($ap->count !== 1 ? 's' : '') . ' this month';
         $apTitle     = $ap->name . ' — ' . ($apActive ? 'made a booking today' : 'no bookings today') . ' · '
                      . ($showMargin ? '£' . number_format($ap->margin, 2) . ' margin, ' . $apBookings : $apBookings)
-                     . ($apIsTop ? ' · top seller this month' : '');
+                     . ($apIsTop ? ' · top seller this month' : ($apIsSecond ? ' · runner-up this month' : ''));
       @endphp
-      <div class="neo-ap-tile{{ $apIsTop ? ' is-top' : '' }}" style="border-color:{{ $apColor }};" title="{{ $apTitle }}">
+      <div class="neo-ap-tile{{ $apIsTop ? ' is-top' : ($apIsSecond ? ' is-second' : '') }}" style="border-color:{{ $apColor }};" title="{{ $apTitle }}">
         {{-- Sibling of the photo, not a child: the photo clips its own
              overflow, so a crown inside it could not sit above the edge. --}}
         @if ($apIsTop)
@@ -130,6 +162,16 @@
             <path d="M2.5 17 L4.5 5 L10 10.5 L15 2.5 L20 10.5 L25.5 5 L27.5 17 Z" fill="#FFFFFF" opacity=".28"
                   style="clip-path:polygon(0 0, 42% 0, 22% 100%, 0 100%)"/>
             <circle cx="15" cy="18.2" r="1.15" fill="#FFF7E0" opacity=".85"/>
+          </svg>
+        @elseif ($apIsSecond)
+          <svg class="neo-ap-crown is-silver" viewBox="0 0 30 22" role="img" aria-label="Runner-up">
+            <title>Runner-up</title>
+            <path d="M2.5 17 L4.5 5 L10 10.5 L15 2.5 L20 10.5 L25.5 5 L27.5 17 Z" fill="url(#toCrownSilver)"/>
+            <rect x="2.5" y="16" width="25" height="4.5" rx="1.6" fill="url(#toCrownSilver)"/>
+            {{-- specular sweep across the band + points, gives it the sheen --}}
+            <path d="M2.5 17 L4.5 5 L10 10.5 L15 2.5 L20 10.5 L25.5 5 L27.5 17 Z" fill="#FFFFFF" opacity=".28"
+                  style="clip-path:polygon(0 0, 42% 0, 22% 100%, 0 100%)"/>
+            <circle cx="15" cy="18.2" r="1.15" fill="#F8FAFC" opacity=".85"/>
           </svg>
         @endif
         <div class="neo-ap-photo">

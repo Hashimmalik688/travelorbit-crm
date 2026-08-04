@@ -104,6 +104,8 @@
 .neo-rb-badge { display:inline-block;font-size:0.684rem;font-weight:800;border-radius:8px;padding:3px 9px;background:var(--to-subtle);border:1px solid var(--to-border);box-shadow:none;white-space:nowrap; }
 .neo-rb-table tbody tr.neo-rb-highlight td { background:rgba(16,185,129,0.07); }
 .neo-rb-table tbody tr.neo-rb-highlight:hover td { background:rgba(16,185,129,0.13); }
+.neo-rb-table tbody tr.neo-rb-refund td { background:rgba(239,68,68,0.08); }
+.neo-rb-table tbody tr.neo-rb-refund:hover td { background:rgba(239,68,68,0.14); }
 .neo-rb-num { border:1px solid var(--to-border);border-radius:8px;padding:3px 10px;font-weight:800;box-shadow:none;background:var(--to-subtle);color:var(--to-indigo);text-decoration:none;display:inline-block; }
 </style>
 <div class="row g-3 mt-4">
@@ -144,8 +146,9 @@
                 // Issued/Invoiced are the two "done" statuses worth calling
                 // out on this list — everything else is still in flight.
                 $rbIsIssuedOrInvoiced = in_array($rb->booking_status, [\App\Models\Booking::STATUS_ISSUED, \App\Models\Booking::STATUS_INVOICED]);
+                $rbIsRefund = $rb->booking_status === \App\Models\Booking::STATUS_REFUND_QUEUE;
               @endphp
-              <tr class="{{ $rbIsIssuedOrInvoiced ? 'neo-rb-highlight' : '' }}">
+              <tr class="{{ $rbIsRefund ? 'neo-rb-refund' : ($rbIsIssuedOrInvoiced ? 'neo-rb-highlight' : '') }}">
                 <td><a href="{{ route('bookings.show', $rb->id) }}" class="neo-rb-num">{{ $rb->booking_number }}</a></td>
                 <td style="color:#475569;">{{ $rb->created_at->format('d/m/Y') }}</td>
                 <td style="color:#1E293B;font-weight:600;">{{ $rb->booker_name ?: '—' }}</td>

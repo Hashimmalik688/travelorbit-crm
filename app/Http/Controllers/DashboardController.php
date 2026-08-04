@@ -507,14 +507,23 @@ class DashboardController extends Controller
                     'made_booking_today' => $agent->today_bookings > 0,
                     'margin'             => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
                     'count'              => $relevant->count(),
+                    // Earliest booking in the relevant set, as a raw unix
+                    // timestamp (not a Carbon instance — comparing Carbon
+                    // objects with <=> doesn't reliably order chronologically).
+                    // The crown tiebreaker below: on equal counts, whoever got
+                    // there first wins.
+                    'first_booking_at'   => optional($relevant->min('created_at'))->timestamp,
                 ];
             })
             // It's a competition on volume: most bookings this month comes top,
             // regardless of margin. Ranking never uses margin, which also means
             // the order can't leak margin to agents who aren't shown it.
-            // Equal counts are broken by name so the order is stable rather
-            // than shuffling between requests.
-            ->sort(fn ($a, $b) => ($b->count <=> $a->count) ?: strcasecmp($a->name, $b->name))
+            // Equal counts are broken by whoever hit that count first (earliest
+            // booking timestamp — nulls, i.e. no bookings, sort last), then by
+            // name so the order is still stable when both are null.
+            ->sort(fn ($a, $b) => ($b->count <=> $a->count)
+                ?: (($a->first_booking_at ?? PHP_INT_MAX) <=> ($b->first_booking_at ?? PHP_INT_MAX))
+                ?: strcasecmp($a->name, $b->name))
             ->values();
 
         return [

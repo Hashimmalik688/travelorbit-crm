@@ -541,6 +541,17 @@ a:hover { color: var(--to-indigo); }
 }
 .to-nav-btn:hover { background: var(--to-border); color: var(--to-slate); }
 .to-nav-btn i { font-size: 1.38rem; }
+.to-calldesk-pill {
+  position: relative; height: 36px; padding: 0 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: 999px; white-space: nowrap;
+  background: var(--to-subtle); border: none;
+  color: var(--to-slate-dim); text-decoration: none;
+  cursor: pointer; transition: background-color 0.1s ease, color 0.1s ease;
+}
+.to-calldesk-pill:hover { background: var(--to-border); color: var(--to-slate); }
+.to-calldesk-pill i { font-size: 1.14rem; line-height: 1; }
+.to-calldesk-pill span { font-size: 0.84rem; font-weight: 600; line-height: 1; }
 .to-nav-badge {
   position: absolute; top: 4px; right: 4px;
   min-width: 8px; height: 8px; border-radius: 50%;

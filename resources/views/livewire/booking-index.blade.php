@@ -82,7 +82,7 @@
                 </thead>
                 <tbody>
                     @forelse ($bookings as $booking)
-                        <tr>
+                        <tr @if($booking->booking_status === \App\Models\Booking::STATUS_REFUND_QUEUE) style="background:rgba(239,68,68,0.08);" @endif>
                             <td>
                                 <span class="fw-semibold">#{{ $booking->booking_number }}</span>
                             </td>
