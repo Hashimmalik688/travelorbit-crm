@@ -82,21 +82,14 @@
                 </thead>
                 <tbody>
                     @forelse ($bookings as $booking)
-                        <tr @if($booking->booking_status === \App\Models\Booking::STATUS_REFUND_QUEUE) style="background:rgba(239,68,68,0.08);" @endif>
+                        <tr @if($booking->hasActiveRefund()) style="background:rgba(239,68,68,0.08);" @endif>
                             <td>
                                 <span class="fw-semibold">#{{ $booking->booking_number }}</span>
                             </td>
                             <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar avatar-sm">
-                                        <span class="avatar-initial rounded-circle">
-                                            {{ strtoupper(substr($booking->booker_name, 0, 1)) }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="fw-semibold d-block">{{ $booking->booker_name }}</span>
-                                        <small class="text-muted">{{ $booking->booker_mobile }}</small>
-                                    </div>
+                                <div>
+                                    <span class="fw-semibold d-block">{{ $booking->booker_name }}</span>
+                                    <small class="text-muted">{{ $booking->booker_mobile }}</small>
                                 </div>
                             </td>
                             <td>{{ $booking->user->name ?? '-' }}</td>

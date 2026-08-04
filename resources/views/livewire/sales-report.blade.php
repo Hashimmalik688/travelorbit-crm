@@ -116,7 +116,7 @@
                 </thead>
                 <tbody>
                     @forelse ($bookings as $booking)
-                        <tr @if($booking->booking_status === \App\Models\Booking::STATUS_REFUND_QUEUE) style="background:rgba(239,68,68,0.08);" @endif>
+                        <tr @if($booking->hasActiveRefund()) style="background:rgba(239,68,68,0.08);" @endif>
                             <td>
                                 <a href="{{ route('bookings.show', $booking) }}" class="fw-semibold">
                                     #{{ $booking->booking_number }}

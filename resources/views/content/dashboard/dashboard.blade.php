@@ -146,7 +146,7 @@
                 // Issued/Invoiced are the two "done" statuses worth calling
                 // out on this list — everything else is still in flight.
                 $rbIsIssuedOrInvoiced = in_array($rb->booking_status, [\App\Models\Booking::STATUS_ISSUED, \App\Models\Booking::STATUS_INVOICED]);
-                $rbIsRefund = $rb->booking_status === \App\Models\Booking::STATUS_REFUND_QUEUE;
+                $rbIsRefund = $rb->hasActiveRefund();
               @endphp
               <tr class="{{ $rbIsRefund ? 'neo-rb-refund' : ($rbIsIssuedOrInvoiced ? 'neo-rb-highlight' : '') }}">
                 <td><a href="{{ route('bookings.show', $rb->id) }}" class="neo-rb-num">{{ $rb->booking_number }}</a></td>

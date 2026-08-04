@@ -355,6 +355,24 @@ class Booking extends Model
         return $this->hasMany(Refund::class);
     }
 
+    /**
+     * True if this booking is in refund_queue, or has any refund request
+     * that hasn't been rejected — booking_status alone doesn't capture this,
+     * since an invoiced/issued booking keeps that status while a refund
+     * against it is requested/reviewed/processed (see RefundIndex::changeStatus,
+     * which only flips booking_status on 'processed' or 'rejected').
+     */
+    public function hasActiveRefund(): bool
+    {
+        if ($this->booking_status === self::STATUS_REFUND_QUEUE) {
+            return true;
+        }
+
+        return $this->relationLoaded('refunds')
+            ? $this->refunds->contains(fn ($r) => $r->status !== 'rejected')
+            : $this->refunds()->where('status', '!=', 'rejected')->exists();
+    }
+
     /** Ownership-transfer history — reassigning this booking to another user's sales. */
     public function reassignments(): HasMany
     {

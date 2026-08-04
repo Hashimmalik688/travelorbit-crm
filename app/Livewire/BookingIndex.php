@@ -90,7 +90,7 @@ class BookingIndex extends Component
             ->when($this->typeFilter,   fn($q) => $q->where('booking_type',   $this->typeFilter))
             ->when($this->dateFrom,     fn($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->dateTo,       fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
-            ->with(['payment', 'passengers', 'flightDetail', 'user'])
+            ->with(['payment', 'passengers', 'flightDetail', 'user', 'refunds'])
             ->orderByDesc('created_at')
             ->paginate(20);
 

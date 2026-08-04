@@ -38,7 +38,7 @@ class SalesReport extends Component
             ->when($this->dateTo, fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
             ->when($this->bookingType, fn($q) => $q->where('booking_type', $this->bookingType))
             ->when($this->agentId, fn($q) => $q->where('user_id', $this->agentId))
-            ->with(['flightDetails', 'hotels', 'visas', 'transfers', 'passengers', 'user'])
+            ->with(['flightDetails', 'hotels', 'visas', 'transfers', 'passengers', 'user', 'refunds'])
             ->orderByDesc('created_at')
             ->get();
     }

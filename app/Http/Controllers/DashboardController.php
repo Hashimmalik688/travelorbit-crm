@@ -426,7 +426,7 @@ class DashboardController extends Controller
         // Recent Bookings: the 10 most recent bookings company-wide, not a
         // date window — same eager-loads as Fresh so netMargin() doesn't
         // trigger N+1 queries.
-        $recentBookings = Booking::with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
+        $recentBookings = Booking::with(['user', 'flightDetail', 'passengers', 'hotels', 'visas', 'payment', 'refunds'])
             ->orderByDesc('created_at')
             ->take(10)
             ->get();
