@@ -2186,7 +2186,7 @@
           <div class="bv-icon" style="background:rgba(255,255,255,.15);"><i class="ph ph-clock-countdown"
               style="color:#fff;font-size:1.08rem;"></i></div>
           <h2 style="color:#fff;">Comments</h2>
-          <span class="ms-auto" style="font-size:0.768rem;color:rgba(255,255,255,.45);">{{ count($activityLog) }}
+          <span class="ms-auto" style="font-size:0.84rem;color:rgba(255,255,255,.45);">{{ count($activityLog) }}
             event{{ count($activityLog) !== 1 ? 's' : '' }}</span>
         </div>
         {{-- The feed runs oldest→newest, so the latest sits at the bottom. Open
@@ -2198,7 +2198,7 @@
               .observe($el, { childList: true, subtree: true });"
           @scroll="stick = ($el.scrollHeight - $el.scrollTop - $el.clientHeight) < 40">
           @if (empty($activityLog))
-            <p style="color:#475569;font-size:0.864rem;padding:4px 0;">No activity yet.</p>
+            <p style="color:#475569;font-size:0.94rem;padding:4px 0;">No activity yet.</p>
           @else
             @foreach ($activityLog as $entry)
               @php
@@ -2238,10 +2238,10 @@
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.3;">
                     @if ($isFullRow)
                       <span
-                        style="font-size:0.876rem;font-weight:800;color:{{ $c['border'] }};">{{ $entry['action'] }}</span>
+                        style="font-size:0.96rem;font-weight:800;color:{{ $c['border'] }};">{{ $entry['action'] }}</span>
                     @else
-                      <span style="font-size:0.828rem;font-weight:700;color:#1E293B;">{{ $entry['agent'] }}</span>
-                      <span style="font-size:0.816rem;font-weight:400;color:#475569;">{{ $entry['action'] }}</span>
+                      <span style="font-size:0.9rem;font-weight:700;color:#1E293B;">{{ $entry['agent'] }}</span>
+                      <span style="font-size:0.888rem;font-weight:400;color:#475569;">{{ $entry['action'] }}</span>
                     @endif
                     @if (!empty($c['label']) && $c['label'] !== 'Edit' && $c['label'] !== '')
                       <span
@@ -2256,14 +2256,14 @@
                   {{-- Agent + timestamp. A folded run shows its span, first → last. --}}
                   @if ($isFullRow)
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:6px;">
-                      <span style="font-size:0.78rem;font-weight:600;color:#475569;">{{ $entry['agent'] }}</span>
-                      <span style="font-size:0.744rem;color:#475569;text-align:right;">{{ $entry['timestamp'] }}@if ($grouped)
+                      <span style="font-size:0.86rem;font-weight:600;color:#475569;">{{ $entry['agent'] }}</span>
+                      <span style="font-size:0.82rem;color:#475569;text-align:right;">{{ $entry['timestamp'] }}@if ($grouped)
                           → {{ $entry['group_last_ts'] }}
                         @endif
                       </span>
                     </div>
                   @else
-                    <div style="display:flex;justify-content:flex-end;font-size:0.72rem;color:#475569;margin-top:5px;">{{ $entry['timestamp'] }}
+                    <div style="display:flex;justify-content:flex-end;font-size:0.8rem;color:#475569;margin-top:5px;">{{ $entry['timestamp'] }}
                       @if ($grouped)
                         → {{ $entry['group_last_ts'] }}
                       @endif
@@ -2299,11 +2299,11 @@
                              sits right after the tag (no leading newline) so pre-wrap doesn't
                              render that whitespace as a visible blank space before the text. --}}
                         <div
-                          style="font-size:0.78rem;color:#334155;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
+                          style="font-size:0.86rem;color:#334155;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
                       </div>
                     @else
                       <div
-                        style="font-size:0.756rem;color:#475569;margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
+                        style="font-size:0.84rem;color:#475569;margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $entry['detail'] }}</div>
                     @endif
                   @endif
                   {{-- Comments --}}
@@ -2323,14 +2323,14 @@
                           <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
                             @if ($r['agent'])
                               <span
-                                style="font-size:0.744rem;font-weight:700;color:#332E9E;">{{ $r['agent'] }}</span>
+                                style="font-size:0.82rem;font-weight:700;color:#332E9E;">{{ $r['agent'] }}</span>
                             @endif
                             @if ($r['at'])
-                              <span style="font-size:0.696rem;color:#475569;margin-left:auto;">{{ $r['at'] }}</span>
+                              <span style="font-size:0.77rem;color:#475569;margin-left:auto;">{{ $r['at'] }}</span>
                             @endif
                           </div>
                           <div
-                            style="font-size:0.78rem;color:#374151;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $r['text'] }}</div>
+                            style="font-size:0.86rem;color:#374151;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">{{ $r['text'] }}</div>
                         </div>
                       </div>
                     @endforeach
@@ -2374,9 +2374,9 @@
                 @input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,220)+'px'"
                 @keydown.ctrl.enter.prevent="$wire.addComment(preset)"
                 @keydown.meta.enter.prevent="$wire.addComment(preset)"
-                :style="`border-radius:14px;font-size:0.84rem;line-height:1.5;resize:vertical;overflow-y:auto;min-height:34px;max-height:220px;white-space:pre-wrap;border-color:${preset ? presets[preset].color + '66' : 'rgba(51,46,158,.12)'}`"></textarea>
+                :style="`border-radius:14px;font-size:0.92rem;line-height:1.5;resize:vertical;overflow-y:auto;min-height:34px;max-height:220px;white-space:pre-wrap;border-color:${preset ? presets[preset].color + '66' : 'rgba(51,46,158,.12)'}`"></textarea>
               <button type="button" @click="$wire.addComment(preset); preset = ''" class="btn btn-sm flex-shrink-0"
-                :style="`background:${preset ? presets[preset].color : 'linear-gradient(135deg,#332E9E,#4A45B5)'};color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:0.816rem;font-weight:600;`">Add
+                :style="`background:${preset ? presets[preset].color : 'linear-gradient(135deg,#332E9E,#4A45B5)'};color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:0.888rem;font-weight:600;`">Add
                 Comment</button>
             </div>
           </div>
