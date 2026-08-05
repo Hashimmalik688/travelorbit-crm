@@ -172,6 +172,16 @@ class BookingShow extends Component
     // Activity
     public $mandatory_comment = '';
     public array $activity_log_entries = [];
+    // Entries appended by logActivity() this request/session that haven't been
+    // persisted yet. Kept separate from activity_log_entries (which is a full
+    // snapshot, potentially stale if this Livewire instance has been sitting
+    // open across other users'/routes' writes) so flushActivityLog() only ever
+    // needs to append these onto a freshly-read copy of the DB column instead
+    // of overwriting the whole column with a possibly-outdated array. See
+    // flushActivityLog() for why the naive overwrite was silently dropping
+    // events (e.g. "Ticket In Process") written via BookingWorkflowController
+    // while a booking sat open in another tab.
+    public array $pendingActivityLogEntries = [];
     public bool $activityLogDirty = false;
     public ?int $reasonEditIndex = null;
     public string $reasonEditText = '';
@@ -1685,7 +1695,7 @@ class BookingShow extends Component
         if (($sp = strpos($agent, ' ')) !== false) $ini .= strtoupper(substr($agent, $sp + 1, 1));
         $avatarUrl = $user?->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null;
 
-        $this->activity_log_entries[] = [
+        $rawEntry = [
             'agent'           => $agent,
             'avatar_url'      => $avatarUrl,
             'avatar_initials' => $ini,
@@ -1695,6 +1705,11 @@ class BookingShow extends Component
             'detail'          => $detail,
             'type'            => $type,
         ];
+        $this->activity_log_entries[] = $rawEntry;
+        // Queued separately from activity_log_entries — flushActivityLog()
+        // appends just these onto a fresh read of the DB column rather than
+        // overwriting the column with the (possibly stale) full array above.
+        $this->pendingActivityLogEntries[] = $rawEntry;
 
         // Mark dirty — actual DB write is batched in dehydrate() so multiple
         // logActivity calls in one round-trip produce only one UPDATE.
@@ -1716,6 +1731,43 @@ class BookingShow extends Component
             'is_json'         => true,
             'reasons'         => [],
         ];
+    }
+
+    /**
+     * Persist any activity-log entries queued by logActivity() since the last
+     * flush — appended onto a freshly-read copy of the DB column, never by
+     * overwriting the column with this component's in-memory snapshot.
+     *
+     * This component can stay "alive" across many Livewire round-trips while
+     * a user keeps a booking open in a browser tab. Other code paths write to
+     * the same booking's activity_log independently and concurrently —
+     * BookingWorkflowController's queueForIssuance/markTicketInProcess/
+     * invoice/issue actions (used from the Issuance Queue / Ready to Invoice
+     * screens) write straight to the DB, and another browser tab on the same
+     * booking is a second instance of this very component. If this method
+     * naively wrote `array_values($this->activity_log_entries)`, it would
+     * blow away whatever those other writers had appended in the meantime —
+     * which is exactly what made "Ticket In Process" (and other status-change
+     * entries with their own colours, like "Issued - Payment Plan") vanish
+     * from the comments feed: the entry was written, then silently clobbered
+     * by a stale tab's next save.
+     */
+    private function flushActivityLog(): void
+    {
+        if (empty($this->pendingActivityLogEntries)) {
+            $this->activityLogDirty = false;
+            return;
+        }
+
+        $freshLog = \App\Models\Booking::where('id', $this->booking->id)->value('activity_log') ?? [];
+        if (is_string($freshLog)) $freshLog = json_decode($freshLog, true) ?? [];
+
+        $merged = array_values(array_merge($freshLog, $this->pendingActivityLogEntries));
+
+        $this->booking->update(['activity_log' => $merged]);
+        $this->activity_log_entries = $merged;
+        $this->pendingActivityLogEntries = [];
+        $this->activityLogDirty = false;
     }
 
     // ── Field-level change tracking ────────────────────────────────────
