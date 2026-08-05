@@ -288,9 +288,13 @@ class BookingShow extends Component
             // Payment Awaiting → Issued" — the OLD disposition it's leaving,
             // not the one it lands on — so a plain substring match would
             // wrongly paint invoicing orange. Invoicing always lands on plain
-            // Issued (Booking::canInvoice requires full payment), so anchoring
-            // on the tail correctly falls through to the green default below.
+            // Issued (Booking::canInvoice requires full payment); it's called
+            // out below by heading ("Booking Issued - Invoiced", set in
+            // buildActivityLog) rather than the detail tail, so it gets its
+            // own yellow badge instead of falling through to the green default.
             return match (true) {
+                stripos($action, 'invoiced') !== false
+                    => ['dot'=>'#CA8A04','bg'=>'rgba(202,138,4,.14)','border'=>'#CA8A04','label'=>'Invoiced','full_row'=>true,'icon'=>'ph-receipt'],
                 preg_match('/payment awaiting\s*$/i', $detail) === 1
                     => ['dot'=>'#C2410C','bg'=>'rgba(194,65,12,.11)','border'=>'#C2410C','label'=>'Payment Awaiting','full_row'=>true,'icon'=>'ph-hourglass'],
                 preg_match('/payment plan\s*$/i', $detail) === 1
@@ -417,12 +421,14 @@ class BookingShow extends Component
                     str_contains($comment, 'Issuance Queue')                                                       => 'Request Issuance',
                     str_contains($comment, 'Ticket In Process') || str_contains($comment, 'Ticket in Process')     => 'Ticket In Process',
                     // Invoicing lands the booking back on "Issued" too (see
-                    // BookingWorkflowController::invoice), so it reads as the same
-                    // event heading — "Invoiced" only shows in the detail line
-                    // below, not as its own heading/badge. "Booking", not
-                    // "Ticket" — non-flight bookings also flow through here,
-                    // where "ticket" would read wrong.
-                    str_contains($comment, 'Issued') || str_contains($comment, 'Invoiced')                         => 'Booking Issued',
+                    // BookingWorkflowController::invoice), but reads as its own
+                    // "Booking Issued - Invoiced" heading/badge rather than a
+                    // plain "Issued" one, so it doesn't look identical to the
+                    // original issue event. "Booking", not "Ticket" —
+                    // non-flight bookings also flow through here, where
+                    // "ticket" would read wrong.
+                    str_contains($comment, 'Invoiced')                                                             => 'Booking Issued - Invoiced',
+                    str_contains($comment, 'Issued')                                                                => 'Booking Issued',
                     str_contains($comment, 'Refund')                                                               => 'Refund Requested',
                     str_contains($comment, 'Cancelled')                                                            => 'Booking Cancelled',
                     default                                                                                        => 'Status Changed',
@@ -472,7 +478,8 @@ class BookingShow extends Component
                 'status_changed'   => match(true) {
                     str_contains($cComment, 'Issuance Queue')   => 'Request Issuance',
                     str_contains($cComment, 'Ticket In Process') => 'Ticket In Process',
-                    str_contains($cComment, 'Issued') || str_contains($cComment, 'Invoiced') => 'Booking Issued',
+                    str_contains($cComment, 'Invoiced')          => 'Booking Issued - Invoiced',
+                    str_contains($cComment, 'Issued')            => 'Booking Issued',
                     str_contains($cComment, 'Refund')            => 'Refund Requested',
                     str_contains($cComment, 'Cancelled')         => 'Booking Cancelled',
                     default                                      => 'Status Changed',
@@ -2446,26 +2453,19 @@ class BookingShow extends Component
 
             if (!$this->isLocked || Auth::user()->hasPermission('bookings.edit_any')) {
 
-            // Activity JSON — build on in-memory entries (already includes all field-edit entries flushed live)
-            $saveUser = Auth::user();
-            $saveIni  = strtoupper(substr($saveUser->name, 0, 1));
-            if (($sp = strpos($saveUser->name, ' ')) !== false) $saveIni .= strtoupper(substr($saveUser->name, $sp + 1, 1));
-            $activityLog   = $this->activity_log_entries;
-            $activityLog[] = [
-                'agent'           => $saveUser->name,
-                'avatar_url'      => $saveUser->profile_photo_path ? asset('storage/' . $saveUser->profile_photo_path) : null,
-                'avatar_initials' => $saveIni,
-                'timestamp'       => now()->toDateTimeString(),
-                'action'          => 'updated',
-                'comment'         => $this->mandatory_comment ?: '',
-                'type'            => 'update',
-            ];
+            // Activity JSON — queued via logActivity() rather than built here
+            // directly, so it (and any entries logged further down this same
+            // transaction — pricing changes, document uploads) get appended
+            // onto a fresh read of the DB column by flushActivityLog() below,
+            // instead of being written as part of $coreUpdate from this
+            // component's in-memory snapshot, which may be stale if this
+            // booking has been open in the tab a while (see flushActivityLog).
+            $this->logActivity('updated', $this->mandatory_comment ?: '', 'update', bypassViewerCheck: true);
 
             $coreUpdate = [
                 'booking_type' => $this->booking_type,
                 'passenger_count' => count($this->passengers),
                 'booking_status' => $this->bookingStatus,
-                'activity_log' => $activityLog,
             ];
             // Lead Source / Lead Nature / Caller Details are only ever rendered
             // as editable when 'locked'=>!$isPrivileged is false (see the
@@ -2488,9 +2488,6 @@ class BookingShow extends Component
                 ];
             }
             $b->update($coreUpdate);
-            // Keep in-memory entries in sync with what was just written; dehydrate() will see dirty=false.
-            $this->activity_log_entries = array_values($activityLog);
-            $this->activityLogDirty = false;
 
             // Activity log record
             BookingActivityLog::create([
@@ -2779,10 +2776,16 @@ class BookingShow extends Component
         $this->newDocuments = [];
         $this->newDocumentTypes = [];
         $this->mandatory_comment = '';
+        // Persist every entry queued during the transaction above (the
+        // "updated" note plus any Pricing Updated / Document Uploaded
+        // entries logged further down) — must happen before refresh()/
+        // loadBookingData() below, which otherwise re-read activity_log from
+        // the DB before these were ever written to it and would silently
+        // drop them, same as the dehydrate() overwrite bug this mirrors.
+        $this->flushActivityLog();
         $this->booking->refresh();
         $this->booking->load(['passengers', 'payment', 'paymentHistory', 'documents', 'flightDetail', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas', 'marginShares.sharedWith', 'marginShares.sharedBy', 'comments' => fn($q) => $q->with('user')->orderBy('created_at')]);
         $this->loadBookingData();
-        $this->activityLogDirty = false; // activity_log was already written inside the transaction
         $this->activityLog = $this->buildActivityLog($this->booking);
         session()->flash('success', "Booking #{$this->booking->booking_number} updated.");
     }
@@ -3078,9 +3081,8 @@ class BookingShow extends Component
         // Lightweight post-save refresh — skip reloading all relationships since
         // in-memory state was just written to DB and is already current.
         // Flush pending activity log entries to DB first so buildActivityLog sees them.
-        if ($this->activityLogDirty && !empty($this->activity_log_entries)) {
-            $this->booking->update(['activity_log' => array_values($this->activity_log_entries)]);
-            $this->activityLogDirty = false;
+        if ($this->activityLogDirty) {
+            $this->flushActivityLog();
         }
         $this->booking->refresh();
         // Sync IDs for any passengers that were just created (had no ID before save)
@@ -3098,9 +3100,8 @@ class BookingShow extends Component
 
     public function dehydrate(): void
     {
-        if ($this->activityLogDirty && !empty($this->activity_log_entries)) {
-            $this->booking->update(['activity_log' => array_values($this->activity_log_entries)]);
-            $this->activityLogDirty = false;
+        if ($this->activityLogDirty) {
+            $this->flushActivityLog();
         }
     }
 
