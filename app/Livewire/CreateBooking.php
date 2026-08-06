@@ -1411,15 +1411,6 @@ class CreateBooking extends Component
                 'details' => null,
             ]);
 
-            // Mandatory comment as BookingComment
-            BookingComment::create([
-                'booking_id' => $booking->id,
-                'user_id' => Auth::id(),
-                'comment' => $this->mandatory_comment,
-                'action' => 'created',
-                'is_mandatory' => true,
-            ]);
-
             // Passengers
             foreach ($this->passengers as $p) {
                 $ptc = $this->computePtc($p['date_of_birth'] ?? null, $p['type']);

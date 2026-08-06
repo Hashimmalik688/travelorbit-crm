@@ -30,12 +30,14 @@
       "Bash(echo \"=== TAURUS composer require ===\"; sed -n '/\"require\"/,/}/p' /var/www/taurus-crm/composer.json; echo; echo \"=== TAURUS attendance views ===\"; ls -R /var/www/taurus-crm/resources/views/attendance /var/www/taurus-crm/resources/views/admin/attendance 2>/dev/null; echo; echo \"=== migrations mentioning attendance ===\"; find /var/www/taurus-crm/database -iname '*attendance*' 2>/dev/null | grep -v worktrees)",
       "Bash(grep -n 'public $booker_\\\\|public $lead_\\\\|public $is_returning\\\\|public $referral_name\\\\|public $old_booking_reference\\\\|public $previous_booking_type' /opt/travelorbit-crm/app/Livewire/BookingShow.php)",
       "Bash(grep -n 'public $booker\\\\|public $lead\\\\|public $is_returning\\\\|public $referral_name\\\\|public $old_booking_reference\\\\|public $previous_booking_type\\\\|public $excursion_notes' /opt/travelorbit-crm/app/Livewire/BookingShow.php)",
-      "Bash(php -i)"
+      "Bash(php -i)",
+      "Bash(sed -n '2150,2320,' resources/views/livewire/booking-show.blade.php 2>/dev/null; sed -n '2150,2320p' resources/views/livewire/booking-show.blade.php)"
     ],
     "additionalDirectories": [
       "/opt/travelorbit-crm",
       "/opt/travelorbit-crm/resources/views/content/dashboard",
-      "/var/www/taurus-crm"
+      "/var/www/taurus-crm",
+      "/opt/travelorbit-crm/resources/views/livewire"
     ]
   }
 }

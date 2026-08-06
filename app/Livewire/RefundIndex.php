@@ -2,12 +2,21 @@
 
 namespace App\Livewire;
 
+use App\Models\BookingPaymentHistory;
 use App\Models\Refund;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+/**
+ * Read-only-ish overview of refund requests for accounts. The actual money
+ * movement — and the real approval gate — happens on the Charge Requests
+ * queue (see PaymentChargeRequest), once a refund payout has been requested
+ * from the booking page (BookingShow::submitRefundChargePayment). This page
+ * just tracks the underlying "does this booking still owe a refund" record
+ * and lets accounts decline one outright before any payout is ever queued.
+ */
 class RefundIndex extends Component
 {
     use WithPagination;
@@ -17,14 +26,10 @@ class RefundIndex extends Component
 
     protected $queryString = ['search', 'statusFilter'];
 
-    public function getTotalRequestedProperty()
+    /** Still owed — not yet paid out or declined. */
+    public function getTotalOutstandingProperty()
     {
-        return Refund::sum('refund_amount');
-    }
-
-    public function getTotalApprovedProperty()
-    {
-        return Refund::whereIn('status', ['approved', 'processed'])->sum('refund_amount');
+        return Refund::where('status', 'requested')->sum('refund_amount');
     }
 
     public function getTotalProcessedProperty()
@@ -34,7 +39,19 @@ class RefundIndex extends Component
 
     public function getPendingReviewCountProperty()
     {
-        return Refund::whereIn('status', ['requested', 'under_review'])->count();
+        return Refund::where('status', 'requested')->count();
+    }
+
+    /** Refund IDs that already have a payout sitting in the Charge Requests queue. */
+    protected function refundIdsWithPendingPayout(): array
+    {
+        return BookingPaymentHistory::where('status', 'pending')
+            ->where('payment_method', 'refund')
+            ->get()
+            ->map(fn ($ph) => $ph->payment_details['refund_id'] ?? null)
+            ->filter()
+            ->unique()
+            ->all();
     }
 
     public function updatingSearch(): void
@@ -47,44 +64,43 @@ class RefundIndex extends Component
         $this->resetPage();
     }
 
-    public function changeStatus($refundId, $newStatus): void
+    /**
+     * Declines the refund need outright — only while it's still just
+     * "requested" with nothing queued at accounts yet. Once a payout has
+     * been requested, it must be resolved on the Charge Requests queue
+     * (approve or reject there) instead.
+     */
+    public function rejectRefund($refundId, string $reason = ''): void
     {
-        $user = Auth::user();
-        if (!$user->hasPermission('refunds.manage')) {
+        if (!Auth::user()->hasPermission('refunds.manage')) {
             return;
         }
 
         $refund = Refund::find($refundId);
-        if (!$refund) return;
+        if (!$refund || $refund->status !== 'requested') return;
+        if (in_array($refund->id, $this->refundIdsWithPendingPayout())) return;
 
-        $oldStatus = $refund->status;
         $refund->update([
-            'status' => $newStatus,
-            'reviewed_at' => in_array($newStatus, ['under_review', 'approved', 'rejected']) ? now() : $refund->reviewed_at,
-            'processed_at' => $newStatus === 'processed' ? now() : $refund->processed_at,
-            'processed_by' => in_array($newStatus, ['approved', 'rejected', 'processed']) ? Auth::id() : null,
+            'status' => 'rejected',
+            'reviewed_at' => now(),
+            'processed_by' => Auth::id(),
+            'notes' => $reason ?: $refund->notes,
         ]);
-
-        if ($newStatus === 'rejected' || $newStatus === 'processed') {
-            $refund->booking->update([
-                'booking_status' => $newStatus === 'processed' ? 'cancelled' : 'confirmed',
-            ]);
-        }
 
         AuditLogger::log(
             Auth::user(),
             $refund->booking,
-            'status_changed',
-            "Refund status changed from {$oldStatus} to {$newStatus}",
-            ['status' => $oldStatus],
-            ['status' => $newStatus],
+            'refund_rejected',
+            'Refund request declined' . ($reason ? " — {$reason}" : ''),
         );
 
-        session()->flash('success', "Refund #{$refundId} status updated to " . ucfirst(str_replace('_', ' ', $newStatus)) . '.');
+        session()->flash('success', "Refund #{$refundId} declined.");
     }
 
     public function render()
     {
+        $pendingPayoutIds = $this->refundIdsWithPendingPayout();
+
         $refunds = Refund::query()
             ->with(['booking', 'requestedBy', 'processedBy'])
             ->when($this->search, function ($query) {
@@ -93,7 +109,10 @@ class RefundIndex extends Component
                         ->orWhere('booker_name', 'ILIKE', "%{$this->search}%");
                 });
             })
-            ->when($this->statusFilter, function ($query) {
+            ->when($this->statusFilter === 'payout_pending', function ($query) use ($pendingPayoutIds) {
+                $query->whereIn('id', $pendingPayoutIds);
+            })
+            ->when($this->statusFilter && $this->statusFilter !== 'payout_pending', function ($query) {
                 $query->where('status', $this->statusFilter);
             })
             ->orderByDesc('created_at')
@@ -101,6 +120,7 @@ class RefundIndex extends Component
 
         return view('livewire.refund-index', [
             'refunds' => $refunds,
+            'pendingPayoutIds' => $pendingPayoutIds,
         ]);
     }
 }

@@ -2937,14 +2937,23 @@
             </div>
           </div>
 
-          {{-- CHARGE REFUND PAYMENT: shown above Payment History while a refund is queued --}}
-          @if ($this->activeRefund)
+          {{-- REQUEST REFUND PAYMENT: shown once a refund is active and doesn't
+             already have a payout sitting in the accounts Charge Requests
+             queue — this doesn't pay anything out itself, it just queues the
+             payout for accounts to approve (see submitRefundChargePayment). --}}
+          @if ($this->activeRefund && !$this->refundPayoutPending)
             <div class="px-4 pt-3">
               <button type="button" x-data="{ open: @entangle('showRefundChargeModal') }" @click="open = true"
                 wire:click="openRefundChargeModal" class="w-100"
                 style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-                <i class="ph ph-arrows-counter-clockwise"></i> Charge Refund Payment
+                <i class="ph ph-arrows-counter-clockwise"></i> Request Refund Payment
               </button>
+            </div>
+          @elseif ($this->refundPayoutPending)
+            <div class="px-4 pt-3">
+              <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#B45309;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">
+                <i class="ph ph-hourglass-medium"></i> Refund Payment Requested — awaiting accounts approval
+              </div>
             </div>
           @endif
 
@@ -3404,7 +3413,7 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
     </div>
   </div>
 
-  {{-- CHARGE REFUND PAYMENT MODAL --}}
+  {{-- REQUEST REFUND PAYMENT MODAL --}}
   <div x-data="{ open: @entangle('showRefundChargeModal') }" x-show="open" x-cloak class="refund-overlay"
     style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"
     @click="open = false" @keydown.escape.window="open = false">
@@ -3413,13 +3422,13 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
       <div
         style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;">
         <h5 class="fw-bold mb-0" style="font-size:1.02rem;color:#fff;display:flex;align-items:center;gap:8px;"><i
-            class="ph ph-arrows-counter-clockwise" style="font-size:1.14rem;"></i> Charge Refund Payment</h5>
+            class="ph ph-arrows-counter-clockwise" style="font-size:1.14rem;"></i> Request Refund Payment</h5>
         <button type="button" @click="open = false"
           style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;">✕</button>
       </div>
       <div class="p-3">
-        <p style="font-size:0.8rem;color:#475569;margin-bottom:14px;">Records the refund as paid out to the customer —
-          it appears in Payment History as a deduction and closes this booking's refund.</p>
+        <p style="font-size:0.8rem;color:#475569;margin-bottom:14px;">Queues this refund as a payout for accounts to
+          approve on the Charge Requests queue — nothing is paid out yet, and the booking's status doesn't change.</p>
         <div class="mb-3">
           <label class="bv-label">Amount (£) <span style="color:#DC2626;">*</span></label>
           <input type="number" wire:model="refundChargeAmount" class="rf-input" placeholder="0.00"
@@ -3440,8 +3449,8 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
           <button type="button" @click="open = false"
             style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:600;cursor:pointer;">Cancel</button>
           <button type="button" wire:click="submitRefundChargePayment"
-            style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Confirm
-            Refund Paid</button>
+            style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Send
+            to Accounts</button>
         </div>
       </div>
     </div>

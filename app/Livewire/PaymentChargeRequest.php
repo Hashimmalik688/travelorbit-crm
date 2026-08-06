@@ -86,6 +86,12 @@ class PaymentChargeRequest extends Component
             $this->syncCcCharges($booking);
         }
 
+        // Refund payouts (queued from the booking page's Request Refund Payment
+        // button — see BookingShow::submitRefundChargePayment) only actually
+        // count as "paid out" once approved here. Booking status is deliberately
+        // left untouched — Booking::hasActiveRefund() is what marks it refunded.
+        $this->markLinkedRefundProcessed($ph);
+
         $this->closeModal();
         session()->flash('success', 'Payment charge approved.');
     }
@@ -113,8 +119,35 @@ class PaymentChargeRequest extends Component
             $this->syncCcCharges($booking);
         }
 
+        // A rejected refund payout leaves the underlying Refund as still
+        // "requested" — nothing was paid, so the booking stays flagged as
+        // needing a refund and can be re-queued from the booking page.
         $this->closeModal();
         session()->flash('success', 'Payment charge rejected.');
+    }
+
+    /**
+     * If this approved payment history row is a refund payout (see
+     * BookingShow::submitRefundChargePayment), mark its linked Refund as
+     * processed now that accounts has actually approved paying it out.
+     */
+    private function markLinkedRefundProcessed(BookingPaymentHistory $ph): void
+    {
+        if (!($ph->payment_details['refund_payout'] ?? false)) {
+            return;
+        }
+
+        $refundId = $ph->payment_details['refund_id'] ?? null;
+        if (!$refundId) return;
+
+        $refund = \App\Models\Refund::find($refundId);
+        if (!$refund) return;
+
+        $refund->update([
+            'status' => 'processed',
+            'processed_by' => Auth::id(),
+            'processed_at' => now(),
+        ]);
     }
 
     public function deletePayment(int $historyId): void

@@ -43,7 +43,7 @@ class BookingShow extends Component
     public array $refundGdsLocatorOptions = [];
     public array $refundAirlineLocatorOptions = [];
 
-    // Charge Refund Payment modal — accounts recording the outgoing refund payout
+    // Request Refund Payment modal — queues the outgoing refund payout for accounts to approve
     public $showRefundChargeModal = false;
     public $refundChargeAmount = '';
     public $refundChargeComment = '';
@@ -272,6 +272,13 @@ class BookingShow extends Component
             return ['dot'=>'#64748B','bg'=>'rgba(100,116,139,.06)','border'=>'#94A3B8','label'=>'View','full_row'=>false,'icon'=>'ph-eye'];
         }
         if (stripos($action, 'request issuance') !== false || stripos($action, 'issuance queue') !== false || stripos($action, 'moved to issuance') !== false) {
+            // A rejected issuance request still carries the "Request Issuance"
+            // action heading — only the detail says it bounced back to Pending —
+            // so without this check it painted the same purple as a normal
+            // request and was easy to miss in the feed.
+            if (stripos($detail, 'rejected') !== false) {
+                return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.10)','border'=>'#DC2626','label'=>'Rejected','full_row'=>true,'icon'=>'ph-x-circle'];
+            }
             return ['dot'=>'#7C3AED','bg'=>'rgba(124,58,237,.12)','border'=>'#7C3AED','label'=>'Issuance','full_row'=>true,'icon'=>'ph-ticket'];
         }
         if (stripos($action, 'ticket in process') !== false || stripos($action, 'processing ticket') !== false) {
@@ -2321,21 +2328,44 @@ class BookingShow extends Component
         }
     }
 
-    /** The refund this booking is currently queued against, if any (drives the "Charge Refund Payment" button). */
+    /**
+     * The refund this booking is currently queued against, if any (drives the
+     * "Request Refund Payment" button). 'requested' is the only in-flight
+     * status now — the payout itself is tracked and approved separately on
+     * the Charge Requests queue, not as a Refund-level review stage.
+     */
     public function getActiveRefundProperty()
     {
         return Refund::where('booking_id', $this->booking->id)
-            ->whereIn('status', ['requested', 'under_review', 'approved'])
+            ->where('status', 'requested')
             ->latest()
             ->first();
     }
 
+    /**
+     * True once this booking's active refund already has a payout sitting in
+     * the accounts Charge Requests queue (a pending booking_payment_history
+     * row with refund_payout=true) — stops a second payout request being
+     * queued on top of one still awaiting approval.
+     */
+    public function getRefundPayoutPendingProperty(): bool
+    {
+        $refund = $this->activeRefund;
+        if (!$refund) return false;
+
+        return $this->booking->paymentHistory
+            ->contains(fn ($ph) => ($ph->payment_details['refund_payout'] ?? false)
+                && ($ph->payment_details['refund_id'] ?? null) === $refund->id
+                && $ph->status === 'pending');
+    }
+
     public function openRefundChargeModal(): void
     {
-        // Deliberately not gated behind payments.charge — recording that a
-        // refund was paid out is open to anyone, unlike other payment actions.
+        // Deliberately not gated behind payments.charge — anyone can queue up
+        // a refund payout, same as anyone can request a regular payment charge.
+        // Accounts is the actual approval gate — see submitRefundChargePayment.
         $refund = $this->activeRefund;
-        if (!$refund) return;
+        if (!$refund || $this->refundPayoutPending) return;
 
         $this->refundChargeAmount = $refund->refund_amount;
         $this->refundChargeComment = '';
@@ -2347,10 +2377,19 @@ class BookingShow extends Component
         $this->reset('showRefundChargeModal', 'refundChargeAmount', 'refundChargeComment');
     }
 
+    /**
+     * Queues the refund payout for accounts to approve — mirrors
+     * requestPaymentCharge() exactly, just with a negative amount. This does
+     * NOT pay the refund out or touch the booking's status; it lands as a
+     * pending row in the existing /payment-charges Charge Requests queue
+     * (PaymentChargeRequest::render() pulls every pending booking_payment_history
+     * row regardless of method), and only PaymentChargeRequest::executeApprove()
+     * — accounts approving it there — marks the linked Refund as processed.
+     */
     public function submitRefundChargePayment(): void
     {
         $refund = $this->activeRefund;
-        if (!$refund) {
+        if (!$refund || $this->refundPayoutPending) {
             $this->closeRefundChargeModal();
             return;
         }
@@ -2367,30 +2406,17 @@ class BookingShow extends Component
             'payment_method' => 'refund',
             'amount' => -abs((float) $this->refundChargeAmount),
             'payment_details' => ['refund_payout' => true, 'refund_id' => $refund->id, 'comment' => $this->refundChargeComment],
-            'status' => 'approved',
-            'approved_by' => Auth::id(),
+            'status' => 'pending',
         ]);
-
-        $refund->update([
-            'status' => 'processed',
-            'processed_by' => Auth::id(),
-            'processed_at' => now(),
-        ]);
-
-        $oldStatus = $this->booking->booking_status;
-        $this->booking->update(['booking_status' => 'cancelled']);
-        $this->bookingStatus = 'cancelled';
-        $this->booking->refresh();
 
         $amountLabel = '£' . number_format($this->refundChargeAmount, 2);
-        AuditLogger::log(Auth::user(), $this->booking, 'status_changed', "Refund payment of {$amountLabel} charged — {$this->refundChargeComment}", ['booking_status' => $oldStatus], ['booking_status' => 'cancelled']);
-        $this->logActivity('Refund Paid', "{$amountLabel} refund paid — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
+        AuditLogger::log(Auth::user(), $this->booking, 'refund_payment_requested', "Refund payment of {$amountLabel} requested — queued for accounts — {$this->refundChargeComment}");
+        $this->logActivity('Request Refund Payment', "{$amountLabel} refund payment requested — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
 
         $this->booking->load('paymentHistory');
-        $this->refreshCcChargesFromHistory();
 
         $this->closeRefundChargeModal();
-        session()->flash('success', 'Refund payment recorded.');
+        session()->flash('success', 'Refund payment requested — sent to accounts for approval.');
     }
 
     // ── Country list ───────────────────────────────────────────────────
