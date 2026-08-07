@@ -86,11 +86,12 @@ class PaymentChargeRequest extends Component
             $this->syncCcCharges($booking);
         }
 
-        // Refund payouts (queued from the booking page's Request Refund Payment
-        // button — see BookingShow::submitRefundChargePayment) only actually
-        // count as "paid out" once approved here. Booking status is deliberately
-        // left untouched — Booking::hasActiveRefund() is what marks it refunded.
-        $this->markLinkedRefundProcessed($ph);
+        // Refund receipts and payouts (queued from the booking page — see
+        // BookingShow::submitRefund and ::submitRefundChargePayment) only
+        // actually move the linked Refund's status once approved here.
+        // Booking status is deliberately left untouched throughout —
+        // Booking::hasActiveRefund() is what marks it refunded.
+        $this->advanceLinkedRefund($ph, approved: true);
 
         $this->closeModal();
         session()->flash('success', 'Payment charge approved.');
@@ -119,35 +120,56 @@ class PaymentChargeRequest extends Component
             $this->syncCcCharges($booking);
         }
 
-        // A rejected refund payout leaves the underlying Refund as still
-        // "requested" — nothing was paid, so the booking stays flagged as
-        // needing a refund and can be re-queued from the booking page.
+        $this->advanceLinkedRefund($ph, approved: false);
+
         $this->closeModal();
         session()->flash('success', 'Payment charge rejected.');
     }
 
     /**
-     * If this approved payment history row is a refund payout (see
-     * BookingShow::submitRefundChargePayment), mark its linked Refund as
-     * processed now that accounts has actually approved paying it out.
+     * Moves a refund through its lifecycle when accounts resolves the
+     * booking_payment_history row tied to it — there are two distinct kinds:
+     *
+     *  - refund_receipt: the claim that the TICKET PROVIDER refunded Travel
+     *    Orbit. Approved → 'received' (it landed, sitting in Travel Orbit's
+     *    balance — whether and how much to pass on to the customer is a
+     *    separate decision). Rejected → 'rejected' (never landed).
+     *
+     *  - refund_payout: Travel Orbit actually paying the customer back.
+     *    Approved → 'processed' (done). Rejected → left as 'received' —
+     *    nothing was paid, so it can be re-queued from the booking page.
+     *
+     * No-op for ordinary payment charges (neither flag set).
      */
-    private function markLinkedRefundProcessed(BookingPaymentHistory $ph): void
+    private function advanceLinkedRefund(BookingPaymentHistory $ph, bool $approved): void
     {
-        if (!($ph->payment_details['refund_payout'] ?? false)) {
-            return;
-        }
+        $details = $ph->payment_details ?? [];
+        $isReceipt = $details['refund_receipt'] ?? false;
+        $isPayout  = $details['refund_payout'] ?? false;
+        if (!$isReceipt && !$isPayout) return;
 
-        $refundId = $ph->payment_details['refund_id'] ?? null;
+        $refundId = $details['refund_id'] ?? null;
         if (!$refundId) return;
 
         $refund = \App\Models\Refund::find($refundId);
         if (!$refund) return;
 
-        $refund->update([
-            'status' => 'processed',
-            'processed_by' => Auth::id(),
-            'processed_at' => now(),
-        ]);
+        if ($isReceipt) {
+            $refund->update($approved
+                ? ['status' => 'received', 'reviewed_at' => now()]
+                : ['status' => 'rejected', 'reviewed_at' => now()]);
+            return;
+        }
+
+        // refund_payout
+        if ($approved) {
+            $refund->update([
+                'status' => 'processed',
+                'processed_by' => Auth::id(),
+                'processed_at' => now(),
+            ]);
+        }
+        // Rejected payout: Refund simply stays 'received'.
     }
 
     public function deletePayment(int $historyId): void

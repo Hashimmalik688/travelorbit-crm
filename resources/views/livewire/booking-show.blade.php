@@ -700,11 +700,17 @@
       </span>
     @endif
     {{-- A refund request is a Refund row, not a booking_status — the booking keeps
-       its real status and this badge is the prominent sign one is in flight. --}}
+       its real status and this badge is the prominent sign one is in flight.
+       Wording tracks which side of the money movement it's currently on. --}}
     @if ($this->activeRefund)
       <span
         style="font-size:0.744rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#DC2626;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px;box-shadow:0 0 0 3px rgba(220,38,38,.25);">
-        <i class="ph ph-arrows-counter-clockwise"></i> Refund Requested —
+        <i class="ph ph-arrows-counter-clockwise"></i>
+        @if ($this->receivedRefund)
+          Refund Received —
+        @else
+          Refund Requested from Provider —
+        @endif
         &pound;{{ number_format($this->activeRefund->refund_amount, 2) }}
       </span>
     @endif
@@ -2937,22 +2943,28 @@
             </div>
           </div>
 
-          {{-- REQUEST REFUND PAYMENT: shown once a refund is active and doesn't
-             already have a payout sitting in the accounts Charge Requests
-             queue — this doesn't pay anything out itself, it just queues the
-             payout for accounts to approve (see submitRefundChargePayment). --}}
-          @if ($this->activeRefund && !$this->refundPayoutPending)
+          {{-- Refund money-flow status strip — two independent stages:
+             1. Ticket-provider refund claimed, not yet confirmed by accounts.
+             2. Confirmed received → "Refund to Customer" queues the payout,
+                which itself waits on accounts approval before it's done. --}}
+          @if ($this->supplierRefundPending)
+            <div class="px-4 pt-3">
+              <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#B45309;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">
+                <i class="ph ph-hourglass-medium"></i> Refund Requested from Provider — awaiting accounts confirmation
+              </div>
+            </div>
+          @elseif ($this->receivedRefund && !$this->refundPayoutPending)
             <div class="px-4 pt-3">
               <button type="button" x-data="{ open: @entangle('showRefundChargeModal') }" @click="open = true"
                 wire:click="openRefundChargeModal" class="w-100"
                 style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-                <i class="ph ph-arrows-counter-clockwise"></i> Request Refund Payment
+                <i class="ph ph-arrows-counter-clockwise"></i> Refund to Customer
               </button>
             </div>
           @elseif ($this->refundPayoutPending)
             <div class="px-4 pt-3">
               <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#B45309;border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">
-                <i class="ph ph-hourglass-medium"></i> Refund Payment Requested — awaiting accounts approval
+                <i class="ph ph-hourglass-medium"></i> Refund to Customer Requested — awaiting accounts approval
               </div>
             </div>
           @endif
@@ -3413,7 +3425,7 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
     </div>
   </div>
 
-  {{-- REQUEST REFUND PAYMENT MODAL --}}
+  {{-- REFUND TO CUSTOMER MODAL --}}
   <div x-data="{ open: @entangle('showRefundChargeModal') }" x-show="open" x-cloak class="refund-overlay"
     style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"
     @click="open = false" @keydown.escape.window="open = false">
@@ -3422,17 +3434,18 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
       <div
         style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;">
         <h5 class="fw-bold mb-0" style="font-size:1.02rem;color:#fff;display:flex;align-items:center;gap:8px;"><i
-            class="ph ph-arrows-counter-clockwise" style="font-size:1.14rem;"></i> Request Refund Payment</h5>
+            class="ph ph-arrows-counter-clockwise" style="font-size:1.14rem;"></i> Refund to Customer</h5>
         <button type="button" @click="open = false"
           style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;">✕</button>
       </div>
       <div class="p-3">
-        <p style="font-size:0.8rem;color:#475569;margin-bottom:14px;">Queues this refund as a payout for accounts to
-          approve on the Charge Requests queue — nothing is paid out yet, and the booking's status doesn't change.</p>
+        <p style="font-size:0.8rem;color:#475569;margin-bottom:14px;">Queues this as a payout to the customer for
+          accounts to approve on the Charge Requests queue — cut from Travel Orbit's balance once approved. Nothing
+          is paid out yet, and the booking's status doesn't change.</p>
         <div class="mb-3">
           <label class="bv-label">Amount (£) <span style="color:#DC2626;">*</span></label>
           <input type="number" wire:model="refundChargeAmount" class="rf-input" placeholder="0.00"
-            min="0.01" step="0.01">
+            min="0.01" max="{{ $this->receivedRefund->refund_amount ?? '' }}" step="0.01">
           @error('refundChargeAmount')
             <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
           @enderror

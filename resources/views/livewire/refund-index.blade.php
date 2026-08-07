@@ -6,29 +6,27 @@
         </div>
         <div class="to-page-header-right">
             <span class="badge" style="background:rgba(220,38,38,.12);color:#DC2626;font-size:0.864rem;font-weight:700;padding:6px 14px;border-radius:20px;">
-                <i class="ph ph-arrows-counter-clockwise me-1"></i> {{ $this->pendingReviewCount }} Awaiting Payout Request
+                <i class="ph ph-arrows-counter-clockwise me-1"></i> {{ $this->pendingReviewCount }} In Flight
             </span>
         </div>
     </div>
 
-    @if(session()->has('success'))
-      <div class="alert alert-success border-0 py-2 px-3 mb-3" style="font-size:0.984rem;">{{ session('success') }}</div>
-    @endif
-
     <p style="font-size:0.84rem;color:#475569;margin-bottom:16px;">
-        This lists which bookings still owe a refund. The actual payout is queued and approved from
-        <a href="{{ route('payment-charges') }}" style="color:#332E9E;font-weight:600;">Charge Requests</a> once
-        someone requests it from the booking page — nothing here pays money out.
+        Tracks refunds claimed from the ticket provider and which of those have since landed in Travel Orbit's
+        balance — whether and how much to pass on to the customer from there is a separate call. All approvals —
+        confirming a provider refund landed, or paying a customer back — happen on
+        <a href="{{ route('payment-charges') }}" style="color:#332E9E;font-weight:600;">Charge Requests</a>; nothing
+        here moves money.
     </p>
 
     {{-- Totals strip --}}
     <div class="d-flex gap-3 flex-wrap" style="margin-bottom:16px;">
         <div style="flex:1;min-width:180px;background:#fff;border:1px solid rgba(51,46,158,.08);border-radius:12px;padding:14px 18px;">
-            <div style="font-size:0.75rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;">Outstanding</div>
-            <div style="font-size:1.32rem;font-weight:800;color:#B45309;">&pound;{{ number_format($this->totalOutstanding, 2) }}</div>
+            <div style="font-size:0.75rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;">Received — Not Yet Refunded</div>
+            <div style="font-size:1.32rem;font-weight:800;color:#7C3AED;">&pound;{{ number_format($this->totalReceived, 2) }}</div>
         </div>
         <div style="flex:1;min-width:180px;background:#fff;border:1px solid rgba(51,46,158,.08);border-radius:12px;padding:14px 18px;">
-            <div style="font-size:0.75rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;">Paid Out</div>
+            <div style="font-size:0.75rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;">Paid Out to Customer</div>
             <div style="font-size:1.32rem;font-weight:800;color:#16A34A;">&pound;{{ number_format($this->totalProcessed, 2) }}</div>
         </div>
     </div>
@@ -45,10 +43,10 @@
 
           <select wire:model.live="statusFilter" style="background:#fff;border:1.5px solid rgba(51,46,158,.15);border-radius:20px;padding:6px 14px;font-size:0.9rem;color:#374151;">
             <option value="">All Statuses</option>
-            <option value="requested">Requested</option>
-            <option value="payout_pending">Payout Requested (at Accounts)</option>
+            <option value="requested">Requested from Provider</option>
+            <option value="received">Received — Not Yet Refunded</option>
             <option value="processed">Paid Out</option>
-            <option value="rejected">Declined</option>
+            <option value="rejected">Rejected</option>
           </select>
 
           @if($search || $statusFilter)
@@ -59,10 +57,6 @@
           @endif
         </div>
     </div>
-
-    @php
-      $canManage = auth()->user()?->hasPermission('refunds.manage');
-    @endphp
 
     {{-- List --}}
     <div class="card animate-in">
@@ -89,12 +83,15 @@
                     <tbody>
                         @foreach($refunds as $refund)
                             @php
-                              $payoutPending = in_array($refund->id, $pendingPayoutIds);
+                              $receiptPending = in_array($refund->id, $receiptPendingIds);
+                              $payoutPending  = in_array($refund->id, $payoutPendingIds);
                               $sb = match(true) {
-                                  $refund->status === 'processed' => ['bg' => 'rgba(22,163,74,.12)', 'color' => '#16A34A', 'label' => 'Paid Out'],
-                                  $refund->status === 'rejected'  => ['bg' => 'rgba(220,38,38,.10)', 'color' => '#DC2626', 'label' => 'Declined'],
-                                  $payoutPending                  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Payout Requested — at Accounts'],
-                                  default                          => ['bg' => 'rgba(245,158,11,.12)', 'color' => '#B45309', 'label' => 'Requested'],
+                                  $refund->status === 'processed' => ['bg' => 'rgba(22,163,74,.12)',  'color' => '#16A34A', 'label' => 'Paid Out to Customer'],
+                                  $refund->status === 'rejected'  => ['bg' => 'rgba(220,38,38,.10)',  'color' => '#DC2626', 'label' => 'Rejected'],
+                                  $payoutPending                  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Payout to Customer — at Accounts'],
+                                  $refund->status === 'received'  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Received — Not Yet Refunded'],
+                                  $receiptPending                 => ['bg' => 'rgba(245,158,11,.12)', 'color' => '#B45309', 'label' => 'Requested — at Accounts'],
+                                  default                          => ['bg' => 'rgba(245,158,11,.12)', 'color' => '#B45309', 'label' => 'Requested from Provider'],
                               };
                             @endphp
                             <tr>
@@ -122,13 +119,7 @@
                                     </span>
                                 </td>
                                 <td style="vertical-align:middle;">
-                                    @if($canManage && $refund->status === 'requested' && !$payoutPending)
-                                        <button type="button" wire:click="rejectRefund({{ $refund->id }})"
-                                            wire:confirm="Decline this refund request outright? No payout will ever be queued for it."
-                                            style="font-size:0.72rem;font-weight:700;padding:4px 10px;border-radius:8px;background:#DC2626;color:#fff;border:none;cursor:pointer;white-space:nowrap;">
-                                            <i class="ph ph-x me-1"></i> Decline
-                                        </button>
-                                    @elseif($payoutPending)
+                                    @if($receiptPending || $payoutPending)
                                         <a href="{{ route('payment-charges') }}" style="font-size:0.756rem;color:#7C3AED;font-weight:600;text-decoration:none;">
                                             <i class="ph ph-arrow-right"></i> Review in Charge Requests
                                         </a>

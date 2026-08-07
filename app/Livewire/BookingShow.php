@@ -2308,12 +2308,29 @@ class BookingShow extends Component
         // is a flag layered on top of the booking's real workflow state (still
         // "issued"/"invoiced"/etc.), not a status of its own. getActiveRefund
         // (this Refund row's status) is the single source of truth for "is a
-        // refund currently in flight", both for this button and the Charge
-        // Refund Payment button.
-        $amountLabel = '£' . number_format($this->refundAmount, 2);
-        AuditLogger::log(Auth::user(), $this->booking, 'refund_requested', "Refund of {$amountLabel} requested — {$this->refundReason}");
-        $this->logActivity('Refund Requested', "{$amountLabel} refund requested — {$this->refundReason}", 'update', bypassViewerCheck: true);
+        // refund currently in flight", both for this button and the Refund to
+        // Customer button.
+        //
+        // This is money the TICKET PROVIDER owes Travel Orbit back — the
+        // opposite direction from paying the customer — so it's queued as a
+        // positive charge request, same mechanism as requestPaymentCharge(),
+        // and only counts once accounts confirms it actually landed (see
+        // PaymentChargeRequest::executeApprove's refund_receipt handling).
+        BookingPaymentHistory::create([
+            'booking_id' => $this->booking->id,
+            'user_id' => Auth::id(),
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'refund_received',
+            'amount' => abs((float) $this->refundAmount),
+            'payment_details' => ['refund_receipt' => true, 'refund_id' => $refund->id, 'comment' => $this->refundReason],
+            'status' => 'pending',
+        ]);
 
+        $amountLabel = '£' . number_format($this->refundAmount, 2);
+        AuditLogger::log(Auth::user(), $this->booking, 'refund_requested', "Refund of {$amountLabel} requested from ticket provider — {$this->refundReason}");
+        $this->logActivity('Refund Requested', "{$amountLabel} refund requested from ticket provider — queued for accounts — {$this->refundReason}", 'update', bypassViewerCheck: true);
+
+        $this->booking->load('paymentHistory');
         $this->showRefundModal = false;
 
         $refund->load('passengers.passenger', 'requestedBy', 'booking.customer');
@@ -2329,28 +2346,57 @@ class BookingShow extends Component
     }
 
     /**
-     * The refund this booking is currently queued against, if any (drives the
-     * "Request Refund Payment" button). 'requested' is the only in-flight
-     * status now — the payout itself is tracked and approved separately on
-     * the Charge Requests queue, not as a Refund-level review stage.
+     * The refund this booking currently has in flight, if any (drives the
+     * "Refund Requested"/"Refund Received" badge and blocks a second Request
+     * Refund). Covers both stages before any decision on the customer's cut:
+     * 'requested'  — ticket-provider refund claimed, awaiting accounts
+     *                confirmation that it landed (see submitRefund).
+     * 'received'   — accounts confirmed it landed; sitting in Travel Orbit's
+     *                balance until someone decides how much (if any) to
+     *                pass on to the customer (see getReceivedRefundProperty).
      */
     public function getActiveRefundProperty()
     {
         return Refund::where('booking_id', $this->booking->id)
-            ->where('status', 'requested')
+            ->whereIn('status', ['requested', 'received'])
             ->latest()
             ->first();
     }
 
     /**
-     * True once this booking's active refund already has a payout sitting in
-     * the accounts Charge Requests queue (a pending booking_payment_history
-     * row with refund_payout=true) — stops a second payout request being
-     * queued on top of one still awaiting approval.
+     * True while the supplier-refund-received claim is still pending accounts
+     * confirmation on the Charge Requests queue — the Refund row itself stays
+     * 'requested' throughout, this is what distinguishes "just claimed" from
+     * "confirmed landed, not yet paid out" (both read as 'requested' otherwise).
+     */
+    public function getSupplierRefundPendingProperty(): bool
+    {
+        $refund = $this->activeRefund;
+        if (!$refund || $refund->status !== 'requested') return false;
+
+        return $this->booking->paymentHistory
+            ->contains(fn ($ph) => ($ph->payment_details['refund_receipt'] ?? false)
+                && ($ph->payment_details['refund_id'] ?? null) === $refund->id
+                && $ph->status === 'pending');
+    }
+
+    /** The refund Travel Orbit has actually received — available to pass on to the customer, in full or in part, at Travel Orbit's discretion. */
+    public function getReceivedRefundProperty()
+    {
+        return Refund::where('booking_id', $this->booking->id)
+            ->where('status', 'received')
+            ->latest()
+            ->first();
+    }
+
+    /**
+     * True once this received refund already has a customer payout sitting in
+     * the accounts Charge Requests queue — stops a second payout being queued
+     * on top of one still awaiting approval.
      */
     public function getRefundPayoutPendingProperty(): bool
     {
-        $refund = $this->activeRefund;
+        $refund = $this->receivedRefund;
         if (!$refund) return false;
 
         return $this->booking->paymentHistory
@@ -2362,9 +2408,9 @@ class BookingShow extends Component
     public function openRefundChargeModal(): void
     {
         // Deliberately not gated behind payments.charge — anyone can queue up
-        // a refund payout, same as anyone can request a regular payment charge.
-        // Accounts is the actual approval gate — see submitRefundChargePayment.
-        $refund = $this->activeRefund;
+        // a customer refund, same as anyone can request a regular payment
+        // charge. Accounts is the actual approval gate — see submitRefundChargePayment.
+        $refund = $this->receivedRefund;
         if (!$refund || $this->refundPayoutPending) return;
 
         $this->refundChargeAmount = $refund->refund_amount;
@@ -2378,24 +2424,25 @@ class BookingShow extends Component
     }
 
     /**
-     * Queues the refund payout for accounts to approve — mirrors
-     * requestPaymentCharge() exactly, just with a negative amount. This does
-     * NOT pay the refund out or touch the booking's status; it lands as a
-     * pending row in the existing /payment-charges Charge Requests queue
-     * (PaymentChargeRequest::render() pulls every pending booking_payment_history
-     * row regardless of method), and only PaymentChargeRequest::executeApprove()
+     * Queues the actual payout to the customer for accounts to approve —
+     * mirrors requestPaymentCharge() exactly, just with a negative amount,
+     * and only once the ticket-provider side has actually landed (see
+     * getReceivedRefundProperty — Travel Orbit can't pass on money it hasn't
+     * received yet). This does NOT pay the refund out or touch the booking's
+     * status; it lands as a pending row in the existing /payment-charges
+     * Charge Requests queue, and only PaymentChargeRequest::executeApprove()
      * — accounts approving it there — marks the linked Refund as processed.
      */
     public function submitRefundChargePayment(): void
     {
-        $refund = $this->activeRefund;
+        $refund = $this->receivedRefund;
         if (!$refund || $this->refundPayoutPending) {
             $this->closeRefundChargeModal();
             return;
         }
 
         $this->validate([
-            'refundChargeAmount' => 'required|numeric|min:0.01',
+            'refundChargeAmount' => 'required|numeric|min:0.01|max:' . $refund->refund_amount,
             'refundChargeComment' => 'required|string|max:500',
         ]);
 
@@ -2410,13 +2457,13 @@ class BookingShow extends Component
         ]);
 
         $amountLabel = '£' . number_format($this->refundChargeAmount, 2);
-        AuditLogger::log(Auth::user(), $this->booking, 'refund_payment_requested', "Refund payment of {$amountLabel} requested — queued for accounts — {$this->refundChargeComment}");
-        $this->logActivity('Request Refund Payment', "{$amountLabel} refund payment requested — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
+        AuditLogger::log(Auth::user(), $this->booking, 'refund_payment_requested', "Refund to customer of {$amountLabel} requested — queued for accounts — {$this->refundChargeComment}");
+        $this->logActivity('Refund to Customer', "{$amountLabel} refund to customer requested — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
 
         $this->booking->load('paymentHistory');
 
         $this->closeRefundChargeModal();
-        session()->flash('success', 'Refund payment requested — sent to accounts for approval.');
+        session()->flash('success', 'Refund to customer requested — sent to accounts for approval.');
     }
 
     // ── Country list ───────────────────────────────────────────────────
