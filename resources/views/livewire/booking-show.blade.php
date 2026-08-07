@@ -2882,23 +2882,19 @@
                 $bc = [
                     'settled' => ['#15803D', '#16A34A', '22,163,74'],
                     'due' => ['#DC2626', '#DC2626', '220,38,38'],
-                    'over' => ['#B45309', '#D97706', '217,119,6'],
+                    'over' => ['#9A3412', '#EA580C', '234,88,12'],
                 ][$state];
                 $blabel = ['settled' => 'Fully Settled', 'due' => 'Balance Due', 'over' => 'Overpaid'][$state];
+                $isOver = $state === 'over';
               @endphp
               <div
-                style="margin-top:10px;padding:12px;border-radius:12px;background:linear-gradient(135deg,rgba({{ $bc[2] }},.07),rgba({{ $bc[2] }},.02));border:1.5px solid rgba({{ $bc[2] }},.14);">
+                style="margin-top:10px;padding:12px;border-radius:12px;{{ $isOver ? 'background:linear-gradient(135deg,rgba(' . $bc[2] . ',.16),rgba(' . $bc[2] . ',.06));border:2px solid rgba(' . $bc[2] . ',.4);' : 'background:linear-gradient(135deg,rgba(' . $bc[2] . ',.07),rgba(' . $bc[2] . ',.02));border:1.5px solid rgba(' . $bc[2] . ',.14);' }}">
                 <div
                   style="font-size:0.672rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $bc[0] }};margin-bottom:2px;">
                   {{ $blabel }}</div>
                 <div
                   style="font-size:1.32rem;font-weight:800;color:{{ $bc[1] }};line-height:1;letter-spacing:-.01em;">
                   &pound;{{ number_format(abs($bal), 2) }}</div>
-                @if ($state === 'over')
-                  <div style="font-size:0.672rem;font-weight:600;color:#B45309;margin-top:3px;">Paid
-                    £{{ number_format($this->totalPaid, 2) }} against a
-                    £{{ number_format($this->totalSoldPrice, 2) }} sale</div>
-                @endif
               </div>
 
               {{-- Margin sharing --}}
