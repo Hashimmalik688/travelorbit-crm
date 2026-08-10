@@ -5,27 +5,28 @@ namespace App\Livewire;
 use App\Models\Booking;
 use App\Models\BookingPaymentHistory;
 use App\Models\MarginClaim;
-use App\Models\Refund;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * M&R Auth Queue — manager approval for "Refund to Customer" payouts queued
- * from the booking page (see BookingShow::submitRefundChargePayment). Split
- * out from the accounts Charge Requests queue (PaymentChargeRequest) because
- * this is a manager call, not an accounts one, and because it's genuinely
- * two decisions in one:
+ * M&R Auth Queue — manager review for "Refund to Customer" requests queued
+ * from the booking page (see BookingShow::submitRefundChargePayment). Two
+ * entirely separate entries per request, each with its own approval:
  *
- *  1. The refund itself — approve (optionally lowering the amount actually
- *     paid to the customer) or decline.
- *  2. The claimed margin that comes with it (received − paid-to-client) —
- *     release it into the agent's performance report, or hold it back.
+ *  1. Refund Request — approve (optionally lowering the amount actually
+ *     paid) or decline the payout itself. Approving does NOT finish it —
+ *     it forwards to the accounts Charge Requests queue for the actual,
+ *     final sign-off (see PaymentChargeRequest::advanceLinkedRefund).
+ *     Declining is final: the underlying Refund simply stays 'received',
+ *     so it can be re-queued from the booking page.
  *
- * Nothing is credited or paid out until approved here; a decline leaves the
- * underlying Refund exactly as it was (still 'received'), so it can be
- * re-queued from the booking page.
+ *  2. Margin Claim — the gap between what was received and what's being
+ *     paid out (see BookingShow::getRefundClaimedMarginProperty), queued as
+ *     its own MarginClaim row the moment the refund was requested. A manager
+ *     releases it (counts in Agent Performance) or holds it (doesn't) —
+ *     entirely independent of whatever happens to the refund request above.
  */
 class RefundAuthQueue extends Component
 {
@@ -35,14 +36,12 @@ class RefundAuthQueue extends Component
     public $dateFrom = '';
     public $dateTo = '';
 
-    public $showModal = false;
-    public $modalAction = '';       // 'approve' or 'decline'
-    public $modalPaymentId = null;
-    public $modalNote = '';
-
-    // Approve-only fields
+    // Refund Request modal
+    public $showRefundModal = false;
+    public $refundModalAction = '';       // 'approve' or 'decline'
+    public $refundModalPaymentId = null;
+    public $refundModalNote = '';
     public $approveAmount = '';
-    public $approveHoldMargin = false;
 
     protected $queryString = ['search', 'dateFrom', 'dateTo'];
 
@@ -66,137 +65,188 @@ class RefundAuthQueue extends Component
         return Auth::user()->hasPermission('refunds.manage');
     }
 
-    /** What's left to claim as margin at the currently-typed amount — mirrors BookingShow::getRefundClaimedMarginProperty. */
-    public function getLiveClaimedMarginProperty(): float
-    {
-        $ph = $this->modalPaymentId ? BookingPaymentHistory::find($this->modalPaymentId) : null;
-        if (!$ph) return 0;
+    // ── Refund Request half ──────────────────────────────────────────
 
-        $received = (float) ($ph->payment_details['refund_received_amount'] ?? 0);
-        $toClient = (float) $this->approveAmount;
-        return max(0, $received - $toClient);
-    }
-
-    public function confirmApprove(int $historyId): void
+    public function confirmApproveRefund(int $historyId): void
     {
         abort_unless($this->canManage(), 403);
 
         $ph = BookingPaymentHistory::findOrFail($historyId);
-        $this->modalPaymentId = $historyId;
-        $this->modalAction = 'approve';
-        $this->modalNote = '';
+        $this->refundModalPaymentId = $historyId;
+        $this->refundModalAction = 'approve';
+        $this->refundModalNote = '';
         $this->approveAmount = (string) abs((float) $ph->amount);
-        $this->approveHoldMargin = false;
-        $this->showModal = true;
+        $this->showRefundModal = true;
     }
 
-    public function confirmDecline(int $historyId): void
+    public function confirmDeclineRefund(int $historyId): void
     {
         abort_unless($this->canManage(), 403);
 
-        $this->modalPaymentId = $historyId;
-        $this->modalAction = 'decline';
-        $this->modalNote = '';
-        $this->showModal = true;
+        $this->refundModalPaymentId = $historyId;
+        $this->refundModalAction = 'decline';
+        $this->refundModalNote = '';
+        $this->showRefundModal = true;
     }
 
-    public function closeModal(): void
+    public function closeRefundModal(): void
     {
-        $this->reset('showModal', 'modalAction', 'modalPaymentId', 'modalNote', 'approveAmount', 'approveHoldMargin');
+        $this->reset('showRefundModal', 'refundModalAction', 'refundModalPaymentId', 'refundModalNote', 'approveAmount');
     }
 
-    public function executeApprove(): void
+    /**
+     * Manager sign-off only — does not finish the refund. Sets
+     * manager_approved so it now surfaces in the accounts Charge Requests
+     * queue (see PaymentChargeRequest::render()) for the real, final
+     * approval; row itself stays 'pending' throughout.
+     */
+    public function executeApproveRefund(): void
     {
         abort_unless($this->canManage(), 403);
 
-        $ph = BookingPaymentHistory::findOrFail($this->modalPaymentId);
+        $ph = BookingPaymentHistory::findOrFail($this->refundModalPaymentId);
         $received = (float) ($ph->payment_details['refund_received_amount'] ?? 0);
+        $originalAmount = abs((float) $ph->amount); // what the agent requested, before any manager edit
 
         $this->validate([
             'approveAmount' => 'required|numeric|min:0.01|max:' . ($received ?: 999999999),
-            'modalNote' => 'nullable|string|max:500',
+            'refundModalNote' => 'nullable|string|max:500',
         ]);
 
-        $claimedMargin = max(0, $received - (float) $this->approveAmount);
+        $newAmount = (float) $this->approveAmount;
 
         $details = $ph->payment_details ?? [];
-        $details['claimed_margin'] = $claimedMargin;
-        $details['margin_held'] = $this->approveHoldMargin;
-        $details['approval_note'] = $this->modalNote;
+        $details['manager_approved'] = true;
+        $details['manager_approved_by'] = Auth::id();
+        $details['manager_approved_at'] = now()->toDateTimeString();
+        $details['manager_note'] = $this->refundModalNote;
+        $details['manager_original_amount'] = $originalAmount;
 
         $ph->update([
-            'amount' => -abs((float) $this->approveAmount),
-            'status' => 'approved',
-            'approved_by' => Auth::id(),
+            'amount' => -abs($newAmount),
             'payment_details' => $details,
         ]);
 
         $booking = Booking::find($ph->booking_id);
 
-        $logMsg = "Refund to customer {$ph->id} approved for £" . number_format((float) $this->approveAmount, 2);
-        if ($this->modalNote) {
-            $logMsg .= " — {$this->modalNote}";
+        // Says exactly what changed, not just the end state — a manager
+        // lowering the payout is the whole point of this approval step
+        // being separate from the agent's original request.
+        $amountPhrase = abs($originalAmount - $newAmount) > 0.005
+            ? 'amount changed from £' . number_format($originalAmount, 2) . ' to £' . number_format($newAmount, 2)
+            : 'amount confirmed at £' . number_format($newAmount, 2);
+
+        $logMsg = "Refund to customer {$ph->id} approved by manager — {$amountPhrase} — forwarded to accounts";
+        if ($this->refundModalNote) {
+            $logMsg .= " — {$this->refundModalNote}";
         }
-        AuditLogger::log(Auth::user(), $booking, 'refund_payment_approved', $logMsg);
+        AuditLogger::log(Auth::user(), $booking, 'refund_payment_manager_approved', $logMsg);
 
         if ($booking) {
-            $this->appendBookingActivity($booking, 'refund_payment_approved', 'Refund to Customer Approved',
-                '£' . number_format((float) $this->approveAmount, 2) . ($this->modalNote ? " — {$this->modalNote}" : ''));
+            $this->appendBookingActivity($booking, 'refund_payment_manager_approved', 'Refund to Customer Approved by Manager',
+                ucfirst($amountPhrase) . ' — forwarded to accounts' . ($this->refundModalNote ? " — {$this->refundModalNote}" : ''));
         }
 
-        // Mark the underlying Refund processed, same as the old accounts flow did.
-        $refundId = $details['refund_id'] ?? null;
-        if ($refundId && ($refund = Refund::find($refundId))) {
-            $refund->update([
-                'status' => 'processed',
-                'processed_by' => Auth::id(),
-                'processed_at' => now(),
-            ]);
-        }
-
-        // Credit the claimed margin now — not at request time — so a
-        // declined refund never credits margin that was never really given
-        // up. Held margin simply isn't credited (yet); it stays visible on
-        // this row's details for whoever revisits it.
-        if (!$this->approveHoldMargin && $claimedMargin > 0) {
-            MarginClaim::create([
-                'booking_id' => $ph->booking_id,
-                'user_id' => $ph->user_id,
-                'applied_by_user_id' => Auth::id(),
-                'amount' => $claimedMargin,
-                'reason' => 'Refund to customer — ' . ($details['comment'] ?? 'margin claimed on refund'),
-                'claim_date' => now()->toDateString(),
-            ]);
-        }
-
-        $this->closeModal();
-        session()->flash('success', 'Refund approved.');
+        $this->closeRefundModal();
+        session()->flash('success', 'Refund approved — forwarded to accounts for final sign-off.');
     }
 
-    public function executeDecline(): void
+    public function executeDeclineRefund(): void
     {
         abort_unless($this->canManage(), 403);
 
-        $this->validate(['modalNote' => 'required|string|max:500']);
+        $this->validate(['refundModalNote' => 'required|string|max:500']);
 
-        $ph = BookingPaymentHistory::findOrFail($this->modalPaymentId);
+        $ph = BookingPaymentHistory::findOrFail($this->refundModalPaymentId);
         $booking = Booking::find($ph->booking_id);
+        $requestedAmount = abs((float) $ph->amount);
 
         $details = $ph->payment_details ?? [];
-        $details['rejection_reason'] = $this->modalNote;
+        $details['rejection_reason'] = $this->refundModalNote;
 
         $ph->update(['status' => 'rejected', 'payment_details' => $details]);
 
-        AuditLogger::log(Auth::user(), $booking, 'refund_payment_declined', "Refund to customer {$ph->id} declined — {$this->modalNote}");
+        $amountLabel = '£' . number_format($requestedAmount, 2);
+        AuditLogger::log(Auth::user(), $booking, 'refund_payment_declined', "Refund to customer {$ph->id} for {$amountLabel} declined by manager — {$this->refundModalNote}");
 
         if ($booking) {
-            $this->appendBookingActivity($booking, 'refund_payment_declined', 'Refund to Customer Declined', $this->modalNote);
+            $this->appendBookingActivity($booking, 'refund_payment_declined', 'Refund to Customer Declined',
+                "{$amountLabel} requested — {$this->refundModalNote}");
         }
 
         // Refund simply stays 'received' — nothing was paid, so it can be re-queued from the booking page.
 
-        $this->closeModal();
+        $this->closeRefundModal();
         session()->flash('success', 'Refund declined.');
+    }
+
+    // ── Margin Claim half ────────────────────────────────────────────
+
+    /**
+     * Releasing a claim does two things at once: credits it toward the
+     * agent's monthly performance (MarginClaim::status), and pulls that same
+     * amount OUT of the booking's own running balance — it was still sitting
+     * there as part of "Overpaid" (the supplier refund landed as a positive
+     * approved row, only the amount actually paid back out to the customer
+     * left it) until now. A plain approved negative ledger row does that;
+     * it's tagged margin_claim so Payment History reads it as what it is
+     * rather than another refund payout. Deliberately does NOT add to this
+     * booking's own Cost & Margins total — that stays cost-vs-sold only; the
+     * claim lives solely in Agent Performance (see AgentPerformance::claimsQuery).
+     */
+    public function approveMargin(int $claimId): void
+    {
+        abort_unless($this->canManage(), 403);
+
+        $claim = MarginClaim::findOrFail($claimId);
+        $claim->update(['status' => 'released', 'applied_by_user_id' => Auth::id()]);
+
+        BookingPaymentHistory::create([
+            'booking_id' => $claim->booking_id,
+            'user_id' => $claim->user_id,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'margin_claim',
+            'amount' => -abs((float) $claim->amount),
+            'payment_details' => ['margin_claim' => true, 'margin_claim_id' => $claim->id, 'comment' => $claim->reason],
+            'status' => 'approved',
+            'approved_by' => Auth::id(),
+        ]);
+
+        $booking = Booking::find($claim->booking_id);
+        $agentName = $claim->user?->name ?? 'agent';
+        $amountLabel = '£' . number_format((float) $claim->amount, 2);
+
+        AuditLogger::log(Auth::user(), $booking, 'margin_claim_released',
+            "Margin claim of {$amountLabel} released — cleared from booking balance, credited to {$agentName}'s performance");
+
+        if ($booking) {
+            $this->appendBookingActivity($booking, 'margin_claim_released', 'Margin Claim Released',
+                "{$amountLabel} credited to {$agentName}'s performance — {$claim->reason}");
+        }
+
+        session()->flash('success', 'Margin claim released — cleared from the booking balance and now counts in Agent Performance.');
+    }
+
+    public function holdMargin(int $claimId): void
+    {
+        abort_unless($this->canManage(), 403);
+
+        $claim = MarginClaim::findOrFail($claimId);
+        $claim->update(['status' => 'held', 'applied_by_user_id' => Auth::id()]);
+
+        $booking = Booking::find($claim->booking_id);
+        $agentName = $claim->user?->name ?? 'agent';
+        $amountLabel = '£' . number_format((float) $claim->amount, 2);
+
+        AuditLogger::log(Auth::user(), $booking, 'margin_claim_held',
+            "Margin claim of {$amountLabel} held — not credited to {$agentName}'s performance, stays on the booking balance");
+
+        if ($booking) {
+            $this->appendBookingActivity($booking, 'margin_claim_held', 'Margin Claim Held',
+                "{$amountLabel} held — not yet credited to {$agentName}'s performance — {$claim->reason}");
+        }
+
+        session()->flash('success', 'Margin claim held.');
     }
 
     private function appendBookingActivity(Booking $booking, string $action, string $label, string $detail): void
@@ -230,9 +280,13 @@ class RefundAuthQueue extends Component
 
     public function render()
     {
-        $query = BookingPaymentHistory::with(['booking', 'user'])
+        $refundQuery = BookingPaymentHistory::with(['booking', 'user'])
             ->where('status', 'pending')
             ->where('payment_details->refund_payout', true)
+            ->where(function ($q) {
+                $q->whereNull('payment_details->manager_approved')
+                    ->orWhere('payment_details->manager_approved', false);
+            })
             ->when($this->search, function ($q) {
                 $q->whereHas('booking', function ($bq) {
                     $bq->where('booking_number', 'like', '%' . $this->search . '%')
@@ -248,8 +302,24 @@ class RefundAuthQueue extends Component
             })
             ->orderBy('created_at', 'asc');
 
+        $marginQuery = MarginClaim::with(['booking', 'user'])
+            ->where('status', 'pending')
+            ->when($this->search, function ($q) {
+                $q->whereHas('booking', function ($bq) {
+                    $bq->where('booking_number', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->when($this->dateFrom, function ($q) {
+                $q->whereDate('created_at', '>=', $this->dateFrom);
+            })
+            ->when($this->dateTo, function ($q) {
+                $q->whereDate('created_at', '<=', $this->dateTo);
+            })
+            ->orderBy('created_at', 'asc');
+
         return view('livewire.refund-auth-queue', [
-            'refundRequests' => $query->paginate(15),
+            'refundRequests' => $refundQuery->paginate(10, pageName: 'refundPage'),
+            'marginClaims'   => $marginQuery->paginate(10, pageName: 'marginPage'),
         ]);
     }
 }

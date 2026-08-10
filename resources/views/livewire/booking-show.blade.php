@@ -607,8 +607,13 @@
     // ── Request Payment Charge button: always available for viewers, follows
     // canEditPayment otherwise — but never while one is already outstanding,
     // issued or not (the booking_status itself no longer reflects this for
-    // issued bookings, so this checks the payment-history ledger directly). ──
-    $hasPendingChargeRequest = $booking->paymentHistory->contains(fn($h) => $h->status === 'pending');
+    // issued bookings, so this checks the payment-history ledger directly).
+    // Refund rows (receipt or payout) are excluded — those are refund flows
+    // with their own status strip/badges above, not an ordinary charge
+    // request, and shouldn't surface the "Charge Requested" pill. ──
+    $hasPendingChargeRequest = $booking->paymentHistory->contains(fn($h) => $h->status === 'pending'
+        && !($h->payment_details['refund_payout'] ?? false)
+        && !($h->payment_details['refund_receipt'] ?? false));
     $canRequestChargeButton = ($viewerOnly || $canEditPayment) && !$hasPendingChargeRequest;
 
     $canEditBooking = $canEditCore && Auth::user()->can('update', $booking);
@@ -711,6 +716,14 @@
         @else
           Refund Requested from Provider
         @endif
+      </span>
+    @elseif ($this->processedRefund)
+      {{-- Nothing left in flight — activeRefund is null once the payout to the
+         customer is fully approved — but the booking did go through a refund,
+         so this stays as a quieter permanent record instead of vanishing. --}}
+      <span
+        style="font-size:0.744rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#16A34A;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px;">
+        <i class="ph ph-check-circle"></i> Refunded
       </span>
     @endif
   </div>
@@ -3006,17 +3019,22 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
                   // "Refund" tile in Request Payment Charge) — also outgoing,
                   // but not tied to an actual Refund/accounts-approved payout.
                   $isInternalRefund = (bool) ($ph->payment_details['internal_refund'] ?? false);
+                  // A released margin claim (see RefundAuthQueue::approveMargin) —
+                  // pulls the claimed gap out of this booking's balance without
+                  // reading as another refund payout; it never touched the
+                  // customer, it's just money Travel Orbit is keeping.
+                  $isMarginClaim = (bool) ($ph->payment_details['margin_claim'] ?? false);
                   $refundComment = $ph->payment_details['comment'] ?? null;
                 @endphp
                 <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1"
-                  style="background:{{ $isRefundReceipt ? 'rgba(8,145,178,.04)' : '#FAFBFF' }};border-radius:8px;border:1px solid {{ $isRefundReceipt ? 'rgba(8,145,178,.15)' : 'rgba(51,46,158,.05)' }};{{ $status === 'voided' ? 'opacity:.7;' : '' }}">
+                  style="background:{{ $isRefundReceipt ? 'rgba(8,145,178,.04)' : ($isMarginClaim ? 'rgba(22,163,74,.04)' : '#FAFBFF') }};border-radius:8px;border:1px solid {{ $isRefundReceipt ? 'rgba(8,145,178,.15)' : ($isMarginClaim ? 'rgba(22,163,74,.15)' : 'rgba(51,46,158,.05)') }};{{ $status === 'voided' ? 'opacity:.7;' : '' }}">
                   <span
                     style="width:20px;height:20px;border-radius:50%;background:rgba(51,46,158,.06);display:inline-flex;align-items:center;justify-content:center;font-size:0.696rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $paymentNum }}</span>
                   <div class="flex-grow-1">
                     <span class="fw-semibold"
-                      style="font-size:0.84rem;{{ $isRefundPayout || $isInternalRefund ? 'color:#DC2626;' : ($isRefundReceipt ? 'color:#0891B2;' : 'color:#1E293B;') }}{{ $status === 'voided' ? 'text-decoration:line-through;' : '' }}">{{ $isRefundPayout || $isInternalRefund ? '−' : '' }}&pound;{{ number_format(abs($ph->amount), 2) }}</span>
+                      style="font-size:0.84rem;{{ $isRefundPayout || $isInternalRefund || $isMarginClaim ? 'color:#DC2626;' : ($isRefundReceipt ? 'color:#0891B2;' : 'color:#1E293B;') }}{{ $status === 'voided' ? 'text-decoration:line-through;' : '' }}">{{ $isRefundPayout || $isInternalRefund || $isMarginClaim ? '−' : '' }}&pound;{{ number_format(abs($ph->amount), 2) }}</span>
                     <span class="d-block"
-                      style="font-size:0.72rem;color:#475569;">{{ $isRefundPayout ? 'Refund' : ucfirst(str_replace('_', ' ', $ph->payment_method ?? 'N/A')) }}
+                      style="font-size:0.72rem;color:#475569;">{{ $isRefundPayout ? 'Refund' : ($isMarginClaim ? 'Margin Claimed' : ucfirst(str_replace('_', ' ', $ph->payment_method ?? 'N/A'))) }}
                       · {{ \Carbon\Carbon::parse($ph->payment_date)->format('d M Y') }}</span>
                     @if ($isRefundPayout && $refundComment)
                       <span class="d-block" style="font-size:0.708rem;color:#DC2626;">{{ $refundComment }}</span>
@@ -3034,6 +3052,10 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
                     <span
                       style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;color:#B91C1C;background:rgba(185,28,28,.08);display:flex;align-items:center;gap:3px;flex-shrink:0;">
                       <i class="ph ph-arrows-counter-clockwise"></i> Internal Refund</span>
+                  @elseif ($isMarginClaim)
+                    <span
+                      style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;color:#16A34A;background:rgba(22,163,74,.1);display:flex;align-items:center;gap:3px;flex-shrink:0;">
+                      <i class="ph ph-percent"></i> Margin Claimed</span>
                   @endif
                   <span
                     style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;{{ $statusStyle }}">{{ $statusLabel }}</span>
@@ -3468,10 +3490,12 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
 
         <div class="row g-3 mb-3">
           <div class="col-6">
-            <label class="bv-label">Refund Received (£)</label>
-            <div style="padding:7px 10px;font-size:0.984rem;font-weight:700;color:#1E293B;background:#F8FAFF;border-radius:8px;border:1px solid rgba(51,46,158,.08);">
-              &pound;{{ number_format((float) $refundReceivedAmount, 2) }}
-            </div>
+            <label class="bv-label">Refund Received (£) <span style="color:#DC2626;">*</span></label>
+            <input type="number" wire:model.live.debounce.300ms="refundReceivedAmount" class="rf-input"
+              placeholder="0.00" min="0.01" max="{{ $this->receivedRefund->refund_amount ?? '' }}" step="0.01">
+            @error('refundReceivedAmount')
+              <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+            @enderror
           </div>
           <div class="col-6">
             <label class="bv-label">Refund to Client (£) <span style="color:#DC2626;">*</span></label>

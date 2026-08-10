@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * The gap between what a supplier actually refunded Travel Orbit and what
- * was passed on to the customer, kept as extra margin — created automatically
- * when accounts approves a Refund to Customer payout that claims some (see
- * PaymentChargeRequest::advanceLinkedRefund). Mirrors MarginDeduction's shape
+ * was passed on to the customer, kept as extra margin — created automatically,
+ * as its own 'pending' M&R Auth Queue entry, the moment a Refund to Customer
+ * payout is requested (see BookingShow::submitRefundChargePayment). It's a
+ * decision entirely separate from the refund payout itself: a manager can
+ * release ('released', counts toward Agent Performance) or hold ('held',
+ * doesn't) it independently of whatever happens to the refund request — see
+ * RefundAuthQueue::approveMargin/holdMargin. Mirrors MarginDeduction's shape
  * but is system-generated rather than manually applied, and is tied to the
  * booking the refund came from.
  */
@@ -21,6 +25,7 @@ class MarginClaim extends Model
         'applied_by_user_id',
         'amount',
         'reason',
+        'status',
         'claim_date',
         'note',
     ];

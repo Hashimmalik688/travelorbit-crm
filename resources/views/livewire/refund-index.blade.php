@@ -86,11 +86,13 @@
                         @foreach($refunds as $refund)
                             @php
                               $receiptPending = in_array($refund->id, $receiptPendingIds);
-                              $payoutPending  = in_array($refund->id, $payoutPendingIds);
+                              $payoutPendingAtManager  = in_array($refund->id, $payoutPendingAtManagerIds);
+                              $payoutPendingAtAccounts = in_array($refund->id, $payoutPendingAtAccountsIds);
                               $sb = match(true) {
                                   $refund->status === 'processed' => ['bg' => 'rgba(22,163,74,.12)',  'color' => '#16A34A', 'label' => 'Paid Out to Customer'],
                                   $refund->status === 'rejected'  => ['bg' => 'rgba(220,38,38,.10)',  'color' => '#DC2626', 'label' => 'Rejected'],
-                                  $payoutPending                  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Payout to Customer — at M&R Auth'],
+                                  $payoutPendingAtManager          => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Payout to Customer — at M&R Auth'],
+                                  $payoutPendingAtAccounts         => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Payout to Customer — at Accounts'],
                                   $refund->status === 'received'  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Received — Not Yet Refunded'],
                                   $receiptPending                 => ['bg' => 'rgba(245,158,11,.12)', 'color' => '#B45309', 'label' => 'Requested — at Accounts'],
                                   default                          => ['bg' => 'rgba(245,158,11,.12)', 'color' => '#B45309', 'label' => 'Requested from Provider'],
@@ -121,11 +123,11 @@
                                     </span>
                                 </td>
                                 <td style="vertical-align:middle;">
-                                    @if($receiptPending)
+                                    @if($receiptPending || $payoutPendingAtAccounts)
                                         <a href="{{ route('payment-charges') }}" style="font-size:0.756rem;color:#7C3AED;font-weight:600;text-decoration:none;">
                                             <i class="ph ph-arrow-right"></i> Review in Charge Requests
                                         </a>
-                                    @elseif($payoutPending)
+                                    @elseif($payoutPendingAtManager)
                                         <a href="{{ route('refund-auth-queue') }}" style="font-size:0.756rem;color:#7C3AED;font-weight:600;text-decoration:none;">
                                             <i class="ph ph-arrow-right"></i> Review in M&amp;R Auth Queue
                                         </a>

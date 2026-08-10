@@ -16,6 +16,7 @@ use App\Models\BookingMarginShare;
 use App\Models\BookingPaymentHistory;
 use App\Models\BookingReassignment;
 use App\Models\BookingTransfer;
+use App\Models\MarginClaim;
 use App\Models\Refund;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -337,6 +338,12 @@ class BookingShow extends Component
         if (stripos($action, 'refund') !== false || stripos($action, 'refund queue') !== false) {
             return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.10)','border'=>'#DC2626','label'=>'Refund','full_row'=>true,'icon'=>'ph-arrows-counter-clockwise'];
         }
+        if (stripos($action, 'margin claim held') !== false) {
+            return ['dot'=>'#B45309','bg'=>'rgba(245,158,11,.10)','border'=>'#B45309','label'=>'Held','full_row'=>true,'icon'=>'ph-pause-circle'];
+        }
+        if (stripos($action, 'margin claim') !== false) {
+            return ['dot'=>'#16A34A','bg'=>'rgba(22,163,74,.10)','border'=>'#16A34A','label'=>'Margin','full_row'=>true,'icon'=>'ph-percent'];
+        }
         if (stripos($action, 'cancelled') !== false || stripos($action, 'cancel') !== false) {
             return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.08)','border'=>'#DC2626','label'=>'Cancelled','full_row'=>true,'icon'=>'ph-x-circle'];
         }
@@ -436,6 +443,20 @@ class BookingShow extends Component
                 'payment_requested'=> 'Request Payment Charge',
                 'payment_approved' => 'Payment Approved',
                 'payment_rejected' => 'Payment Declined',
+                // Refund receipt (supplier → Travel Orbit) and payout (Travel
+                // Orbit → customer) approvals/declines at accounts — kept
+                // distinct from a plain charge (see PaymentChargeRequest::executeApprove/executeReject)
+                // so each reads as what actually happened, not a generic "Payment Approved".
+                'refund_receipt_approved' => 'Refund Receipt Confirmed',
+                'refund_receipt_declined' => 'Refund Receipt Declined',
+                'refund_payout_completed' => 'Refund to Customer Completed',
+                'refund_payout_declined'  => 'Refund to Customer Declined at Accounts',
+                // Manager-stage decision on the M&R Auth Queue, before it
+                // ever reaches accounts (see RefundAuthQueue::executeApproveRefund/executeDeclineRefund).
+                'refund_payment_manager_approved' => 'Refund to Customer Approved by Manager',
+                'refund_payment_declined'         => 'Refund to Customer Declined',
+                'margin_claim_released'           => 'Margin Claim Released',
+                'margin_claim_held'               => 'Margin Claim Held',
                 // Entries written before the rename stored the heading verbatim —
                 // map it so the feed reads the same way top to bottom.
                 'Ticket Issued'    => 'Booking Issued',
@@ -2380,6 +2401,15 @@ class BookingShow extends Component
      *                balance until someone decides how much (if any) to
      *                pass on to the customer (see getReceivedRefundProperty).
      */
+    /** The most recent refund that's been fully paid out — for the "Refunded" badge once activeRefund has nothing left in flight. */
+    public function getProcessedRefundProperty()
+    {
+        return Refund::where('booking_id', $this->booking->id)
+            ->where('status', 'processed')
+            ->latest()
+            ->first();
+    }
+
     public function getActiveRefundProperty()
     {
         return Refund::where('booking_id', $this->booking->id)
@@ -2438,8 +2468,10 @@ class BookingShow extends Component
         $refund = $this->receivedRefund;
         if (!$refund || $this->refundPayoutPending) return;
 
-        // "Refund received" is fact, shown for reference — it does NOT
-        // pre-fill "Refund to client"; that's left blank for the agent to
+        // "Refund received" starts pre-filled from what's on file, but is
+        // manually editable — the agent may know the actual figure differs
+        // (partial receipt, currency rounding, etc). It does NOT pre-fill
+        // "Refund to client" though; that's left blank for the agent to
         // decide, per booking (the gap becomes the claimed margin below).
         $this->refundReceivedAmount = $refund->refund_amount;
         $this->refundChargeAmount = '';
@@ -2500,7 +2532,8 @@ class BookingShow extends Component
         }
 
         $this->validate([
-            'refundChargeAmount' => 'required|numeric|min:0.01|max:' . $refund->refund_amount,
+            'refundReceivedAmount' => 'required|numeric|min:0.01|max:' . $refund->refund_amount,
+            'refundChargeAmount' => 'required|numeric|min:0.01|max:' . (float) $this->refundReceivedAmount,
             'refundChargeComment' => 'required|string|max:500',
             'refundMode' => 'required|in:bank,card',
             'refundAcknowledgement' => 'required|in:email,whatsapp,verbal',
@@ -2541,15 +2574,30 @@ class BookingShow extends Component
             'status' => 'pending',
         ]);
 
+        // Its own separate M&R Auth Queue entry — a manager releases or holds
+        // it independently of whatever happens to the refund request itself
+        // (see RefundAuthQueue::approveMargin/holdMargin).
+        if ($claimedMargin > 0) {
+            MarginClaim::create([
+                'booking_id' => $this->booking->id,
+                'user_id' => Auth::id(),
+                'applied_by_user_id' => Auth::id(),
+                'amount' => $claimedMargin,
+                'reason' => 'Refund to customer — ' . $this->refundChargeComment,
+                'status' => 'pending',
+                'claim_date' => now()->toDateString(),
+            ]);
+        }
+
         $amountLabel = '£' . number_format((float) $this->refundChargeAmount, 2);
         $marginLabel = $claimedMargin > 0 ? ' — £' . number_format($claimedMargin, 2) . ' claimed as margin' : '';
         AuditLogger::log(Auth::user(), $this->booking, 'refund_payment_requested', "Refund to customer of {$amountLabel} requested — queued for accounts{$marginLabel} — {$this->refundChargeComment}");
-        $this->logActivity('Refund to Customer', "{$amountLabel} refund to customer requested{$marginLabel} — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
+        $this->logActivity('Refund to Customer Requested', "{$amountLabel} refund to customer requested{$marginLabel} — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
 
         $this->booking->load('paymentHistory');
 
         $this->closeRefundChargeModal();
-        session()->flash('success', 'Refund to customer requested — sent to accounts for approval.');
+        session()->flash('success', 'Refund to customer requested — sent to the M&R Auth Queue for approval.');
     }
 
     // ── Country list ───────────────────────────────────────────────────

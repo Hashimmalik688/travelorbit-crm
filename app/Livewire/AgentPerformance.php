@@ -226,12 +226,18 @@ class AgentPerformance extends Component
     // ── Margin claims (auto-created when accounts approves a Refund to
     // Customer payout that keeps some of what the supplier sent back —
     // see PaymentChargeRequest::recordMarginClaim) ────────────────────
+    /**
+     * Only 'released' claims count — 'pending' ones are still sitting on the
+     * M&R Auth Queue awaiting a manager's release/hold decision, and 'held'
+     * ones were deliberately kept back (see RefundAuthQueue::approveMargin/holdMargin).
+     */
     private function claimsQuery()
     {
         [$from, $to] = $this->dateRange();
         $agentId = $this->effectiveAgentId();
 
         return MarginClaim::query()
+            ->where('status', 'released')
             ->when($agentId, fn ($q) => $q->where('user_id', $agentId))
             ->whereDate('claim_date', '>=', $from)
             ->whereDate('claim_date', '<=', $to);
