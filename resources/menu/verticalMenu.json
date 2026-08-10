@@ -21,10 +21,11 @@
     { "url": "/my-bookings/payment-plan",     "name": "Payment Plan",     "icon": "menu-icon icon-base ph ph-calendar-check", "slug": "bookings.payment-plan",     "permissions": ["bookings.own_issued"] },
     { "url": "/my-bookings/payment-awaiting", "name": "Payment Awaiting", "icon": "menu-icon icon-base ph ph-hourglass-medium","slug": "bookings.payment-awaiting", "permissions": ["bookings.own_issued"] },
 
-    { "menuHeader": "Accounts", "permissions": ["accounts.access"] },
+    { "menuHeader": "Accounts", "permissions": ["accounts.access","refunds.manage"] },
     { "url": "/accounts-dashboard", "name": "Ready to Invoice",  "icon": "menu-icon icon-base ph ph-receipt",     "slug": "accounts.dashboard", "permissions": ["accounts.access"] },
     { "url": "/payment-charges",  "name": "Charge Requests",      "icon": "menu-icon icon-base ph ph-queue",          "slug": "payment-charges",   "permissions": ["accounts.access"] },
     { "url": "/refunds",          "name": "Refunds",               "icon": "menu-icon icon-base ph ph-arrow-u-up-left", "slug": "refunds",          "permissions": ["accounts.access"] },
+    { "url": "/refund-auth-queue", "name": "M&R Auth Queue",       "icon": "menu-icon icon-base ph ph-shield-check",   "slug": "refund-auth-queue", "permissions": ["refunds.manage"] },
 
     { "menuHeader": "Reports",  "permissions": ["reports.view","reports.performance","reports.performance_all","reports.departure_arrival"] },
     { "url": "/reports",        "name": "Reports Hub",       "icon": "menu-icon icon-base ph ph-chart-bar",       "slug": "reports",          "permissions": ["reports.view"], "excludeRoles": ["accounts"] },

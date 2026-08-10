@@ -8,18 +8,19 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Read-only overview of refund requests for accounts. All the actual money
- * movement — and the real approval gate, in both directions — happens on the
- * Charge Requests queue (see PaymentChargeRequest::advanceLinkedRefund):
+ * Read-only overview of refund requests for accounts. The real approval gate
+ * is split across two queues depending on which direction the money's moving:
  *
  *  - 'requested' → accounts approves/rejects the ticket-provider refund
- *    receipt claim there, which flips this Refund to 'received' or 'rejected'.
+ *    receipt claim on Charge Requests (see PaymentChargeRequest::advanceLinkedRefund),
+ *    which flips this Refund to 'received' or 'rejected'.
  *  - 'received'  → once the booking page queues a payout ("Refund to
- *    Customer"), accounts approves/rejects THAT there too, which flips this
+ *    Customer"), a manager approves/declines THAT on the M&R Auth Queue (see
+ *    RefundAuthQueue::executeApprove/executeDecline), which flips this
  *    Refund to 'processed' (or leaves it 'received' to retry).
  *
  * This page never mutates a Refund itself — it just tells accounts where
- * each one currently sits and links out to Charge Requests to act on it.
+ * each one currently sits and links out to the right queue to act on it.
  */
 class RefundIndex extends Component
 {

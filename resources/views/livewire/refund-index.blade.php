@@ -13,10 +13,12 @@
 
     <p style="font-size:0.84rem;color:#475569;margin-bottom:16px;">
         Tracks refunds claimed from the ticket provider and which of those have since landed in Travel Orbit's
-        balance — whether and how much to pass on to the customer from there is a separate call. All approvals —
-        confirming a provider refund landed, or paying a customer back — happen on
-        <a href="{{ route('payment-charges') }}" style="color:#332E9E;font-weight:600;">Charge Requests</a>; nothing
-        here moves money.
+        balance — whether and how much to pass on to the customer from there is a separate call. Confirming a
+        provider refund landed happens on
+        <a href="{{ route('payment-charges') }}" style="color:#332E9E;font-weight:600;">Charge Requests</a>; paying
+        the customer back is approved on the
+        <a href="{{ route('refund-auth-queue') }}" style="color:#332E9E;font-weight:600;">M&amp;R Auth Queue</a>.
+        Nothing here moves money.
     </p>
 
     {{-- Totals strip --}}
@@ -88,7 +90,7 @@
                               $sb = match(true) {
                                   $refund->status === 'processed' => ['bg' => 'rgba(22,163,74,.12)',  'color' => '#16A34A', 'label' => 'Paid Out to Customer'],
                                   $refund->status === 'rejected'  => ['bg' => 'rgba(220,38,38,.10)',  'color' => '#DC2626', 'label' => 'Rejected'],
-                                  $payoutPending                  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Payout to Customer — at Accounts'],
+                                  $payoutPending                  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Payout to Customer — at M&R Auth'],
                                   $refund->status === 'received'  => ['bg' => 'rgba(124,58,237,.12)', 'color' => '#7C3AED', 'label' => 'Received — Not Yet Refunded'],
                                   $receiptPending                 => ['bg' => 'rgba(245,158,11,.12)', 'color' => '#B45309', 'label' => 'Requested — at Accounts'],
                                   default                          => ['bg' => 'rgba(245,158,11,.12)', 'color' => '#B45309', 'label' => 'Requested from Provider'],
@@ -119,9 +121,13 @@
                                     </span>
                                 </td>
                                 <td style="vertical-align:middle;">
-                                    @if($receiptPending || $payoutPending)
+                                    @if($receiptPending)
                                         <a href="{{ route('payment-charges') }}" style="font-size:0.756rem;color:#7C3AED;font-weight:600;text-decoration:none;">
                                             <i class="ph ph-arrow-right"></i> Review in Charge Requests
+                                        </a>
+                                    @elseif($payoutPending)
+                                        <a href="{{ route('refund-auth-queue') }}" style="font-size:0.756rem;color:#7C3AED;font-weight:600;text-decoration:none;">
+                                            <i class="ph ph-arrow-right"></i> Review in M&amp;R Auth Queue
                                         </a>
                                     @else
                                         <span style="font-size:0.78rem;color:#94A3B8;">—</span>

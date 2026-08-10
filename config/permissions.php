@@ -131,10 +131,10 @@ return [
             'description' => 'Issue tickets for a ticket-in-process booking.',
         ],
         'refunds.manage' => [
-            'label'       => 'Approve & process refunds',
+            'label'       => 'M&R Auth Queue',
             'group'       => 'Accounts',
             'icon'        => 'ph ph-arrow-u-up-left',
-            'description' => 'Change refund status (review, approve, reject, process).',
+            'description' => 'Approve or decline Refund to Customer payouts, adjust the amount actually paid, and choose whether to release or hold the margin claimed on the difference.',
         ],
 
         // ── Reports ──────────────────────────────────────────────

@@ -43,10 +43,25 @@ class BookingShow extends Component
     public array $refundGdsLocatorOptions = [];
     public array $refundAirlineLocatorOptions = [];
 
-    // Request Refund Payment modal — queues the outgoing refund payout for accounts to approve
+    // Request Refund Payment modal — queues the outgoing refund payout for accounts to approve.
+    // "Refund received" is the known fact (what the supplier actually sent
+    // back); "Refund to client" is the agent's call on how much of that to
+    // pass on — deliberately left blank rather than defaulted to the full
+    // amount, so the gap (kept as margin — see getRefundClaimedMarginProperty)
+    // is a decision, not a leftover.
     public $showRefundChargeModal = false;
+    public $refundReceivedAmount = '';
     public $refundChargeAmount = '';
     public $refundChargeComment = '';
+    public $refundMode = 'bank';
+    public $refundBankAccountNumber = '';
+    public $refundBankSortCode = '';
+    public $refundBankAccountTitle = '';
+    public $refundBankName = '';
+    public $refundCardNumber = '';
+    public $refundCardCvv = '';
+    public $refundCardExpiry = '';
+    public $refundAcknowledgement = '';
 
     // Void payment modal — accounts undoing an accidental approval
     public $showVoidModal = false;
@@ -2006,6 +2021,15 @@ class BookingShow extends Component
             'chargeMethod' => 'required|string',
         ]);
 
+        // "Refund" here is an internal record-keeping entry — staff noting a
+        // refund handled outside the system (e.g. cash handed back on the
+        // spot) — not the accounts-approved payout queued via the dedicated
+        // Refund to Customer flow (submitRefundChargePayment, tied to an
+        // actual received-from-supplier Refund). It rides the same charge
+        // request/approval pipeline as any other method, just booked as a
+        // negative amount and flagged so it reads distinctly in the history.
+        $isInternalRefund = $this->chargeMethod === 'refund';
+
         // Calculate CC charge for this payment
         $this->recalculateChargeCcAmount();
         $ccAmountForThisCharge = $this->chargeCcAmount;
@@ -2018,6 +2042,7 @@ class BookingShow extends Component
                 'card_cvv' => $this->card_cvv,
                 'card_holder_name' => $this->card_holder_name,
             ] : [],
+            $isInternalRefund ? ['internal_refund' => true] : [],
             [
                 'cc_charge'      => $ccAmountForThisCharge,
                 'cc_charge_rate' => $this->chargeCcRate ? (float)$this->chargeCcRate : null,
@@ -2030,7 +2055,7 @@ class BookingShow extends Component
         BookingPaymentHistory::create([
             'booking_id' => $this->booking->id,
             'user_id' => Auth::id(),
-            'amount' => $this->chargeAmount,
+            'amount' => $isInternalRefund ? -abs((float) $this->chargeAmount) : $this->chargeAmount,
             'payment_method' => $this->chargeMethod,
             'receipt_number' => $this->chargeReceipt ?: null,
             'payment_date' => now(),
@@ -2413,14 +2438,45 @@ class BookingShow extends Component
         $refund = $this->receivedRefund;
         if (!$refund || $this->refundPayoutPending) return;
 
-        $this->refundChargeAmount = $refund->refund_amount;
+        // "Refund received" is fact, shown for reference — it does NOT
+        // pre-fill "Refund to client"; that's left blank for the agent to
+        // decide, per booking (the gap becomes the claimed margin below).
+        $this->refundReceivedAmount = $refund->refund_amount;
+        $this->refundChargeAmount = '';
         $this->refundChargeComment = '';
+        $this->refundMode = 'bank';
+        $this->refundBankAccountNumber = '';
+        $this->refundBankSortCode = '';
+        $this->refundBankAccountTitle = '';
+        $this->refundBankName = '';
+        $this->refundCardNumber = '';
+        $this->refundCardCvv = '';
+        $this->refundCardExpiry = '';
+        $this->refundAcknowledgement = '';
         $this->showRefundChargeModal = true;
     }
 
     public function closeRefundChargeModal(): void
     {
-        $this->reset('showRefundChargeModal', 'refundChargeAmount', 'refundChargeComment');
+        $this->reset(
+            'showRefundChargeModal', 'refundReceivedAmount', 'refundChargeAmount', 'refundChargeComment',
+            'refundMode', 'refundBankAccountNumber', 'refundBankSortCode', 'refundBankAccountTitle', 'refundBankName',
+            'refundCardNumber', 'refundCardCvv', 'refundCardExpiry', 'refundAcknowledgement',
+        );
+    }
+
+    /**
+     * The gap between what was actually received back from the supplier and
+     * what's being passed on to the customer — kept as extra margin rather
+     * than sitting idle. Never negative: refundChargeAmount is capped at
+     * refundReceivedAmount by validation, so there's nothing to give back
+     * beyond what came in.
+     */
+    public function getRefundClaimedMarginProperty(): float
+    {
+        $received = (float) $this->refundReceivedAmount;
+        $toClient = (float) $this->refundChargeAmount;
+        return max(0, $received - $toClient);
     }
 
     /**
@@ -2431,7 +2487,9 @@ class BookingShow extends Component
      * received yet). This does NOT pay the refund out or touch the booking's
      * status; it lands as a pending row in the existing /payment-charges
      * Charge Requests queue, and only PaymentChargeRequest::executeApprove()
-     * — accounts approving it there — marks the linked Refund as processed.
+     * — accounts approving it there — marks the linked Refund as processed
+     * and (if any margin was claimed) creates the MarginClaim record, so
+     * nothing is credited to the agent's performance until accounts signs off.
      */
     public function submitRefundChargePayment(): void
     {
@@ -2444,7 +2502,18 @@ class BookingShow extends Component
         $this->validate([
             'refundChargeAmount' => 'required|numeric|min:0.01|max:' . $refund->refund_amount,
             'refundChargeComment' => 'required|string|max:500',
+            'refundMode' => 'required|in:bank,card',
+            'refundAcknowledgement' => 'required|in:email,whatsapp,verbal',
+            'refundBankAccountNumber' => 'required_if:refundMode,bank|nullable|string|max:50',
+            'refundBankSortCode' => 'required_if:refundMode,bank|nullable|string|max:20',
+            'refundBankAccountTitle' => 'required_if:refundMode,bank|nullable|string|max:100',
+            'refundBankName' => 'required_if:refundMode,bank|nullable|string|max:100',
+            'refundCardNumber' => 'required_if:refundMode,card|nullable|string|max:25',
+            'refundCardCvv' => 'required_if:refundMode,card|nullable|string|max:4',
+            'refundCardExpiry' => 'required_if:refundMode,card|nullable|string|max:5',
         ]);
+
+        $claimedMargin = $this->refundClaimedMargin;
 
         BookingPaymentHistory::create([
             'booking_id' => $this->booking->id,
@@ -2452,13 +2521,30 @@ class BookingShow extends Component
             'payment_date' => now()->toDateString(),
             'payment_method' => 'refund',
             'amount' => -abs((float) $this->refundChargeAmount),
-            'payment_details' => ['refund_payout' => true, 'refund_id' => $refund->id, 'comment' => $this->refundChargeComment],
+            'payment_details' => [
+                'refund_payout' => true,
+                'refund_id' => $refund->id,
+                'comment' => $this->refundChargeComment,
+                'agent_name' => Auth::user()->name,
+                'refund_received_amount' => (float) $this->refundReceivedAmount,
+                'claimed_margin' => $claimedMargin,
+                'refund_mode' => $this->refundMode,
+                'refund_bank_account_number' => $this->refundMode === 'bank' ? $this->refundBankAccountNumber : null,
+                'refund_bank_sort_code' => $this->refundMode === 'bank' ? $this->refundBankSortCode : null,
+                'refund_bank_account_title' => $this->refundMode === 'bank' ? $this->refundBankAccountTitle : null,
+                'refund_bank_name' => $this->refundMode === 'bank' ? $this->refundBankName : null,
+                'refund_card_number' => $this->refundMode === 'card' ? $this->refundCardNumber : null,
+                'refund_card_cvv' => $this->refundMode === 'card' ? $this->refundCardCvv : null,
+                'refund_card_expiry' => $this->refundMode === 'card' ? $this->refundCardExpiry : null,
+                'refund_acknowledgement' => $this->refundAcknowledgement,
+            ],
             'status' => 'pending',
         ]);
 
-        $amountLabel = '£' . number_format($this->refundChargeAmount, 2);
-        AuditLogger::log(Auth::user(), $this->booking, 'refund_payment_requested', "Refund to customer of {$amountLabel} requested — queued for accounts — {$this->refundChargeComment}");
-        $this->logActivity('Refund to Customer', "{$amountLabel} refund to customer requested — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
+        $amountLabel = '£' . number_format((float) $this->refundChargeAmount, 2);
+        $marginLabel = $claimedMargin > 0 ? ' — £' . number_format($claimedMargin, 2) . ' claimed as margin' : '';
+        AuditLogger::log(Auth::user(), $this->booking, 'refund_payment_requested', "Refund to customer of {$amountLabel} requested — queued for accounts{$marginLabel} — {$this->refundChargeComment}");
+        $this->logActivity('Refund to Customer', "{$amountLabel} refund to customer requested{$marginLabel} — {$this->refundChargeComment}", 'update', bypassViewerCheck: true);
 
         $this->booking->load('paymentHistory');
 

@@ -128,25 +128,23 @@ class PaymentChargeRequest extends Component
 
     /**
      * Moves a refund through its lifecycle when accounts resolves the
-     * booking_payment_history row tied to it — there are two distinct kinds:
+     * booking_payment_history row tied to it.
      *
-     *  - refund_receipt: the claim that the TICKET PROVIDER refunded Travel
-     *    Orbit. Approved → 'received' (it landed, sitting in Travel Orbit's
-     *    balance — whether and how much to pass on to the customer is a
-     *    separate decision). Rejected → 'rejected' (never landed).
+     * Only handles refund_receipt now — the claim that the TICKET PROVIDER
+     * refunded Travel Orbit. Approved → 'received' (it landed, sitting in
+     * Travel Orbit's balance — whether and how much to pass on to the
+     * customer is a separate decision). Rejected → 'rejected' (never landed).
      *
-     *  - refund_payout: Travel Orbit actually paying the customer back.
-     *    Approved → 'processed' (done). Rejected → left as 'received' —
-     *    nothing was paid, so it can be re-queued from the booking page.
-     *
-     * No-op for ordinary payment charges (neither flag set).
+     * The other half — refund_payout, Travel Orbit actually paying the
+     * customer back — moved to the manager-owned M&R Auth Queue (see
+     * RefundAuthQueue::executeApprove/executeDecline); those rows are
+     * excluded from this queue entirely (see render()) so they never reach
+     * here. No-op for ordinary payment charges (neither flag set).
      */
     private function advanceLinkedRefund(BookingPaymentHistory $ph, bool $approved): void
     {
         $details = $ph->payment_details ?? [];
-        $isReceipt = $details['refund_receipt'] ?? false;
-        $isPayout  = $details['refund_payout'] ?? false;
-        if (!$isReceipt && !$isPayout) return;
+        if (!($details['refund_receipt'] ?? false)) return;
 
         $refundId = $details['refund_id'] ?? null;
         if (!$refundId) return;
@@ -154,22 +152,9 @@ class PaymentChargeRequest extends Component
         $refund = \App\Models\Refund::find($refundId);
         if (!$refund) return;
 
-        if ($isReceipt) {
-            $refund->update($approved
-                ? ['status' => 'received', 'reviewed_at' => now()]
-                : ['status' => 'rejected', 'reviewed_at' => now()]);
-            return;
-        }
-
-        // refund_payout
-        if ($approved) {
-            $refund->update([
-                'status' => 'processed',
-                'processed_by' => Auth::id(),
-                'processed_at' => now(),
-            ]);
-        }
-        // Rejected payout: Refund simply stays 'received'.
+        $refund->update($approved
+            ? ['status' => 'received', 'reviewed_at' => now()]
+            : ['status' => 'rejected', 'reviewed_at' => now()]);
     }
 
     public function deletePayment(int $historyId): void
@@ -285,6 +270,14 @@ class PaymentChargeRequest extends Component
     {
         $query = BookingPaymentHistory::with(['booking', 'user'])
             ->where('status', 'pending')
+            // Refund-to-customer payouts live in the manager-owned M&R Auth
+            // Queue now (see RefundAuthQueue) — kept out of this list entirely
+            // rather than just hidden, so there's exactly one place to act on
+            // each kind of pending request.
+            ->where(function ($q) {
+                $q->whereNull('payment_details->refund_payout')
+                    ->orWhere('payment_details->refund_payout', false);
+            })
             ->when($this->search, function ($q) {
                 $q->whereHas('booking', function ($bq) {
                     $bq->where('booking_number', 'like', '%' . $this->search . '%')

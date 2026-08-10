@@ -707,11 +707,10 @@
         style="font-size:0.744rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#DC2626;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px;box-shadow:0 0 0 3px rgba(220,38,38,.25);">
         <i class="ph ph-arrows-counter-clockwise"></i>
         @if ($this->receivedRefund)
-          Refund Received —
+          Refund Received
         @else
-          Refund Requested from Provider —
+          Refund Requested from Provider
         @endif
-        &pound;{{ number_format($this->activeRefund->refund_amount, 2) }}
       </span>
     @endif
   </div>
@@ -795,10 +794,11 @@
          A refund already in flight is a Refund row, not a booking_status — so
          the booking keeps its real status (issued/invoiced/etc.) and the
          prominent "Refund Requested" badge in the status banner above carries
-         that signal instead; this button just steps aside while one's active. --}}
+         that signal alongside it. Multiple refunds can be requested against a
+         single booking (e.g. separate passengers/lines), so this button stays
+         available even while one is already active. --}}
       @if (in_array($status, ['pending', 'confirmed', 'issued', 'issued_payment_awaiting', 'issued_payment_plan']) &&
-              !in_array($role, ['accounts', 'issuance']) &&
-              !$this->activeRefund)
+              !in_array($role, ['accounts', 'issuance']))
         <button type="button" x-data="{ open: @entangle('showRefundModal') }" @click="open = true" wire:click="requestRefund" class="bv-action"
           style="background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2);color:#DC2626;">
           <i class="ph ph-arrows-counter-clockwise"></i> Request Refund
@@ -2998,15 +2998,23 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
                   };
                   $voidReason = $ph->payment_details['void_reason'] ?? null;
                   $isRefundPayout = (bool) ($ph->payment_details['refund_payout'] ?? false);
+                  // The supplier-refund-received row — money coming back to
+                  // Travel Orbit, the opposite direction from a refund payout —
+                  // gets its own colour so it doesn't read as an ordinary payment.
+                  $isRefundReceipt = (bool) ($ph->payment_details['refund_receipt'] ?? false);
+                  // Staff logging a refund handled outside the system (see the
+                  // "Refund" tile in Request Payment Charge) — also outgoing,
+                  // but not tied to an actual Refund/accounts-approved payout.
+                  $isInternalRefund = (bool) ($ph->payment_details['internal_refund'] ?? false);
                   $refundComment = $ph->payment_details['comment'] ?? null;
                 @endphp
                 <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1"
-                  style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);{{ $status === 'voided' ? 'opacity:.7;' : '' }}">
+                  style="background:{{ $isRefundReceipt ? 'rgba(8,145,178,.04)' : '#FAFBFF' }};border-radius:8px;border:1px solid {{ $isRefundReceipt ? 'rgba(8,145,178,.15)' : 'rgba(51,46,158,.05)' }};{{ $status === 'voided' ? 'opacity:.7;' : '' }}">
                   <span
                     style="width:20px;height:20px;border-radius:50%;background:rgba(51,46,158,.06);display:inline-flex;align-items:center;justify-content:center;font-size:0.696rem;font-weight:800;color:#332E9E;flex-shrink:0;">{{ $paymentNum }}</span>
                   <div class="flex-grow-1">
                     <span class="fw-semibold"
-                      style="font-size:0.84rem;{{ $isRefundPayout ? 'color:#DC2626;' : 'color:#1E293B;' }}{{ $status === 'voided' ? 'text-decoration:line-through;' : '' }}">{{ $isRefundPayout ? '−' : '' }}&pound;{{ number_format(abs($ph->amount), 2) }}</span>
+                      style="font-size:0.84rem;{{ $isRefundPayout || $isInternalRefund ? 'color:#DC2626;' : ($isRefundReceipt ? 'color:#0891B2;' : 'color:#1E293B;') }}{{ $status === 'voided' ? 'text-decoration:line-through;' : '' }}">{{ $isRefundPayout || $isInternalRefund ? '−' : '' }}&pound;{{ number_format(abs($ph->amount), 2) }}</span>
                     <span class="d-block"
                       style="font-size:0.72rem;color:#475569;">{{ $isRefundPayout ? 'Refund' : ucfirst(str_replace('_', ' ', $ph->payment_method ?? 'N/A')) }}
                       · {{ \Carbon\Carbon::parse($ph->payment_date)->format('d M Y') }}</span>
@@ -3018,6 +3026,15 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
                         {{ $ph->voidedBy?->name ?? 'accounts' }} — {{ $voidReason }}</span>
                     @endif
                   </div>
+                  @if ($isRefundReceipt)
+                    <span
+                      style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;color:#0891B2;background:rgba(8,145,178,.1);display:flex;align-items:center;gap:3px;flex-shrink:0;">
+                      <i class="ph ph-arrows-counter-clockwise"></i> Refund</span>
+                  @elseif ($isInternalRefund)
+                    <span
+                      style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;color:#B91C1C;background:rgba(185,28,28,.08);display:flex;align-items:center;gap:3px;flex-shrink:0;">
+                      <i class="ph ph-arrows-counter-clockwise"></i> Internal Refund</span>
+                  @endif
                   <span
                     style="font-size:0.696rem;font-weight:700;padding:2px 8px;border-radius:10px;{{ $statusStyle }}">{{ $statusLabel }}</span>
                   @if ($status === 'approved' && Auth::user()->hasPermission('payments.charge'))
@@ -3172,6 +3189,11 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
               'clearpay' => ['label' => 'ClearPay', 'icon' => 'ph-arrows-clockwise', 'color' => '#047857'],
               'stripe' => ['label' => 'Stripe', 'icon' => 'ph-lightning', 'color' => '#6366F1'],
               'cash' => ['label' => 'Cash', 'icon' => 'ph-money', 'color' => '#15803D'],
+              // Internal record-keeping only — staff logging a refund handled
+              // outside the system (e.g. cash handed back). Distinct from the
+              // accounts-approved "Refund to Customer" payout above, which is
+              // tied to money actually received back from the ticket provider.
+              'refund' => ['label' => 'Refund', 'icon' => 'ph-arrows-counter-clockwise', 'color' => '#B91C1C'],
           ];
         @endphp
         {{-- Instant client-side highlight via the native radio's :checked state,
@@ -3422,38 +3444,154 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
   </div>
 
   {{-- REFUND TO CUSTOMER MODAL --}}
-  <div x-data="{ open: @entangle('showRefundChargeModal') }" x-show="open" x-cloak class="refund-overlay"
+  <div x-data="{ open: @entangle('showRefundChargeModal'), mode: @entangle('refundMode') }" x-show="open" x-cloak
+    class="refund-overlay"
     style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"
     @click="open = false" @keydown.escape.window="open = false">
-    <div style="background:#fff;border-radius:18px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.2);"
+    <div
+      style="background:#fff;border-radius:18px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:92vh;display:flex;flex-direction:column;"
       @click.stop>
       <div
-        style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;">
+        style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <h5 class="fw-bold mb-0" style="font-size:1.02rem;color:#fff;display:flex;align-items:center;gap:8px;"><i
             class="ph ph-arrows-counter-clockwise" style="font-size:1.14rem;"></i> Refund to Customer</h5>
         <button type="button" @click="open = false"
           style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;">✕</button>
       </div>
-      <div class="p-3">
-        <p style="font-size:0.8rem;color:#475569;margin-bottom:14px;">Queues this as a payout to the customer for
-          accounts to approve on the Charge Requests queue — cut from Travel Orbit's balance once approved. Nothing
-          is paid out yet, and the booking's status doesn't change.</p>
+      <div class="p-3" style="overflow-y:auto;">
         <div class="mb-3">
-          <label class="bv-label">Amount (£) <span style="color:#DC2626;">*</span></label>
-          <input type="number" wire:model="refundChargeAmount" class="rf-input" placeholder="0.00"
-            min="0.01" max="{{ $this->receivedRefund->refund_amount ?? '' }}" step="0.01">
-          @error('refundChargeAmount')
-            <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
-          @enderror
+          <label class="bv-label">Agent</label>
+          <div style="padding:7px 10px;font-size:0.9rem;font-weight:600;color:#1E293B;background:#F8FAFF;border-radius:8px;border:1px solid rgba(51,46,158,.08);">
+            {{ Auth::user()->name }}
+          </div>
         </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="bv-label">Refund Received (£)</label>
+            <div style="padding:7px 10px;font-size:0.984rem;font-weight:700;color:#1E293B;background:#F8FAFF;border-radius:8px;border:1px solid rgba(51,46,158,.08);">
+              &pound;{{ number_format((float) $refundReceivedAmount, 2) }}
+            </div>
+          </div>
+          <div class="col-6">
+            <label class="bv-label">Refund to Client (£) <span style="color:#DC2626;">*</span></label>
+            <input type="number" wire:model.live.debounce.300ms="refundChargeAmount" class="rf-input"
+              placeholder="0.00" min="0.01" max="{{ $refundReceivedAmount ?: '' }}" step="0.01">
+            @error('refundChargeAmount')
+              <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+            @enderror
+          </div>
+        </div>
+
+        <div class="mb-3" style="padding:8px 12px;border-radius:10px;background:rgba(22,163,74,.06);border:1px solid rgba(22,163,74,.18);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:0.816rem;font-weight:700;color:#166534;">Claim as Margin</span>
+          <span style="font-size:0.984rem;font-weight:800;color:#166534;">&pound;{{ number_format($this->refundClaimedMargin, 2) }}</span>
+        </div>
+
         <div class="mb-3">
-          <label class="bv-label">Comment <span style="color:#DC2626;">*</span></label>
+          <label class="bv-label">Refund Mode</label>
+          <div class="d-flex gap-2">
+            <label style="cursor:pointer;flex:1;">
+              <input type="radio" wire:model.live="refundMode" value="bank" style="display:none;">
+              <div class="d-flex align-items-center justify-content-center gap-2 py-2"
+                :style="mode === 'bank' ? 'border:1.5px solid #DC2626;background:rgba(220,38,38,.06);color:#DC2626;' : 'border:1.5px solid rgba(51,46,158,.12);color:#475569;'"
+                style="border-radius:8px;font-size:0.864rem;font-weight:700;">
+                <i class="ph ph-bank"></i> Bank
+              </div>
+            </label>
+            <label style="cursor:pointer;flex:1;">
+              <input type="radio" wire:model.live="refundMode" value="card" style="display:none;">
+              <div class="d-flex align-items-center justify-content-center gap-2 py-2"
+                :style="mode === 'card' ? 'border:1.5px solid #DC2626;background:rgba(220,38,38,.06);color:#DC2626;' : 'border:1.5px solid rgba(51,46,158,.12);color:#475569;'"
+                style="border-radius:8px;font-size:0.864rem;font-weight:700;">
+                <i class="ph ph-credit-card"></i> Card
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div x-show="mode === 'bank'" x-cloak>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="bv-label">Account # <span style="color:#DC2626;">*</span></label>
+              <input type="text" wire:model="refundBankAccountNumber" class="rf-input" placeholder="Account number">
+              @error('refundBankAccountNumber')
+                <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+              @enderror
+            </div>
+            <div class="col-6">
+              <label class="bv-label">Sort Code <span style="color:#DC2626;">*</span></label>
+              <input type="text" wire:model="refundBankSortCode" class="rf-input" placeholder="00-00-00">
+              @error('refundBankSortCode')
+                <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+              @enderror
+            </div>
+            <div class="col-6">
+              <label class="bv-label">Account Title <span style="color:#DC2626;">*</span></label>
+              <input type="text" wire:model="refundBankAccountTitle" class="rf-input" placeholder="Name on account">
+              @error('refundBankAccountTitle')
+                <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+              @enderror
+            </div>
+            <div class="col-6">
+              <label class="bv-label">Bank Name <span style="color:#DC2626;">*</span></label>
+              <input type="text" wire:model="refundBankName" class="rf-input" placeholder="e.g. Barclays">
+              @error('refundBankName')
+                <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+              @enderror
+            </div>
+          </div>
+        </div>
+
+        <div x-show="mode === 'card'" x-cloak>
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <label class="bv-label">Card Number <span style="color:#DC2626;">*</span></label>
+              <input type="text" wire:model="refundCardNumber" class="rf-input" placeholder="1234 5678 9012 3456"
+                maxlength="19">
+              @error('refundCardNumber')
+                <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+              @enderror
+            </div>
+            <div class="col-6">
+              <label class="bv-label">Expiry <span style="color:#DC2626;">*</span></label>
+              <input type="text" wire:model="refundCardExpiry" class="rf-input" placeholder="MM/YY" maxlength="5">
+              @error('refundCardExpiry')
+                <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+              @enderror
+            </div>
+            <div class="col-6">
+              <label class="bv-label">CVV <span style="color:#DC2626;">*</span></label>
+              <input type="text" wire:model="refundCardCvv" class="rf-input" placeholder="123" maxlength="4">
+              @error('refundCardCvv')
+                <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+              @enderror
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="bv-label">Refund Reason <span style="color:#DC2626;">*</span></label>
           <textarea wire:model="refundChargeComment" rows="3" class="rf-input"
-            placeholder="e.g. paid via bank transfer, ref ABC123"></textarea>
+            placeholder="Why is this refund being made?"></textarea>
           @error('refundChargeComment')
             <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
           @enderror
         </div>
+
+        <div class="mb-3">
+          <label class="bv-label">Refund Acknowledgement <span style="color:#DC2626;">*</span></label>
+          <select wire:model="refundAcknowledgement" class="rf-input">
+            <option value="">Select how the customer was told</option>
+            <option value="email">Email</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="verbal">Verbal</option>
+          </select>
+          @error('refundAcknowledgement')
+            <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+          @enderror
+        </div>
+
         <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
           <button type="button" @click="open = false"
             style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:600;cursor:pointer;">Cancel</button>

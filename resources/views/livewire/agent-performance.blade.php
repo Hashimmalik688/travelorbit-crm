@@ -184,6 +184,12 @@
                             <span class="fw-semibold text-success">+£{{ number_format($totals['sharedIn'], 2) }}</span>
                         </div>
                     @endif
+                    @if ($totals['claims'] > 0)
+                        <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid rgba(51,46,158,.08);">
+                            <span class="text-muted">Claimed Margin</span>
+                            <span class="fw-semibold text-success">+£{{ number_format($totals['claims'], 2) }}</span>
+                        </div>
+                    @endif
                     <div class="d-flex justify-content-between py-2">
                         <span class="fw-semibold" style="color:#0F172A;">Net Margin</span>
                         <span class="fw-bold {{ $totals['netMarginCc'] >= 0 ? 'text-success' : 'text-danger' }}">£{{ number_format($totals['netMarginCc'], 2) }}</span>
@@ -250,6 +256,34 @@
                 @empty
                     <p class="mb-0 text-muted" style="font-size:0.84rem;">No deductions applied {{ $monthLabel }}.</p>
                 @endforelse
+            </div>
+        </div>
+    @endif
+
+    {{-- ── Margin Claims — auto-created when accounts approves a Refund to
+         Customer payout that kept back some of what the supplier sent back;
+         read-only here, nothing to manually apply or remove. ── --}}
+    @if (!$showAgent && $claimsList->isNotEmpty())
+        <div class="card animate-in mt-3">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="ph ph-plus-circle" style="color:#16A34A;font-size:1.08rem;"></i>
+                    <span class="fw-bold" style="color:#0F172A;">Claimed Margin</span>
+                </div>
+
+                @foreach ($claimsList as $c)
+                    <div class="d-flex align-items-center gap-2 mb-2 px-2 py-2" style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);">
+                        <i class="ph ph-arrows-counter-clockwise" style="color:#16A34A;font-size:0.96rem;flex-shrink:0;"></i>
+                        <div class="flex-grow-1">
+                            <span class="fw-semibold" style="font-size:0.864rem;color:#1E293B;">+£{{ number_format($c->amount, 2) }} — {{ $c->reason }}</span>
+                            <span class="d-block" style="font-size:0.744rem;color:#475569;">
+                                {{ $c->claim_date->format('d M Y') }}
+                                @if ($c->booking) · <a href="{{ route('bookings.show', $c->booking) }}" class="text-decoration-none">Booking #{{ $c->booking->booking_number }}</a> @endif
+                                · approved by {{ $c->appliedBy?->name ?: '—' }}
+                            </span>
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
     @endif

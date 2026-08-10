@@ -87,6 +87,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/payment-charges', fn() => view('content.finance.payment-charge-requests'))->name('payment-charges');
     });
 
+    Route::get('/refund-auth-queue', fn() => view('content.finance.refund-auth-queue'))->name('refund-auth-queue')->middleware('permission:refunds.manage');
+
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports',             fn() => view('content.reports.index'))->name('reports');
         Route::get('/reports/sales',       [ReportController::class, 'sales'])->name('reports.sales');

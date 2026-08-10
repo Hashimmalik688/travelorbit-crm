@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Booking;
 use App\Models\BookingMarginShare;
+use App\Models\MarginClaim;
 use App\Models\MarginDeduction;
 use App\Models\User;
 use Carbon\Carbon;
@@ -222,6 +223,33 @@ class AgentPerformance extends Component
             ->get();
     }
 
+    // ── Margin claims (auto-created when accounts approves a Refund to
+    // Customer payout that keeps some of what the supplier sent back —
+    // see PaymentChargeRequest::recordMarginClaim) ────────────────────
+    private function claimsQuery()
+    {
+        [$from, $to] = $this->dateRange();
+        $agentId = $this->effectiveAgentId();
+
+        return MarginClaim::query()
+            ->when($agentId, fn ($q) => $q->where('user_id', $agentId))
+            ->whereDate('claim_date', '>=', $from)
+            ->whereDate('claim_date', '<=', $to);
+    }
+
+    private function claimsTotal(): float
+    {
+        return (float) $this->claimsQuery()->sum('amount');
+    }
+
+    private function claimsList()
+    {
+        return $this->claimsQuery()
+            ->with(['user', 'booking', 'appliedBy'])
+            ->orderByDesc('claim_date')
+            ->get();
+    }
+
     public function openDeduction(): void
     {
         abort_unless($this->canApplyDeduction(), 403);
@@ -344,6 +372,7 @@ class AgentPerformance extends Component
         $marginCc    = (float) $rows->sum('marginCc');
         $marginNoCc  = (float) $rows->sum('marginNoCc');
         $deductions  = $this->deductionsTotal();
+        $claims      = $this->claimsTotal();
 
         return view('livewire.agent-performance', [
             'rows'       => $rows,
@@ -357,11 +386,13 @@ class AgentPerformance extends Component
                 'sharedOut'     => $sharedOut,
                 'sharedIn'      => $sharedIn,
                 'deductions'    => $deductions,
-                'netMarginCc'   => $marginCc - $sharedOut + $sharedIn - $deductions,
-                'netMarginNoCc' => $marginNoCc - $sharedOut + $sharedIn - $deductions,
+                'claims'        => $claims,
+                'netMarginCc'   => $marginCc - $sharedOut + $sharedIn - $deductions + $claims,
+                'netMarginNoCc' => $marginNoCc - $sharedOut + $sharedIn - $deductions + $claims,
             ],
             'deductionsList'     => $this->deductionsList(),
             'canApplyDeduction'  => $this->canApplyDeduction(),
+            'claimsList'         => $this->claimsList(),
             'breakdown'  => $this->breakdown($rows),
             'showAgent'  => $this->canViewAll && empty($this->effectiveAgentId()),
             'agentUsers' => $this->canViewAll ? $this->agentUsers() : collect(),
