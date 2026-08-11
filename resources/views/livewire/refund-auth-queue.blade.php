@@ -185,11 +185,11 @@
                                 </td>
                                 <td style="vertical-align:middle;">
                                     <div class="d-flex gap-1">
-                                        <button type="button" wire:click="approveMargin({{ $c->id }})" wire:confirm="Release this margin claim? It will count toward this agent's performance report."
+                                        <button type="button" wire:click="confirmReleaseMargin({{ $c->id }})"
                                             style="font-size:0.72rem;font-weight:700;padding:4px 10px;border-radius:8px;background:#16A34A;color:#fff;border:none;cursor:pointer;white-space:nowrap;">
                                             <i class="ph ph-check me-1"></i> Release
                                         </button>
-                                        <button type="button" wire:click="holdMargin({{ $c->id }})" wire:confirm="Hold this margin claim? It will not be credited."
+                                        <button type="button" wire:click="confirmHoldMargin({{ $c->id }})"
                                             style="font-size:0.72rem;font-weight:700;padding:4px 10px;border-radius:8px;background:#F59E0B;color:#fff;border:none;cursor:pointer;white-space:nowrap;">
                                             <i class="ph ph-pause me-1"></i> Hold
                                         </button>
@@ -272,6 +272,58 @@
                            {{ $refundModalAction === 'approve' ? 'background:#16A34A;' : 'background:#F59E0B;' }}">
                     <i class="ph {{ $refundModalAction === 'approve' ? 'ph-check' : 'ph-x' }} me-1"></i>
                     {{ $refundModalAction === 'approve' ? 'Approve & Forward' : 'Decline' }}
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Margin Claim Release / Hold Modal --}}
+    @if($showMarginModal)
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:28px 32px 24px;">
+            {{-- Icon --}}
+            <div style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;
+                        {{ $marginModalAction === 'release' ? 'background:rgba(22,163,74,.12);' : 'background:rgba(245,158,11,.12);' }}">
+                <i class="ph {{ $marginModalAction === 'release' ? 'ph-check-circle' : 'ph-pause-circle' }}"
+                   style="font-size:1.8rem;{{ $marginModalAction === 'release' ? 'color:#16A34A;' : 'color:#F59E0B;' }}"></i>
+            </div>
+
+            {{-- Title --}}
+            <h5 style="font-weight:800;font-size:1.2rem;color:#1E293B;text-align:center;margin-bottom:4px;">
+                {{ $marginModalAction === 'release' ? 'Release Margin Claim' : 'Hold Margin Claim' }}
+            </h5>
+            <p style="font-size:0.864rem;color:#475569;text-align:center;margin-bottom:20px;">
+                {{ $marginModalAction === 'release' ? 'Confirm — or adjust — the amount, then credit it to this agent\'s performance.' : 'Confirm — or adjust — the amount to hold back; nothing is credited yet.' }}
+            </p>
+
+            <div class="mb-3">
+                <label style="display:block;font-size:0.78rem;font-weight:700;color:#475569;margin-bottom:6px;">Amount (£) *</label>
+                <input type="number" wire:model="marginAmount" step="0.01" min="0.01"
+                    style="width:100%;padding:8px 10px;font-size:0.984rem;font-weight:700;border-radius:8px;border:1.5px solid rgba(22,163,74,.3);">
+                @error('marginAmount') <span style="font-size:0.75rem;color:#DC2626;">{{ $message }}</span> @enderror
+            </div>
+
+            {{-- Note box --}}
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:0.816rem;font-weight:700;color:#475569;margin-bottom:6px;">Note (optional)</label>
+                <textarea wire:model="marginModalNote" rows="3"
+                    placeholder="e.g. Adjusted for a manual reconciliation..."
+                    class="form-control" style="font-size:0.96rem;resize:vertical;border-radius:10px;border:1.5px solid rgba(51,46,158,.15);padding:10px 14px;width:100%;"></textarea>
+                @error('marginModalNote') <span style="font-size:0.78rem;color:#DC2626;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+            </div>
+
+            {{-- Buttons --}}
+            <div class="d-flex gap-2">
+                <button type="button" wire:click="closeMarginModal"
+                    style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(51,46,158,.15);background:#fff;font-size:0.912rem;font-weight:700;color:#475569;cursor:pointer;">
+                    Cancel
+                </button>
+                <button type="button" wire:click="{{ $marginModalAction === 'release' ? 'executeReleaseMargin' : 'executeHoldMargin' }}"
+                    style="flex:1;padding:10px;border-radius:10px;border:none;font-size:0.912rem;font-weight:700;color:#fff;cursor:pointer;
+                           {{ $marginModalAction === 'release' ? 'background:#16A34A;' : 'background:#F59E0B;' }}">
+                    <i class="ph {{ $marginModalAction === 'release' ? 'ph-check' : 'ph-pause' }} me-1"></i>
+                    {{ $marginModalAction === 'release' ? 'Release' : 'Hold' }}
                 </button>
             </div>
         </div>

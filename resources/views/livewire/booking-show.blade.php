@@ -3025,6 +3025,31 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
                   // customer, it's just money Travel Orbit is keeping.
                   $isMarginClaim = (bool) ($ph->payment_details['margin_claim'] ?? false);
                   $refundComment = $ph->payment_details['comment'] ?? null;
+
+                  // Status pill: refund-family rows say what stage of THEIR
+                  // own pipeline they're at, not the generic Pending/Approved
+                  // every ordinary payment uses — a refund payout sitting
+                  // with a manager reads differently from one already
+                  // forwarded to accounts, even though both are "pending".
+                  if ($isRefundPayout) {
+                      $managerApproved = (bool) ($ph->payment_details['manager_approved'] ?? false);
+                      [$statusLabel, $statusStyle] = match (true) {
+                          $status === 'approved' => ['Refunded', 'color:#16A34A;background:rgba(22,163,74,.08);'],
+                          $status === 'voided' => ['Voided', 'color:#DC2626;background:rgba(220,38,38,.08);'],
+                          $managerApproved => ['Awaiting Accounts', 'color:#7C3AED;background:rgba(124,58,237,.08);'],
+                          default => ['Awaiting Manager', 'color:#F59E0B;background:rgba(245,158,11,.08);'],
+                      };
+                  } elseif ($isRefundReceipt) {
+                      [$statusLabel, $statusStyle] = match (true) {
+                          $status === 'approved' => ['Received', 'color:#0891B2;background:rgba(8,145,178,.08);'],
+                          $status === 'voided' => ['Voided', 'color:#DC2626;background:rgba(220,38,38,.08);'],
+                          default => ['Awaiting Accounts', 'color:#F59E0B;background:rgba(245,158,11,.08);'],
+                      };
+                  } elseif ($isMarginClaim) {
+                      // Only ever created already-approved (see RefundAuthQueue::approveMargin) — no other state to show.
+                      $statusLabel = 'Released';
+                      $statusStyle = 'color:#16A34A;background:rgba(22,163,74,.08);';
+                  }
                 @endphp
                 <div class="d-flex align-items-center gap-2 mb-2 px-2 py-1"
                   style="background:{{ $isRefundReceipt ? 'rgba(8,145,178,.04)' : ($isMarginClaim ? 'rgba(22,163,74,.04)' : '#FAFBFF') }};border-radius:8px;border:1px solid {{ $isRefundReceipt ? 'rgba(8,145,178,.15)' : ($isMarginClaim ? 'rgba(22,163,74,.15)' : 'rgba(51,46,158,.05)') }};{{ $status === 'voided' ? 'opacity:.7;' : '' }}">

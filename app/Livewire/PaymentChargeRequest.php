@@ -73,16 +73,15 @@ class PaymentChargeRequest extends Component
         $details['approval_note'] = $this->modalNote;
         $ph->update(['payment_details' => $details]);
 
-        // Refund receipts and payouts read as their own action in the
-        // booking's Comments feed rather than a generic "Payment Approved" —
-        // otherwise a confirmed supplier refund and a completed customer
-        // payout are indistinguishable from an ordinary charge there.
+        // Refund receipts read as their own action in the booking's Comments
+        // feed rather than a generic "Payment Approved" — otherwise a
+        // confirmed supplier refund is indistinguishable from an ordinary
+        // charge there. Refund payouts never reach this queue at all — see
+        // render()'s exclusion and the Refunds page instead.
         $amountLabel = '£' . number_format(abs((float) $ph->amount), 2);
         [$activityAction, $activityLabel, $activityDetail] = match (true) {
             $details['refund_receipt'] ?? false => ['refund_receipt_approved', 'Refund Receipt Confirmed',
                 "{$amountLabel} confirmed received from supplier"],
-            $details['refund_payout'] ?? false  => ['refund_payout_completed', 'Refund to Customer Completed',
-                "{$amountLabel} paid to customer — approved by manager, signed off by accounts"],
             default                              => ['payment_approved', 'Payment Approved', ''],
         };
         if ($this->modalNote) {
@@ -99,11 +98,11 @@ class PaymentChargeRequest extends Component
             $this->syncCcCharges($booking);
         }
 
-        // Refund receipts and payouts (queued from the booking page — see
-        // BookingShow::submitRefund and ::submitRefundChargePayment) only
-        // actually move the linked Refund's status once approved here.
-        // Booking status is deliberately left untouched throughout —
-        // Booking::hasActiveRefund() is what marks it refunded.
+        // Refund receipts (queued from the booking page — see
+        // BookingShow::submitRefund) only actually move the linked Refund's
+        // status once approved here. Booking status is deliberately left
+        // untouched throughout — Booking::hasActiveRefund() is what marks it
+        // refunded.
         $this->advanceLinkedRefund($ph, approved: true);
 
         $this->closeModal();
@@ -127,8 +126,6 @@ class PaymentChargeRequest extends Component
         [$activityAction, $activityLabel, $activityDetail] = match (true) {
             $details['refund_receipt'] ?? false => ['refund_receipt_declined', 'Refund Receipt Declined',
                 "{$amountLabel} claimed receipt rejected — never landed"],
-            $details['refund_payout'] ?? false  => ['refund_payout_declined', 'Refund to Customer Declined at Accounts',
-                "{$amountLabel} payout rejected — refund stays received, can be re-queued"],
             default                              => ['payment_rejected', 'Payment Declined', ''],
         };
         $activityDetail = $activityDetail ? "{$activityDetail} — {$this->modalNote}" : $this->modalNote;
@@ -151,31 +148,23 @@ class PaymentChargeRequest extends Component
 
     /**
      * Moves a refund through its lifecycle when accounts resolves the
-     * booking_payment_history row tied to it — there are two distinct kinds:
+     * booking_payment_history row tied to it. Only handles refund_receipt —
+     * the claim that the TICKET PROVIDER refunded Travel Orbit. Approved →
+     * 'received' (it landed, sitting in Travel Orbit's balance — whether and
+     * how much to pass on to the customer is a separate decision). Rejected
+     * → 'rejected' (never landed).
      *
-     *  - refund_receipt: the claim that the TICKET PROVIDER refunded Travel
-     *    Orbit. Approved → 'received' (it landed, sitting in Travel Orbit's
-     *    balance — whether and how much to pass on to the customer is a
-     *    separate decision). Rejected → 'rejected' (never landed).
+     * The other half — refund_payout, Travel Orbit actually paying the
+     * customer back — never reaches this queue at all (see render()'s
+     * exclusion below); it goes M&R Auth Queue → Refunds page instead (see
+     * RefundIndex::executeApprovePayout/executeDeclinePayout).
      *
-     *  - refund_payout: Travel Orbit actually paying the customer back. Only
-     *    reaches this queue once a manager has already approved it on the
-     *    M&R Auth Queue (see RefundAuthQueue::approveRefund and render()'s
-     *    manager_approved filter below) — accounts here is the second and
-     *    final sign-off. Approved → 'processed' (done). Rejected → left as
-     *    'received' — nothing was paid, so it can be re-queued from the
-     *    booking page. The claimed margin on it was already decided
-     *    separately by the manager (see RefundAuthQueue::approveMargin/holdMargin)
-     *    and isn't touched here.
-     *
-     * No-op for ordinary payment charges (neither flag set).
+     * No-op for ordinary payment charges.
      */
     private function advanceLinkedRefund(BookingPaymentHistory $ph, bool $approved): void
     {
         $details = $ph->payment_details ?? [];
-        $isReceipt = $details['refund_receipt'] ?? false;
-        $isPayout  = $details['refund_payout'] ?? false;
-        if (!$isReceipt && !$isPayout) return;
+        if (!($details['refund_receipt'] ?? false)) return;
 
         $refundId = $details['refund_id'] ?? null;
         if (!$refundId) return;
@@ -183,22 +172,9 @@ class PaymentChargeRequest extends Component
         $refund = \App\Models\Refund::find($refundId);
         if (!$refund) return;
 
-        if ($isReceipt) {
-            $refund->update($approved
-                ? ['status' => 'received', 'reviewed_at' => now()]
-                : ['status' => 'rejected', 'reviewed_at' => now()]);
-            return;
-        }
-
-        // refund_payout
-        if ($approved) {
-            $refund->update([
-                'status' => 'processed',
-                'processed_by' => Auth::id(),
-                'processed_at' => now(),
-            ]);
-        }
-        // Rejected payout: Refund simply stays 'received'.
+        $refund->update($approved
+            ? ['status' => 'received', 'reviewed_at' => now()]
+            : ['status' => 'rejected', 'reviewed_at' => now()]);
     }
 
     public function deletePayment(int $historyId): void
@@ -314,17 +290,13 @@ class PaymentChargeRequest extends Component
     {
         $query = BookingPaymentHistory::with(['booking', 'user'])
             ->where('status', 'pending')
-            // Refund-to-customer payouts start on the manager-owned M&R Auth
-            // Queue (see RefundAuthQueue) and only land here — for the final,
-            // accounts sign-off — once a manager has already approved them
-            // there (manager_approved). Still-pending-with-a-manager ones stay
-            // out of this list entirely, so there's exactly one queue to act
-            // on a request at any given moment.
+            // Refund-to-customer payouts never appear here — they go through
+            // the M&R Auth Queue (manager) then the Refunds page (accounts)
+            // instead (see RefundIndex), so there's exactly one queue to act
+            // on any given request.
             ->where(function ($q) {
-                $q->where(function ($q2) {
-                    $q2->whereNull('payment_details->refund_payout')
-                        ->orWhere('payment_details->refund_payout', false);
-                })->orWhere('payment_details->manager_approved', true);
+                $q->whereNull('payment_details->refund_payout')
+                    ->orWhere('payment_details->refund_payout', false);
             })
             ->when($this->search, function ($q) {
                 $q->whereHas('booking', function ($bq) {

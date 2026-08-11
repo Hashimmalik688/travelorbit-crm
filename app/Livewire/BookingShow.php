@@ -335,6 +335,25 @@ class BookingShow extends Component
         if (stripos($action, 'payment declined') !== false || stripos($action, 'rejected') !== false || stripos($action, 'payment rejected') !== false) {
             return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.10)','border'=>'#DC2626','label'=>'Declined','full_row'=>true,'icon'=>'ph-x-circle'];
         }
+        // Each stage of the refund pipeline gets its own colour/label instead
+        // of one generic red "Refund" tag for everything — matched on the
+        // exact resolved heading (see buildActivityLog's match table) so a
+        // step is never mistaken for a neighbouring one. Checked before the
+        // catch-all 'refund' rule below, which anything not listed here
+        // (older/legacy entries) still falls through to.
+        $refundStages = [
+            'Refund Requested' => ['dot'=>'#B45309','bg'=>'rgba(245,158,11,.12)','border'=>'#B45309','label'=>'Claim Pending','icon'=>'ph-hourglass-medium'],
+            'Refund Receipt Confirmed' => ['dot'=>'#0891B2','bg'=>'rgba(8,145,178,.12)','border'=>'#0891B2','label'=>'Received','icon'=>'ph-check-circle'],
+            'Refund Receipt Declined' => ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.10)','border'=>'#DC2626','label'=>'Receipt Declined','icon'=>'ph-x-circle'],
+            'Refund to Customer Requested' => ['dot'=>'#E11D48','bg'=>'rgba(225,29,72,.12)','border'=>'#E11D48','label'=>'Payout Requested','icon'=>'ph-arrows-counter-clockwise'],
+            'Refund to Customer Approved by Manager' => ['dot'=>'#7C3AED','bg'=>'rgba(124,58,237,.12)','border'=>'#7C3AED','label'=>'Mgr Approved','icon'=>'ph-check-circle'],
+            'Refund to Customer Declined' => ['dot'=>'#EA580C','bg'=>'rgba(234,88,12,.12)','border'=>'#EA580C','label'=>'Mgr Declined','icon'=>'ph-x-circle'],
+            'Refund to Customer Completed' => ['dot'=>'#16A34A','bg'=>'rgba(22,163,74,.12)','border'=>'#16A34A','label'=>'Refunded','icon'=>'ph-check-circle'],
+            'Refund to Customer Declined at Accounts' => ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.10)','border'=>'#DC2626','label'=>'Payout Declined','icon'=>'ph-x-circle'],
+        ];
+        if (isset($refundStages[$action])) {
+            return $refundStages[$action] + ['full_row' => true];
+        }
         if (stripos($action, 'refund') !== false || stripos($action, 'refund queue') !== false) {
             return ['dot'=>'#DC2626','bg'=>'rgba(220,38,38,.10)','border'=>'#DC2626','label'=>'Refund','full_row'=>true,'icon'=>'ph-arrows-counter-clockwise'];
         }
@@ -1623,6 +1642,13 @@ class BookingShow extends Component
         ]);
 
         $this->booking->update(['user_id' => $newOwner->id]);
+
+        // Claimed margin moves with the booking too — every MarginClaim tied
+        // to it (pending, released, or held) now counts toward the new
+        // owner's Agent Performance instead of the previous owner's,
+        // matching the "sale, margin and refunds count toward the new
+        // owner" promise made on the Transfer Booking confirmation.
+        MarginClaim::where('booking_id', $this->booking->id)->update(['user_id' => $newOwner->id]);
 
         $description = ($previousOwner?->name ?? '—') . ' → ' . $newOwner->name . ($this->transferNote ? " — {$this->transferNote}" : '');
         AuditLogger::log(Auth::user(), $this->booking, 'booking_transferred', "Booking transferred: {$description}", ['user_id' => $previousOwner?->id], ['user_id' => $newOwner->id]);

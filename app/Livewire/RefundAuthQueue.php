@@ -43,6 +43,13 @@ class RefundAuthQueue extends Component
     public $refundModalNote = '';
     public $approveAmount = '';
 
+    // Margin Claim modal — amount is editable on both actions (see approveMargin/holdMargin)
+    public $showMarginModal = false;
+    public $marginModalAction = '';       // 'release' or 'hold'
+    public $marginModalClaimId = null;
+    public $marginModalNote = '';
+    public $marginAmount = '';
+
     protected $queryString = ['search', 'dateFrom', 'dateTo'];
 
     public function updatingSearch(): void
@@ -182,6 +189,35 @@ class RefundAuthQueue extends Component
 
     // ── Margin Claim half ────────────────────────────────────────────
 
+    public function confirmReleaseMargin(int $claimId): void
+    {
+        abort_unless($this->canManage(), 403);
+
+        $claim = MarginClaim::findOrFail($claimId);
+        $this->marginModalClaimId = $claimId;
+        $this->marginModalAction = 'release';
+        $this->marginModalNote = '';
+        $this->marginAmount = (string) $claim->amount;
+        $this->showMarginModal = true;
+    }
+
+    public function confirmHoldMargin(int $claimId): void
+    {
+        abort_unless($this->canManage(), 403);
+
+        $claim = MarginClaim::findOrFail($claimId);
+        $this->marginModalClaimId = $claimId;
+        $this->marginModalAction = 'hold';
+        $this->marginModalNote = '';
+        $this->marginAmount = (string) $claim->amount;
+        $this->showMarginModal = true;
+    }
+
+    public function closeMarginModal(): void
+    {
+        $this->reset('showMarginModal', 'marginModalAction', 'marginModalClaimId', 'marginModalNote', 'marginAmount');
+    }
+
     /**
      * Releasing a claim does two things at once: credits it toward the
      * agent's monthly performance (MarginClaim::status), and pulls that same
@@ -193,20 +229,30 @@ class RefundAuthQueue extends Component
      * rather than another refund payout. Deliberately does NOT add to this
      * booking's own Cost & Margins total — that stays cost-vs-sold only; the
      * claim lives solely in Agent Performance (see AgentPerformance::claimsQuery).
+     *
+     * The amount is editable right up to this point — a manager can correct
+     * it before it's credited, same as the refund payout amount above.
      */
-    public function approveMargin(int $claimId): void
+    public function executeReleaseMargin(): void
     {
         abort_unless($this->canManage(), 403);
 
-        $claim = MarginClaim::findOrFail($claimId);
-        $claim->update(['status' => 'released', 'applied_by_user_id' => Auth::id()]);
+        $claim = MarginClaim::findOrFail($this->marginModalClaimId);
+
+        $this->validate([
+            'marginAmount' => 'required|numeric|min:0.01',
+            'marginModalNote' => 'nullable|string|max:500',
+        ]);
+
+        $amount = (float) $this->marginAmount;
+        $claim->update(['status' => 'released', 'amount' => $amount, 'applied_by_user_id' => Auth::id()]);
 
         BookingPaymentHistory::create([
             'booking_id' => $claim->booking_id,
             'user_id' => $claim->user_id,
             'payment_date' => now()->toDateString(),
             'payment_method' => 'margin_claim',
-            'amount' => -abs((float) $claim->amount),
+            'amount' => -abs($amount),
             'payment_details' => ['margin_claim' => true, 'margin_claim_id' => $claim->id, 'comment' => $claim->reason],
             'status' => 'approved',
             'approved_by' => Auth::id(),
@@ -214,38 +260,54 @@ class RefundAuthQueue extends Component
 
         $booking = Booking::find($claim->booking_id);
         $agentName = $claim->user?->name ?? 'agent';
-        $amountLabel = '£' . number_format((float) $claim->amount, 2);
+        $amountLabel = '£' . number_format($amount, 2);
 
-        AuditLogger::log(Auth::user(), $booking, 'margin_claim_released',
-            "Margin claim of {$amountLabel} released — cleared from booking balance, credited to {$agentName}'s performance");
+        $logMsg = "Margin claim of {$amountLabel} released — cleared from booking balance, credited to {$agentName}'s performance";
+        if ($this->marginModalNote) {
+            $logMsg .= " — {$this->marginModalNote}";
+        }
+        AuditLogger::log(Auth::user(), $booking, 'margin_claim_released', $logMsg);
 
         if ($booking) {
             $this->appendBookingActivity($booking, 'margin_claim_released', 'Margin Claim Released',
-                "{$amountLabel} credited to {$agentName}'s performance — {$claim->reason}");
+                "{$amountLabel} credited to {$agentName}'s performance — {$claim->reason}" . ($this->marginModalNote ? " — {$this->marginModalNote}" : ''));
         }
 
+        $this->closeMarginModal();
         session()->flash('success', 'Margin claim released — cleared from the booking balance and now counts in Agent Performance.');
     }
 
-    public function holdMargin(int $claimId): void
+    /** Amount is editable here too, purely for record-keeping — held claims post no ledger row, so nothing else depends on it. */
+    public function executeHoldMargin(): void
     {
         abort_unless($this->canManage(), 403);
 
-        $claim = MarginClaim::findOrFail($claimId);
-        $claim->update(['status' => 'held', 'applied_by_user_id' => Auth::id()]);
+        $claim = MarginClaim::findOrFail($this->marginModalClaimId);
+
+        $this->validate([
+            'marginAmount' => 'required|numeric|min:0.01',
+            'marginModalNote' => 'nullable|string|max:500',
+        ]);
+
+        $amount = (float) $this->marginAmount;
+        $claim->update(['status' => 'held', 'amount' => $amount, 'applied_by_user_id' => Auth::id()]);
 
         $booking = Booking::find($claim->booking_id);
         $agentName = $claim->user?->name ?? 'agent';
-        $amountLabel = '£' . number_format((float) $claim->amount, 2);
+        $amountLabel = '£' . number_format($amount, 2);
 
-        AuditLogger::log(Auth::user(), $booking, 'margin_claim_held',
-            "Margin claim of {$amountLabel} held — not credited to {$agentName}'s performance, stays on the booking balance");
+        $logMsg = "Margin claim of {$amountLabel} held — not credited to {$agentName}'s performance, stays on the booking balance";
+        if ($this->marginModalNote) {
+            $logMsg .= " — {$this->marginModalNote}";
+        }
+        AuditLogger::log(Auth::user(), $booking, 'margin_claim_held', $logMsg);
 
         if ($booking) {
             $this->appendBookingActivity($booking, 'margin_claim_held', 'Margin Claim Held',
-                "{$amountLabel} held — not yet credited to {$agentName}'s performance — {$claim->reason}");
+                "{$amountLabel} held — not yet credited to {$agentName}'s performance — {$claim->reason}" . ($this->marginModalNote ? " — {$this->marginModalNote}" : ''));
         }
 
+        $this->closeMarginModal();
         session()->flash('success', 'Margin claim held.');
     }
 
