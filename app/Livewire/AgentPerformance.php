@@ -248,14 +248,6 @@ class AgentPerformance extends Component
         return (float) $this->claimsQuery()->sum('amount');
     }
 
-    private function claimsList()
-    {
-        return $this->claimsQuery()
-            ->with(['user', 'booking', 'appliedBy'])
-            ->orderByDesc('claim_date')
-            ->get();
-    }
-
     public function openDeduction(): void
     {
         abort_unless($this->canApplyDeduction(), 403);
@@ -398,7 +390,6 @@ class AgentPerformance extends Component
             ],
             'deductionsList'     => $this->deductionsList(),
             'canApplyDeduction'  => $this->canApplyDeduction(),
-            'claimsList'         => $this->claimsList(),
             'breakdown'  => $this->breakdown($rows),
             'showAgent'  => $this->canViewAll && empty($this->effectiveAgentId()),
             'agentUsers' => $this->canViewAll ? $this->agentUsers() : collect(),

@@ -245,7 +245,10 @@ class RefundAuthQueue extends Component
         ]);
 
         $amount = (float) $this->marginAmount;
-        $claim->update(['status' => 'released', 'amount' => $amount, 'applied_by_user_id' => Auth::id()]);
+        // claim_date moves to today — Agent Performance counts a claim in
+        // the month it was actually released, not the month the underlying
+        // booking was made or the refund first requested (see AgentPerformance::claimsQuery).
+        $claim->update(['status' => 'released', 'amount' => $amount, 'applied_by_user_id' => Auth::id(), 'claim_date' => now()->toDateString()]);
 
         BookingPaymentHistory::create([
             'booking_id' => $claim->booking_id,

@@ -11,87 +11,34 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Refunds overview for accounts — plus the actual approval gate for the
- * customer-payout half. The gate is split across three stops depending on
- * which direction the money's moving, and how far a payout has gotten:
+ * Refunds queue for accounts — the final sign-off on a "Refund to Customer"
+ * payout, once a manager has already approved it on the M&R Auth Queue (see
+ * RefundAuthQueue::executeApproveRefund). Approve here → completes the
+ * refund (money actually leaves Travel Orbit's balance, the linked Refund
+ * flips to 'processed'). Decline → the Refund simply stays 'received', so
+ * it can be re-queued from the booking page.
  *
- *  - 'requested' → accounts approves/rejects the ticket-provider refund
- *    receipt claim on Charge Requests (see PaymentChargeRequest::advanceLinkedRefund),
- *    which flips this Refund to 'received' or 'rejected'.
- *  - 'received'  → once the booking page queues a payout ("Refund to
- *    Customer"), a manager approves/declines it on the M&R Auth Queue (see
- *    RefundAuthQueue::executeApproveRefund/executeDeclineRefund) first —
- *    declining leaves this Refund 'received' to retry; approving forwards it
- *    HERE, to accounts, for the final sign-off (see executeApprovePayout/executeDeclinePayout
- *    below), which flips it to 'processed'.
- *
- * The receipt half stays on Charge Requests (it's an ordinary accounts
- * approval, no manager step involved); only the payout half — the one that
- * already went through a manager — lands on this page.
+ * A work queue, not a report — it only ever lists what's sitting here
+ * waiting on YOUR decision, nothing historical.
  */
 class RefundIndex extends Component
 {
     use WithPagination;
 
     public $search = '';
-    public $statusFilter = '';
 
-    // Approve/Decline modal for a manager-approved payout
+    // Approve/Decline modal
     public $showModal = false;
     public $modalAction = '';       // 'approve' or 'decline'
     public $modalPaymentId = null;
     public $modalNote = '';
 
-    protected $queryString = ['search', 'statusFilter'];
-
-    /** Confirmed received from the ticket provider, sitting in Travel Orbit's balance and not yet paid out to the customer. */
-    public function getTotalReceivedProperty()
-    {
-        return Refund::where('status', 'received')->sum('refund_amount');
-    }
-
-    public function getTotalProcessedProperty()
-    {
-        return Refund::where('status', 'processed')->sum('refund_amount');
-    }
-
-    public function getPendingReviewCountProperty()
-    {
-        return Refund::whereIn('status', ['requested', 'received'])->count();
-    }
-
-    /**
-     * Refund IDs with a pending booking_payment_history row of the given kind
-     * ('refund_receipt' or 'refund_payout'), optionally further filtered.
-     *
-     * Note: Collection::when() invokes a Closure passed as its condition
-     * argument (treating it as a value-computing callback), so $extra must
-     * be passed as `!== null`, not handed to when() directly — otherwise
-     * Laravel calls $extra($collection) instead of filtering rows with it.
-     */
-    protected function refundIdsPendingOn(string $flag, ?\Closure $extra = null): array
-    {
-        return BookingPaymentHistory::where('status', 'pending')
-            ->get()
-            ->filter(fn ($ph) => $ph->payment_details[$flag] ?? false)
-            ->when($extra !== null, fn ($rows) => $rows->filter($extra))
-            ->map(fn ($ph) => $ph->payment_details['refund_id'] ?? null)
-            ->filter()
-            ->unique()
-            ->all();
-    }
+    protected $queryString = ['search'];
 
     public function updatingSearch(): void
     {
         $this->resetPage();
     }
-
-    public function updatingStatusFilter(): void
-    {
-        $this->resetPage();
-    }
-
-    // ── Payout approval (manager-approved, awaiting accounts) ──────────
 
     public function confirmApprovePayout(int $historyId): void
     {
@@ -208,40 +155,21 @@ class RefundIndex extends Component
 
     public function render()
     {
-        $receiptPendingIds = $this->refundIdsPendingOn('refund_receipt');
-        // Still awaiting a manager decision on the M&R Auth Queue, vs. manager
-        // already approved and it's now awaiting the final accounts sign-off
-        // right here — two different links/labels in the overview table below.
-        $payoutPendingAtManagerIds  = $this->refundIdsPendingOn('refund_payout', fn ($ph) => !($ph->payment_details['manager_approved'] ?? false));
-        $payoutPendingAtAccountsIds = $this->refundIdsPendingOn('refund_payout', fn ($ph) => (bool) ($ph->payment_details['manager_approved'] ?? false));
-
-        $awaitingPayouts = BookingPaymentHistory::with(['booking', 'user'])
+        $query = BookingPaymentHistory::with(['booking', 'user'])
             ->where('status', 'pending')
             ->where('payment_details->refund_payout', true)
             ->where('payment_details->manager_approved', true)
-            ->orderBy('created_at', 'asc')
-            ->get();
-
-        $refunds = Refund::query()
-            ->with(['booking', 'requestedBy', 'processedBy'])
-            ->when($this->search, function ($query) {
-                $query->whereHas('booking', function ($q) {
-                    $q->where('booking_number', 'ILIKE', "%{$this->search}%")
-                        ->orWhere('booker_name', 'ILIKE', "%{$this->search}%");
+            ->when($this->search, function ($q) {
+                $q->whereHas('booking', function ($bq) {
+                    $bq->where('booking_number', 'like', '%' . $this->search . '%')
+                       ->orWhere('lead_name', 'like', '%' . $this->search . '%')
+                       ->orWhere('lead_email', 'like', '%' . $this->search . '%');
                 });
             })
-            ->when($this->statusFilter, function ($query) {
-                $query->where('status', $this->statusFilter);
-            })
-            ->orderByDesc('created_at')
-            ->paginate(15);
+            ->orderBy('created_at', 'asc');
 
         return view('livewire.refund-index', [
-            'refunds' => $refunds,
-            'awaitingPayouts' => $awaitingPayouts,
-            'receiptPendingIds' => $receiptPendingIds,
-            'payoutPendingAtManagerIds' => $payoutPendingAtManagerIds,
-            'payoutPendingAtAccountsIds' => $payoutPendingAtAccountsIds,
+            'awaitingPayouts' => $query->paginate(15),
         ]);
     }
 }

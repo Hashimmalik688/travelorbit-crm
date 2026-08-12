@@ -147,7 +147,11 @@
         </div>
     </div>
 
-    @if ($rows->isNotEmpty())
+    {{-- Shown whenever there's anything to report for the period — not just
+         bookings. An agent with zero issued bookings this month but a
+         released margin claim (see AgentPerformance::claimsQuery) still has
+         a Net Margin worth showing, so this can't be gated on $rows alone. --}}
+    @if ($rows->isNotEmpty() || $totals['claims'] > 0 || $totals['deductions'] > 0 || $totals['sharedIn'] > 0 || $totals['sharedOut'] > 0)
         <div class="d-flex flex-wrap gap-3 mt-3">
             {{-- ── Financial summary ── --}}
             <div class="card animate-in" style="flex:1 1 320px;max-width:400px;">
@@ -260,33 +264,9 @@
         </div>
     @endif
 
-    {{-- ── Margin Claims — auto-created when accounts approves a Refund to
-         Customer payout that kept back some of what the supplier sent back;
-         read-only here, nothing to manually apply or remove. ── --}}
-    @if (!$showAgent && $claimsList->isNotEmpty())
-        <div class="card animate-in mt-3">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <i class="ph ph-plus-circle" style="color:#16A34A;font-size:1.08rem;"></i>
-                    <span class="fw-bold" style="color:#0F172A;">Claimed Margin</span>
-                </div>
-
-                @foreach ($claimsList as $c)
-                    <div class="d-flex align-items-center gap-2 mb-2 px-2 py-2" style="background:#FAFBFF;border-radius:8px;border:1px solid rgba(51,46,158,.05);">
-                        <i class="ph ph-arrows-counter-clockwise" style="color:#16A34A;font-size:0.96rem;flex-shrink:0;"></i>
-                        <div class="flex-grow-1">
-                            <span class="fw-semibold" style="font-size:0.864rem;color:#1E293B;">+£{{ number_format($c->amount, 2) }} — {{ $c->reason }}</span>
-                            <span class="d-block" style="font-size:0.744rem;color:#475569;">
-                                {{ $c->claim_date->format('d M Y') }}
-                                @if ($c->booking) · <a href="{{ route('bookings.show', $c->booking) }}" class="text-decoration-none">Booking #{{ $c->booking->booking_number }}</a> @endif
-                                · approved by {{ $c->appliedBy?->name ?: '—' }}
-                            </span>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
+    {{-- Claimed margin lives solely in the Financial Summary card's total
+         above — same treatment whether viewing all agents or one — no
+         separate itemized list here. --}}
 </div>
 
 {{-- APPLY DEDUCTION MODAL --}}
