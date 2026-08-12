@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Crm;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Services\TicketOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -97,7 +98,21 @@ class BookingWorkflowController extends Controller
             model_id: $booking->id,
             description: "Booking #{$booking->booking_number} marked as Ticket in Process" . ($reason ? ": $reason" : "") . " (Date: {$processedDate})",
         );
-        return back()->with('success', "Booking #{$booking->booking_number} marked as Ticket in Process.");
+
+        // "Send Ticket Order" checkbox — grabs its data straight from THIS
+        // booking (the one the issuance queue row was for) and emails it.
+        // Deliberately not gated behind appendBookingActivity/AuditLog above;
+        // see TicketOrderService::createAndSend for why it only ever shows
+        // up as a comment badge.
+        $sentTicketOrder = false;
+        if (request()->boolean('send_ticket_order')) {
+            TicketOrderService::createAndSend($booking, Auth::user());
+            $sentTicketOrder = true;
+        }
+
+        $message = "Booking #{$booking->booking_number} marked as Ticket in Process.";
+        if ($sentTicketOrder) $message .= ' Ticket order sent.';
+        return back()->with('success', $message);
     }
 
     /**

@@ -154,6 +154,10 @@
           <label style="font-size:0.864rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Reason <span style="color:#DC2626;">*</span></label>
           <textarea name="reason" class="form-control" rows="3" style="font-size:0.936rem;border-radius:10px;border-color:#64748B;resize:vertical;padding:10px 14px;" placeholder="Why is this booking being processed?" required></textarea>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:rgba(14,165,233,.06);border:1px solid rgba(14,165,233,.2);border-radius:10px;cursor:pointer;">
+          <input type="checkbox" name="send_ticket_order" value="1" style="width:16px;height:16px;accent-color:#0EA5E9;">
+          <span style="font-size:0.864rem;font-weight:600;color:#0369A1;">Send Ticket Order</span>
+        </label>
       </div>
       <div style="padding:14px 24px;border-top:1px solid #F1F5F9;display:flex;gap:10px;justify-content:flex-end;">
         <button type="button" onclick="document.getElementById('processModal').style.display='none'" style="background:#F1F5F9;color:#475569;border:none;border-radius:10px;padding:8px 18px;font-size:0.888rem;font-weight:600;cursor:pointer;">Cancel</button>

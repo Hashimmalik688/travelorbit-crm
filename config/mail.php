@@ -64,6 +64,20 @@ return [
             'timeout' => null,
         ],
 
+        // Ticket-order emails ride the same ops Gmail transport as refunds
+        // (see 'refund_smtp' above) unless TICKET_ORDER_MAIL_* overrides are
+        // set — falls back to the REFUND_MAIL_* credentials so no extra SMTP
+        // account has to be provisioned just for this.
+        'ticket_order_smtp' => [
+            'transport' => 'smtp',
+            'scheme' => env('TICKET_ORDER_MAIL_SCHEME', env('REFUND_MAIL_SCHEME')),
+            'host' => env('TICKET_ORDER_MAIL_HOST', env('REFUND_MAIL_HOST', 'smtp.gmail.com')),
+            'port' => env('TICKET_ORDER_MAIL_PORT', env('REFUND_MAIL_PORT', 587)),
+            'username' => env('TICKET_ORDER_MAIL_USERNAME', env('REFUND_MAIL_USERNAME')),
+            'password' => env('TICKET_ORDER_MAIL_PASSWORD', env('REFUND_MAIL_PASSWORD')),
+            'timeout' => null,
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],

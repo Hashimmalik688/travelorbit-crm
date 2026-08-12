@@ -35,6 +35,14 @@ class BookingComment extends Model
             'short' => 'Manager Info',
             'color' => '#DC2626',
         ],
+        // System-generated only (see TicketOrderService::createAndSend) — not
+        // offered as a pickable preset when writing a manual comment, so it's
+        // deliberately left out of getCommentPresetsProperty's list.
+        'ticket_order_sent' => [
+            'label' => 'Ticket Order Sent',
+            'short' => 'Ticket Order',
+            'color' => '#0EA5E9',
+        ],
     ];
 
     protected $fillable = [

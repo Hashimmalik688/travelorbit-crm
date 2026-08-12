@@ -18,6 +18,7 @@ use App\Models\BookingReassignment;
 use App\Models\BookingTransfer;
 use App\Models\MarginClaim;
 use App\Models\Refund;
+use App\Models\TicketOrder;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use App\Mail\RefundRequestMail;
+use App\Mail\TicketOrderMail;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -43,6 +45,24 @@ class BookingShow extends Component
     public array $refundLines = []; // one row per passenger being refunded: passenger_id, e_ticket_number, gds_locator, airline_locator
     public array $refundGdsLocatorOptions = [];
     public array $refundAirlineLocatorOptions = [];
+
+    // Ticket Order modal — the "please issue ticket" form emailed to the
+    // consolidator. Agent is always the logged-in user (see submitTicketOrder).
+    public $showTicketOrderModal = false;
+    public $ticketOrderIssuedTo = '';
+    public $ticketOrderRefNumber = '';
+    public array $ticketOrderPassengers = []; // one row per pax: passenger_id, name, date_of_birth, passport_number
+    public array $ticketOrderSegments = []; // one row per flight segment: locator, folder, type, booked_in, issue_from, airline
+    public $ticketOrderSoldAdult = '';
+    public $ticketOrderSoldChild = '';
+    public $ticketOrderSoldInfant = '';
+    public $ticketOrderCostAdult = '';
+    public $ticketOrderCostChild = '';
+    public $ticketOrderCostInfant = '';
+    public $ticketOrderSafiCharges = '';
+    public $ticketOrderPaymentAmount = '';
+    public $ticketOrderClearanceDate = '';
+    public $ticketOrderNotes = '';
 
     // Request Refund Payment modal — queues the outgoing refund payout for accounts to approve.
     // "Refund received" is the known fact (what the supplier actually sent
@@ -2237,10 +2257,15 @@ class BookingShow extends Component
     }
 
     // ── Comments ───────────────────────────────────────────────────────
-    /** Header presets available when commenting. The manager-only preset is hidden from regular agents. */
+    /**
+     * Header presets available when commenting. The manager-only preset is
+     * hidden from regular agents; ticket_order_sent is system-generated only
+     * (see TicketOrderService::createAndSend) and never manually pickable.
+     */
     public function getCommentPresetsProperty(): array
     {
         $presets = BookingComment::PRESETS;
+        unset($presets['ticket_order_sent']);
         if (!Auth::user()->hasPermission('bookings.edit_any')) {
             unset($presets['manager_info']);
         }
@@ -2414,6 +2439,164 @@ class BookingShow extends Component
         } catch (\Throwable $e) {
             report($e);
             session()->flash('success', 'Refund request submitted — but the email to accounts could not be sent (mail is not fully configured yet).');
+        }
+    }
+
+    // ── Ticket Order ───────────────────────────────────────────────────
+    // The "please issue ticket" form consultants used to type out by hand
+    // and email to the consolidator (e.g. Crystal Travel). Prefilled from
+    // the booking's own passengers/flight segments/pricing, editable before
+    // sending — same shape as the Refund flow above.
+    public function requestTicketOrder(): void
+    {
+        $this->abortIfViewer();
+
+        $this->ticketOrderIssuedTo = '';
+        $this->ticketOrderRefNumber = '';
+        $this->ticketOrderNotes = '';
+        $this->ticketOrderPaymentAmount = '';
+        $this->ticketOrderClearanceDate = '';
+
+        $this->ticketOrderPassengers = collect($this->passengers)->map(fn($p) => [
+            'passenger_id' => $p['id'] ?? null,
+            'name' => trim(($p['title'] ?? '') . ' ' . ($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')),
+            'date_of_birth' => $p['date_of_birth'] ?? '',
+            'passport_number' => $p['passport_number'] ?? '',
+        ])->values()->all();
+
+        $this->ticketOrderSegments = collect($this->flightSegments)->map(fn($seg) => [
+            'locator' => $seg['locator'] ?? '',
+            'folder' => $this->flight_folder_number ?? '',
+            'type' => 'Console',
+            'booked_in' => $seg['gds'] ?? '',
+            'issue_from' => $seg['vendor'] ?? '',
+            'airline' => $seg['airline'] ?? '',
+        ])->values()->all();
+        if (empty($this->ticketOrderSegments)) {
+            $this->ticketOrderSegments = [$this->blankTicketOrderSegment()];
+        }
+
+        $breakdown = $this->ticketOrderPricingBreakdown();
+        $this->ticketOrderSoldAdult = $breakdown['sold_adult'] ?: '';
+        $this->ticketOrderSoldChild = $breakdown['sold_child'] ?: '';
+        $this->ticketOrderSoldInfant = $breakdown['sold_infant'] ?: '';
+        $this->ticketOrderCostAdult = $breakdown['cost_adult'] ?: '';
+        $this->ticketOrderCostChild = $breakdown['cost_child'] ?: '';
+        $this->ticketOrderCostInfant = $breakdown['cost_infant'] ?: '';
+        $this->ticketOrderSafiCharges = $this->atolSafiTax ?: '';
+
+        $this->showTicketOrderModal = true;
+    }
+
+    /**
+     * Sums each flight segment's per-passenger cost/sold onto Adult/Child/
+     * Infant buckets, keyed off each passenger's own type — mirrors
+     * getTotalFlightCostProperty/getTotalFlightSoldProperty but split by PTC
+     * instead of collapsed into one total, since the ticket order form
+     * (like the old hand-filled template) breaks pricing out per pax type.
+     */
+    private function ticketOrderPricingBreakdown(): array
+    {
+        $sums = ['sold_adult' => 0, 'sold_child' => 0, 'sold_infant' => 0, 'cost_adult' => 0, 'cost_child' => 0, 'cost_infant' => 0];
+        foreach ($this->flightSegments as $seg) {
+            foreach ($seg['passenger_costs'] ?? [] as $pi => $pc) {
+                $type = $this->passengers[$pi]['type'] ?? 'adult';
+                $bucket = in_array($type, ['child', 'infant'], true) ? $type : 'adult';
+                $sums["sold_{$bucket}"] += (float) ($pc['sold'] ?? 0);
+                $sums["cost_{$bucket}"] += (float) ($pc['cost'] ?? 0);
+            }
+        }
+        return $sums;
+    }
+
+    private function blankTicketOrderSegment(): array
+    {
+        return ['locator' => '', 'folder' => '', 'type' => 'Console', 'booked_in' => '', 'issue_from' => '', 'airline' => ''];
+    }
+
+    public function addTicketOrderSegment(): void
+    {
+        $this->ticketOrderSegments[] = $this->blankTicketOrderSegment();
+    }
+
+    public function removeTicketOrderSegment(int $index): void
+    {
+        if (count($this->ticketOrderSegments) <= 1) return;
+        unset($this->ticketOrderSegments[$index]);
+        $this->ticketOrderSegments = array_values($this->ticketOrderSegments);
+    }
+
+    public function submitTicketOrder(): void
+    {
+        $this->validate([
+            'ticketOrderIssuedTo' => 'required|string|max:255',
+            'ticketOrderPassengers' => 'required|array|min:1',
+            'ticketOrderPassengers.*.name' => 'required|string',
+            'ticketOrderSoldAdult' => 'nullable|numeric|min:0',
+            'ticketOrderSoldChild' => 'nullable|numeric|min:0',
+            'ticketOrderSoldInfant' => 'nullable|numeric|min:0',
+            'ticketOrderCostAdult' => 'nullable|numeric|min:0',
+            'ticketOrderCostChild' => 'nullable|numeric|min:0',
+            'ticketOrderCostInfant' => 'nullable|numeric|min:0',
+            'ticketOrderSafiCharges' => 'nullable|numeric|min:0',
+            'ticketOrderPaymentAmount' => 'nullable|numeric|min:0',
+            'ticketOrderClearanceDate' => 'nullable|date',
+        ]);
+
+        $ticketOrder = TicketOrder::create([
+            'booking_id' => $this->booking->id,
+            'requested_by' => Auth::id(),
+            'ref_number' => $this->ticketOrderRefNumber ?: null,
+            'issued_to' => $this->ticketOrderIssuedTo,
+            'sold_adult' => $this->ticketOrderSoldAdult ?: 0,
+            'sold_child' => $this->ticketOrderSoldChild ?: 0,
+            'sold_infant' => $this->ticketOrderSoldInfant ?: 0,
+            'cost_adult' => $this->ticketOrderCostAdult ?: 0,
+            'cost_child' => $this->ticketOrderCostChild ?: 0,
+            'cost_infant' => $this->ticketOrderCostInfant ?: 0,
+            'safi_charges' => $this->ticketOrderSafiCharges ?: 0,
+            'payment_amount' => $this->ticketOrderPaymentAmount ?: 0,
+            'clearance_date' => $this->ticketOrderClearanceDate ?: null,
+            'notes' => $this->ticketOrderNotes ?: null,
+        ]);
+
+        foreach ($this->ticketOrderPassengers as $i => $pax) {
+            $ticketOrder->passengers()->create([
+                'passenger_id' => $pax['passenger_id'] ?: null,
+                'name' => $pax['name'],
+                'date_of_birth' => $pax['date_of_birth'] ?: null,
+                'passport_number' => $pax['passport_number'] ?: null,
+                'sort_order' => $i,
+            ]);
+        }
+
+        foreach ($this->ticketOrderSegments as $i => $seg) {
+            $ticketOrder->segments()->create([
+                'locator' => $seg['locator'] ?: null,
+                'folder' => $seg['folder'] ?: null,
+                'type' => $seg['type'] ?: 'Console',
+                'booked_in' => $seg['booked_in'] ?: null,
+                'issue_from' => $seg['issue_from'] ?: null,
+                'airline' => $seg['airline'] ?: null,
+                'sort_order' => $i,
+            ]);
+        }
+
+        AuditLogger::log(Auth::user(), $this->booking, 'ticket_order_created', "Ticket order sent to {$this->ticketOrderIssuedTo}" . ($this->ticketOrderRefNumber ? " (Ref #{$this->ticketOrderRefNumber})" : ''));
+        $this->logActivity('Ticket Order Sent', "Ticket order form sent to {$this->ticketOrderIssuedTo}", 'update', bypassViewerCheck: true);
+
+        $this->showTicketOrderModal = false;
+
+        $ticketOrder->load('passengers', 'segments', 'requestedBy', 'booking');
+        try {
+            Mail::mailer('ticket_order_smtp')
+                ->to(env('TICKET_ORDER_MAIL_TO', 'tickets@travelorbit.co.uk'))
+                ->send(new TicketOrderMail($ticketOrder));
+            $ticketOrder->update(['sent_at' => now()]);
+            session()->flash('success', 'Ticket order created and emailed.');
+        } catch (\Throwable $e) {
+            report($e);
+            session()->flash('success', 'Ticket order created — but the email could not be sent (mail is not fully configured yet).');
         }
     }
 

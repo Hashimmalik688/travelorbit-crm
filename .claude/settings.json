@@ -31,7 +31,9 @@
       "Bash(grep -n 'public $booker_\\\\|public $lead_\\\\|public $is_returning\\\\|public $referral_name\\\\|public $old_booking_reference\\\\|public $previous_booking_type' /opt/travelorbit-crm/app/Livewire/BookingShow.php)",
       "Bash(grep -n 'public $booker\\\\|public $lead\\\\|public $is_returning\\\\|public $referral_name\\\\|public $old_booking_reference\\\\|public $previous_booking_type\\\\|public $excursion_notes' /opt/travelorbit-crm/app/Livewire/BookingShow.php)",
       "Bash(php -i)",
-      "Bash(sed -n '2150,2320,' resources/views/livewire/booking-show.blade.php 2>/dev/null; sed -n '2150,2320p' resources/views/livewire/booking-show.blade.php)"
+      "Bash(sed -n '2150,2320,' resources/views/livewire/booking-show.blade.php 2>/dev/null; sed -n '2150,2320p' resources/views/livewire/booking-show.blade.php)",
+      "Bash(grep -n 'protected $fillable' -A40 /opt/travelorbit-crm/app/Models/Booking.php)",
+      "Bash(git add *)"
     ],
     "additionalDirectories": [
       "/opt/travelorbit-crm",
