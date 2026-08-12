@@ -16,6 +16,7 @@ class TicketOrderSegment extends Model
         'booked_in',
         'issue_from',
         'airline',
+        'pnr',
         'sort_order',
     ];
 

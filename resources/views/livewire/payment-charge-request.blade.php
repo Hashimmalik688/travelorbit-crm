@@ -56,7 +56,8 @@
                         <tr>
                             <th style="width:40px;">#</th>
                             <th>Booking</th>
-                            <th>Booker</th>
+                            <th>Customer</th>
+                            <th>Agent</th>
                             <th>Method</th>
                             <th class="text-end">&pound; Amount</th>
                             <th>Requested</th>
@@ -76,9 +77,9 @@
                                     <a href="{{ route('bookings.show', $cr->booking) }}" style="font-weight:700;color:#1E293B;text-decoration:none;font-size:0.936rem;">
                                         #{{ $cr->booking?->booking_number }}
                                     </a>
-                                    <span class="d-block" style="font-size:0.768rem;color:#475569;">{{ $cr->booking?->lead_name }}</span>
                                 </td>
-                                <td style="vertical-align:middle;font-size:0.888rem;color:#475569;">{{ $cr->user?->name }}</td>
+                                <td style="vertical-align:middle;font-size:0.888rem;color:#1E293B;font-weight:600;">{{ $cr->booking?->booker_name ?: 'N/A' }}</td>
+                                <td style="vertical-align:middle;font-size:0.888rem;color:#475569;">{{ $cr->user?->name ?? 'N/A' }}</td>
                                 <td style="vertical-align:middle;">
                                     <span style="font-size:0.816rem;font-weight:600;color:#475569;background:rgba(51,46,158,.06);padding:2px 10px;border-radius:10px;">
                                         {{ ucfirst(str_replace('_', ' ', $cr->payment_method ?? 'N/A')) }}

@@ -449,8 +449,12 @@ class DashboardController extends Controller
         $queueBookings = Booking::where('booking_status', 'issuance_queue')
             ->orderBy('issuance_queued_at')->take(20)->with(['user','flightDetail','passengers'])->get();
 
+        // Prefill for the "Send Ticket Order" To field — the agent can still
+        // change or add to it per booking (see TicketOrderService::createAndSend).
+        $defaultTicketOrderTo = env('TICKET_ORDER_MAIL_TO', 'info@travelorbit.co.uk');
+
         return view('content.dashboard.issuance-dashboard', compact(
-            'inQueue', 'doneToday', 'queueBookings'
+            'inQueue', 'doneToday', 'queueBookings', 'defaultTicketOrderTo'
         ));
     }
 

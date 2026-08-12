@@ -125,7 +125,7 @@
 
 {{-- ══ PROCESS MODAL ══ --}}
 <div id="processModal" style="display:none;position:fixed;inset:0;z-index:1055;align-items:center;justify-content:center;background:rgba(15,23,42,0.3);">
-  <div style="background:#fff;border-radius:20px;width:400px;max-width:92vw;box-shadow:0 25px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.04);overflow:hidden;animation:processModalIn .25s ease;">
+  <div style="background:#fff;border-radius:20px;width:440px;max-width:92vw;box-shadow:0 25px 80px rgba(0,0,0,0.22),0 0 0 1px rgba(0,0,0,0.04);animation:processModalIn .25s ease;max-height:92vh;overflow-x:hidden;overflow-y:auto;">
     <form method="POST" action="" id="processForm">
       @csrf
       <div style="background:linear-gradient(135deg,#0EA5E9 0%,#0284C7 100%);padding:20px 24px;position:relative;">
@@ -155,9 +155,31 @@
           <textarea name="reason" class="form-control" rows="3" style="font-size:0.936rem;border-radius:10px;border-color:#64748B;resize:vertical;padding:10px 14px;" placeholder="Why is this booking being processed?" required></textarea>
         </div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:rgba(14,165,233,.06);border:1px solid rgba(14,165,233,.2);border-radius:10px;cursor:pointer;">
-          <input type="checkbox" name="send_ticket_order" value="1" style="width:16px;height:16px;accent-color:#0EA5E9;">
+          <input type="checkbox" name="send_ticket_order" id="sendTicketOrderCheck" value="1" style="width:16px;height:16px;accent-color:#0EA5E9;"
+            onchange="document.getElementById('ticketOrderRecipients').style.display = this.checked ? 'block' : 'none';
+                      document.getElementById('ticketOrderToInput').required = this.checked;">
           <span style="font-size:0.864rem;font-weight:600;color:#0369A1;">Send Ticket Order</span>
         </label>
+
+        {{-- Recipients — only relevant (and only submitted/required) when the
+             checkbox above is checked; see markTicketInProcess's validation. --}}
+        <div id="ticketOrderRecipients" style="display:none;margin-top:10px;padding:12px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;">
+          <div style="margin-bottom:10px;">
+            <label style="font-size:0.792rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">To <span style="color:#DC2626;">*</span></label>
+            <input type="text" name="ticket_order_to" id="ticketOrderToInput" class="form-control" value="{{ $defaultTicketOrderTo }}"
+              style="font-size:0.864rem;border-radius:8px;padding:7px 12px;" placeholder="name@example.com, name2@example.com">
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:0.792rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">CC</label>
+            <input type="text" name="ticket_order_cc" class="form-control"
+              style="font-size:0.864rem;border-radius:8px;padding:7px 12px;" placeholder="Optional, comma-separated">
+          </div>
+          <div>
+            <label style="font-size:0.792rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">BCC</label>
+            <input type="text" name="ticket_order_bcc" class="form-control"
+              style="font-size:0.864rem;border-radius:8px;padding:7px 12px;" placeholder="Optional, comma-separated">
+          </div>
+        </div>
       </div>
       <div style="padding:14px 24px;border-top:1px solid #F1F5F9;display:flex;gap:10px;justify-content:flex-end;">
         <button type="button" onclick="document.getElementById('processModal').style.display='none'" style="background:#F1F5F9;color:#475569;border:none;border-radius:10px;padding:8px 18px;font-size:0.888rem;font-weight:600;cursor:pointer;">Cancel</button>
@@ -219,6 +241,11 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('processForm').action = btn.getAttribute('data-route');
       document.getElementById('processBookingRef').textContent = btn.getAttribute('data-booking-ref');
       document.getElementById('processDate').value = new Date().toISOString().split('T')[0];
+      // Reset the ticket-order checkbox/recipients each time — this modal is
+      // reused across every row without a page reload in between.
+      document.getElementById('sendTicketOrderCheck').checked = false;
+      document.getElementById('ticketOrderRecipients').style.display = 'none';
+      document.getElementById('ticketOrderToInput').required = false;
       processModalEl.style.display = 'flex';
     });
   });

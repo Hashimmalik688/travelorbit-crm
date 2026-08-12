@@ -299,10 +299,15 @@ class PaymentChargeRequest extends Component
                     ->orWhere('payment_details->refund_payout', false);
             })
             ->when($this->search, function ($q) {
+                // booker_first_name/booker_last_name/booker_email are the real
+                // columns — lead_name/lead_email don't exist on bookings and
+                // threw a "column does not exist" 500 the moment anyone typed
+                // into this search box.
                 $q->whereHas('booking', function ($bq) {
                     $bq->where('booking_number', 'like', '%' . $this->search . '%')
-                       ->orWhere('lead_name', 'like', '%' . $this->search . '%')
-                       ->orWhere('lead_email', 'like', '%' . $this->search . '%');
+                       ->orWhere('booker_first_name', 'like', '%' . $this->search . '%')
+                       ->orWhere('booker_last_name', 'like', '%' . $this->search . '%')
+                       ->orWhere('booker_email', 'like', '%' . $this->search . '%');
                 });
             })
             ->when($this->dateFrom, function ($q) {

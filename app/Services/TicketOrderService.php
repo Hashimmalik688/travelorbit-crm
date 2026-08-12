@@ -19,8 +19,24 @@ use Illuminate\Support\Facades\Mail;
  */
 class TicketOrderService
 {
-    public static function createAndSend(Booking $booking, User $agent): TicketOrder
-    {
+    /**
+     * @param bool $logComment Set false for a one-off test send (see the
+     *   Issuance Queue path) that shouldn't leave the "Ticket Order Sent"
+     *   badge in the booking's Comments feed.
+     * @param ?string $to  Comma-separated recipient addresses. Falls back to
+     *   TICKET_ORDER_MAIL_TO when blank — the Issuance Queue's "Send Ticket
+     *   Order" checkbox lets the agent type these in per booking.
+     * @param ?string $cc  Comma-separated CC addresses, optional.
+     * @param ?string $bcc Comma-separated BCC addresses, optional.
+     */
+    public static function createAndSend(
+        Booking $booking,
+        User $agent,
+        bool $logComment = true,
+        ?string $to = null,
+        ?string $cc = null,
+        ?string $bcc = null,
+    ): TicketOrder {
         $booking->loadMissing(['passengers', 'flightDetails']);
 
         $firstFd = $booking->flightDetails->first();
@@ -30,19 +46,16 @@ class TicketOrderService
 
         $passengersList = $booking->passengers->values();
         $nonInfant = $passengersList->filter(fn ($p) => $p->passenger_type !== 'infant')->count();
-        $safiCharges = 0;
-        if ($firstFd) {
-            if ($firstFd->atol) $safiCharges += 2.50 * $nonInfant;
-            if ($firstFd->safi) $safiCharges += 2.50 * $nonInfant;
-        }
+        $atol = (bool) ($firstFd?->atol);
+        $safi = (bool) ($firstFd?->safi);
+        $safiCharges = ($atol ? 2.50 * $nonInfant : 0) + ($safi ? 2.50 * $nonInfant : 0);
 
-        $sums = ['sold_adult' => 0, 'sold_child' => 0, 'sold_infant' => 0, 'cost_adult' => 0, 'cost_child' => 0, 'cost_infant' => 0];
+        $costSums = ['cost_adult' => 0, 'cost_child' => 0, 'cost_infant' => 0];
         foreach ($booking->flightDetails as $fd) {
             foreach ($fd->passenger_costs ?? [] as $pi => $pc) {
                 $type = $passengersList->get($pi)?->passenger_type ?? 'adult';
                 $bucket = in_array($type, ['child', 'infant'], true) ? $type : 'adult';
-                $sums["sold_{$bucket}"] += (float) ($pc['sold'] ?? 0);
-                $sums["cost_{$bucket}"] += (float) ($pc['cost'] ?? 0);
+                $costSums["cost_{$bucket}"] += (float) ($pc['cost'] ?? 0);
             }
         }
 
@@ -50,12 +63,11 @@ class TicketOrderService
             'booking_id' => $booking->id,
             'requested_by' => $agent->id,
             'issued_to' => $issuedTo,
-            'sold_adult' => $sums['sold_adult'],
-            'sold_child' => $sums['sold_child'],
-            'sold_infant' => $sums['sold_infant'],
-            'cost_adult' => $sums['cost_adult'],
-            'cost_child' => $sums['cost_child'],
-            'cost_infant' => $sums['cost_infant'],
+            'cost_adult' => $costSums['cost_adult'],
+            'cost_child' => $costSums['cost_child'],
+            'cost_infant' => $costSums['cost_infant'],
+            'atol' => $atol,
+            'safi' => $safi,
             'safi_charges' => $safiCharges,
         ]);
 
@@ -73,11 +85,10 @@ class TicketOrderService
             $ticketOrder->segments()->create([
                 'flight_detail_id' => $fd->id,
                 'locator' => $fd->locator ?: null,
-                'folder' => $firstFd->folder_number ?? null,
-                'type' => 'Console',
                 'booked_in' => $fd->gds ?: null,
                 'issue_from' => $fd->vendor ?: null,
                 'airline' => $fd->airline ?: null,
+                'pnr' => $fd->pnr ?: null,
                 'sort_order' => $i,
             ]);
         }
@@ -86,27 +97,56 @@ class TicketOrderService
         // activity_log / AuditLog like every other issuance-queue event
         // (see BookingWorkflowController::appendBookingActivity). The user
         // asked for this to show up as a coloured comment badge and nowhere
-        // else — no status banner, no audit trail entry.
-        BookingComment::create([
-            'booking_id' => $booking->id,
-            'user_id' => $agent->id,
-            'agent_name' => $agent->name,
-            'avatar_url' => $agent->profile_photo_path ? asset('storage/' . $agent->profile_photo_path) : null,
-            'action' => 'ticket_order_sent',
-            'comment' => "Ticket order sent to {$issuedTo}.",
-            'preset' => 'ticket_order_sent',
-        ]);
+        // else — no status banner, no audit trail entry. Skipped entirely
+        // for a test send (see $logComment).
+        if ($logComment) {
+            BookingComment::create([
+                'booking_id' => $booking->id,
+                'user_id' => $agent->id,
+                'agent_name' => $agent->name,
+                'avatar_url' => $agent->profile_photo_path ? asset('storage/' . $agent->profile_photo_path) : null,
+                'action' => 'ticket_order_sent',
+                'comment' => "Ticket order sent to {$issuedTo}.",
+                'preset' => 'ticket_order_sent',
+            ]);
+        }
+
+        $toAddresses = self::parseEmailList($to);
+        if (empty($toAddresses)) {
+            $toAddresses = self::parseEmailList(env('TICKET_ORDER_MAIL_TO', 'info@travelorbit.co.uk'));
+        }
+        $ccAddresses = self::parseEmailList($cc);
+        $bccAddresses = self::parseEmailList($bcc);
 
         $ticketOrder->load('passengers', 'segments', 'requestedBy', 'booking');
         try {
-            Mail::mailer('ticket_order_smtp')
-                ->to(env('TICKET_ORDER_MAIL_TO', 'tickets@travelorbit.co.uk'))
-                ->send(new TicketOrderMail($ticketOrder));
-            $ticketOrder->update(['sent_at' => now()]);
+            $mailer = Mail::mailer('ticket_order_smtp')->to($toAddresses);
+            if ($ccAddresses) $mailer->cc($ccAddresses);
+            if ($bccAddresses) $mailer->bcc($bccAddresses);
+            $mailer->send(new TicketOrderMail($ticketOrder));
+
+            $ticketOrder->update([
+                'sent_at' => now(),
+                'sent_to' => implode(', ', $toAddresses) ?: null,
+                'sent_cc' => implode(', ', $ccAddresses) ?: null,
+                'sent_bcc' => implode(', ', $bccAddresses) ?: null,
+            ]);
         } catch (\Throwable $e) {
             report($e);
         }
 
         return $ticketOrder;
+    }
+
+    /** Splits a comma/semicolon-separated string into trimmed, de-duped, valid email addresses. */
+    private static function parseEmailList(?string $raw): array
+    {
+        if (!$raw) return [];
+        return collect(preg_split('/[,;]+/', $raw))
+            ->map(fn ($e) => trim($e))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values()
+            ->all();
     }
 }

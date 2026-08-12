@@ -879,9 +879,13 @@
           <div class="bv-icon" style="background:rgba(51,46,158,.08);"><i class="ph ph-user-circle"
               style="color:#332E9E;font-size:1.08rem;"></i></div>
           <h2>Lead &amp; Caller</h2>
+          <span class="ms-auto"
+            style="font-size:0.78rem;font-weight:600;color:#475569;background:rgba(51,46,158,.06);border:1px solid rgba(51,46,158,.12);border-radius:20px;padding:3px 12px;display:inline-flex;align-items:center;gap:5px;">
+            <i class="ph ph-user" style="font-size:0.9rem;color:#332E9E;"></i> {{ $booking->user?->name ?? 'Unassigned' }}
+          </span>
           @if ($isPrivileged)
-            <button type="button" @click="sectionEditing = !sectionEditing" class="bv-edit-pencil ms-auto"
-              style="width:auto;padding:4px 10px;border-radius:6px;gap:4px;"
+            <button type="button" @click="sectionEditing = !sectionEditing" class="bv-edit-pencil"
+              style="width:auto;padding:4px 10px;border-radius:6px;gap:4px;margin-left:8px;"
               x-text="sectionEditing ? 'Done' : 'Edit'"></button>
           @endif
         </div>
@@ -3246,6 +3250,7 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
               'clearpay' => ['label' => 'ClearPay', 'icon' => 'ph-arrows-clockwise', 'color' => '#047857'],
               'stripe' => ['label' => 'Stripe', 'icon' => 'ph-lightning', 'color' => '#6366F1'],
               'cash' => ['label' => 'Cash', 'icon' => 'ph-money', 'color' => '#15803D'],
+              'cash_pak_ofc' => ['label' => 'Cash | Pak Ofc', 'icon' => 'ph-money', 'color' => '#0F766E'],
               // Internal record-keeping only — staff logging a refund handled
               // outside the system (e.g. cash handed back). Distinct from the
               // accounts-approved "Refund to Customer" payout above, which is
@@ -3522,18 +3527,12 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
           <span class="text-muted"> · Agent: {{ Auth::user()->name }}</span>
         </div>
 
-        <div class="row g-2 mb-3">
-          <div class="col-md-8">
-            <label class="bv-label">To (consolidator) <span style="color:#DC2626;">*</span></label>
-            <input type="text" wire:model="ticketOrderIssuedTo" class="rf-input" placeholder="e.g. Crystal Travel">
-            @error('ticketOrderIssuedTo')
-              <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
-            @enderror
-          </div>
-          <div class="col-md-4">
-            <label class="bv-label">Ref #</label>
-            <input type="text" wire:model="ticketOrderRefNumber" class="rf-input" placeholder="Optional">
-          </div>
+        <div class="mb-3">
+          <label class="bv-label">To (consolidator) <span style="color:#DC2626;">*</span></label>
+          <input type="text" wire:model="ticketOrderIssuedTo" class="rf-input" placeholder="e.g. Crystal Travel">
+          @error('ticketOrderIssuedTo')
+            <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
+          @enderror
         </div>
 
         <div class="d-flex align-items-center justify-content-between mb-2">
@@ -3587,16 +3586,6 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
                 <input type="text" wire:model="ticketOrderSegments.{{ $si }}.locator" class="rf-input">
               </div>
               <div class="col-md-4">
-                <label class="bv-label">Folder</label>
-                <input type="text" wire:model="ticketOrderSegments.{{ $si }}.folder" class="rf-input">
-              </div>
-              <div class="col-md-4">
-                <label class="bv-label">Type</label>
-                <input type="text" wire:model="ticketOrderSegments.{{ $si }}.type" class="rf-input">
-              </div>
-            </div>
-            <div class="row g-3 mt-2">
-              <div class="col-md-4">
                 <label class="bv-label">Booked In (GDS)</label>
                 <input type="text" wire:model="ticketOrderSegments.{{ $si }}.booked_in" class="rf-input">
               </div>
@@ -3604,9 +3593,16 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
                 <label class="bv-label">Issue From</label>
                 <input type="text" wire:model="ticketOrderSegments.{{ $si }}.issue_from" class="rf-input">
               </div>
+            </div>
+            <div class="row g-3 mt-2">
               <div class="col-md-4">
                 <label class="bv-label">Airline</label>
                 <input type="text" wire:model="ticketOrderSegments.{{ $si }}.airline" class="rf-input">
+              </div>
+              <div class="col-md-8">
+                <label class="bv-label">PNR (raw itinerary lines)</label>
+                <textarea wire:model="ticketOrderSegments.{{ $si }}.pnr" rows="2" class="rf-input"
+                  style="resize:vertical;font-family:'Courier New',monospace;font-size:0.8rem;"></textarea>
               </div>
             </div>
           </div>
@@ -3614,26 +3610,14 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
 
         <div class="mb-2 mt-3">
           <span
-            style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Sold
-            For / Cost (£)</span>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-md-2"><label class="bv-label">Sold Adult</label><input type="number" step="0.01" wire:model="ticketOrderSoldAdult" class="rf-input"></div>
-          <div class="col-md-2"><label class="bv-label">Sold Child</label><input type="number" step="0.01" wire:model="ticketOrderSoldChild" class="rf-input"></div>
-          <div class="col-md-2"><label class="bv-label">Sold Infant</label><input type="number" step="0.01" wire:model="ticketOrderSoldInfant" class="rf-input"></div>
-          <div class="col-md-2"><label class="bv-label">Cost Adult</label><input type="number" step="0.01" wire:model="ticketOrderCostAdult" class="rf-input"></div>
-          <div class="col-md-2"><label class="bv-label">Cost Child</label><input type="number" step="0.01" wire:model="ticketOrderCostChild" class="rf-input"></div>
-          <div class="col-md-2"><label class="bv-label">Cost Infant</label><input type="number" step="0.01" wire:model="ticketOrderCostInfant" class="rf-input"></div>
+            style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Cost
+            (£)</span>
         </div>
         <div class="row g-2 mb-3">
-          <div class="col-md-4"><label class="bv-label">Safi Charges</label><input type="number" step="0.01" wire:model="ticketOrderSafiCharges" class="rf-input"></div>
-          <div class="col-md-4"><label class="bv-label">Payment (£)</label><input type="number" step="0.01" wire:model="ticketOrderPaymentAmount" class="rf-input"></div>
-          <div class="col-md-4"><label class="bv-label">Clearance Date</label><input type="date" wire:model="ticketOrderClearanceDate" class="rf-input"></div>
-        </div>
-
-        <div class="mb-3">
-          <label class="bv-label">Notes</label>
-          <textarea wire:model="ticketOrderNotes" rows="2" class="rf-input" style="resize:vertical;"></textarea>
+          <div class="col-md-3"><label class="bv-label">Cost Adult</label><input type="number" step="0.01" wire:model="ticketOrderCostAdult" class="rf-input"></div>
+          <div class="col-md-3"><label class="bv-label">Cost Child</label><input type="number" step="0.01" wire:model="ticketOrderCostChild" class="rf-input"></div>
+          <div class="col-md-3"><label class="bv-label">Cost Infant</label><input type="number" step="0.01" wire:model="ticketOrderCostInfant" class="rf-input"></div>
+          <div class="col-md-3"><label class="bv-label">ATOL/SAFI Charges</label><input type="number" step="0.01" wire:model="ticketOrderSafiCharges" class="rf-input"></div>
         </div>
 
         <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">

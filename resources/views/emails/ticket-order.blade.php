@@ -34,15 +34,12 @@
             </td>
           </tr>
 
-          {{-- Booking No / Consultant / Date strip --}}
+          {{-- Agent / Date strip — no Booking No. here, the badge in the
+               header already carries it. --}}
           <tr>
             <td style="background:#F8FAFF;border-bottom:1px solid #E2E8F0;padding:12px 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td>
-                    <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#94A3B8;">Booking No.</div>
-                    <div style="font-size:14px;font-weight:700;color:#1E293B;">{{ $booking->booking_number ?? $booking->id }}</div>
-                  </td>
                   <td>
                     <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#94A3B8;">Agent</div>
                     <div style="font-size:14px;font-weight:700;color:#1E293B;">{{ $ticketOrder->requestedBy->name ?? 'N/A' }}</div>
@@ -56,21 +53,15 @@
             </td>
           </tr>
 
-          {{-- To / Ref --}}
+          {{-- To --}}
           <tr>
             <td style="padding:16px 24px 2px 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                 <tr>
-                  <td style="padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;width:160px;vertical-align:top;">
+                  <td style="padding:6px 0;font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;width:160px;vertical-align:top;">
                     To</td>
-                  <td style="padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:14px;color:#1E293B;font-weight:700;">
+                  <td style="padding:6px 0;font-size:14px;color:#1E293B;font-weight:700;">
                     {{ $ticketOrder->issued_to }}</td>
-                </tr>
-                <tr>
-                  <td style="padding:6px 0;font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;vertical-align:top;">
-                    Ref #</td>
-                  <td style="padding:6px 0;font-size:14px;color:#1E293B;">
-                    {{ $ticketOrder->ref_number ?: '—' }}</td>
                 </tr>
               </table>
             </td>
@@ -105,35 +96,29 @@
             </td>
           </tr>
 
-          {{-- Flight Details --}}
+          {{-- Flight Details — one mini-table per segment (Locator/Booked In/
+               Issue From/Airline), followed by its raw GDS itinerary lines
+               when we have them, matching the old hand-filled form. --}}
           <tr>
             <td style="padding:0 24px 20px 24px;">
               <div style="font-size:12px;font-weight:700;color:#332E9E;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 6px 0;">
                 Flight Details</div>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                style="border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid #E2E8F0;">
-                <tr style="background:#332E9E;">
-                  <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
-                    Locator</th>
-                  <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
-                    Folder</th>
-                  <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
-                    Type</th>
-                  <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
-                    Booked In</th>
-                  <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
-                    Issue From</th>
-                  <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
-                    Airline</th>
-                </tr>
-                @foreach ($ticketOrder->segments as $i => $seg)
-                  <tr style="background:{{ $i % 2 === 0 ? '#ffffff' : '#F8FAFF' }};">
+              @foreach ($ticketOrder->segments as $seg)
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                  style="border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid #E2E8F0;margin-bottom:10px;">
+                  <tr style="background:#332E9E;">
+                    <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
+                      Locator</th>
+                    <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
+                      Booked In</th>
+                    <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
+                      Issue From</th>
+                    <th style="padding:7px 8px;text-align:left;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
+                      Airline</th>
+                  </tr>
+                  <tr style="background:#ffffff;">
                     <td style="padding:8px;font-size:12px;color:#1E293B;font-family:'Courier New',monospace;border-top:1px solid #F1F5F9;">
                       {{ $seg->locator ?: 'N/A' }}</td>
-                    <td style="padding:8px;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">
-                      {{ $seg->folder ?: 'N/A' }}</td>
-                    <td style="padding:8px;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">
-                      {{ $seg->type ?: 'N/A' }}</td>
                     <td style="padding:8px;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">
                       {{ $seg->booked_in ?: 'N/A' }}</td>
                     <td style="padding:8px;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">
@@ -141,79 +126,47 @@
                     <td style="padding:8px;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">
                       {{ $seg->airline ?: 'N/A' }}</td>
                   </tr>
-                @endforeach
-              </table>
+                  @if ($seg->pnr)
+                    <tr style="background:#F8FAFF;">
+                      <td colspan="4" style="padding:8px;font-size:12px;color:#334155;font-family:'Courier New',monospace;white-space:pre-wrap;line-height:1.5;border-top:1px solid #F1F5F9;">
+                        {{ $seg->pnr }}</td>
+                    </tr>
+                  @endif
+                </table>
+              @endforeach
             </td>
           </tr>
 
-          {{-- Sold / Cost / Margin --}}
-          <tr>
-            <td style="padding:0 24px 20px 24px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                style="border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid #E2E8F0;">
-                <tr style="background:#332E9E;">
-                  <th colspan="3" style="padding:7px 8px;text-align:center;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;border-right:1px solid rgba(255,255,255,.2);">
-                    Sold For</th>
-                  <th colspan="3" style="padding:7px 8px;text-align:center;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;border-right:1px solid rgba(255,255,255,.2);">
-                    Cost</th>
-                  <th style="padding:7px 8px;text-align:center;font-size:11px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.02em;">
-                    Margin</th>
-                </tr>
-                <tr style="background:#F8FAFF;">
-                  <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Adult</th>
-                  <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Child</th>
-                  <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;border-right:1px solid #E2E8F0;">Infant</th>
-                  <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Adult</th>
-                  <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Child</th>
-                  <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;border-right:1px solid #E2E8F0;">Infant</th>
-                  <th></th>
-                </tr>
-                <tr style="background:#ffffff;">
-                  <td style="padding:8px;text-align:center;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">GBP {{ number_format($ticketOrder->sold_adult, 2) }}</td>
-                  <td style="padding:8px;text-align:center;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">GBP {{ number_format($ticketOrder->sold_child, 2) }}</td>
-                  <td style="padding:8px;text-align:center;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;border-right:1px solid #F1F5F9;">GBP {{ number_format($ticketOrder->sold_infant, 2) }}</td>
-                  <td style="padding:8px;text-align:center;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">GBP {{ number_format($ticketOrder->cost_adult, 2) }}</td>
-                  <td style="padding:8px;text-align:center;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;">GBP {{ number_format($ticketOrder->cost_child, 2) }}</td>
-                  <td style="padding:8px;text-align:center;font-size:12px;color:#1E293B;border-top:1px solid #F1F5F9;border-right:1px solid #F1F5F9;">GBP {{ number_format($ticketOrder->cost_infant, 2) }}</td>
-                  <td style="padding:8px;text-align:center;font-size:12px;font-weight:700;color:#16A34A;border-top:1px solid #F1F5F9;">GBP {{ number_format($ticketOrder->margin, 2) }}</td>
-                </tr>
-                <tr style="background:#F8FAFF;">
-                  <td colspan="7" style="padding:6px 8px;text-align:center;font-size:12px;color:#475569;border-top:1px solid #F1F5F9;">
-                    <strong>Safi Charges:</strong> {{ number_format($ticketOrder->safi_charges, 2) }}</td>
-                </tr>
-                <tr style="background:#ffffff;">
-                  <td colspan="3" style="padding:10px 8px;text-align:center;font-size:13px;font-weight:800;color:#1E293B;border-top:1px solid #E2E8F0;">
-                    Total: GBP {{ number_format($ticketOrder->total_sold, 2) }}</td>
-                  <td colspan="3" style="padding:10px 8px;text-align:center;font-size:13px;font-weight:800;color:#1E293B;border-top:1px solid #E2E8F0;">
-                    Total: GBP {{ number_format($ticketOrder->total_cost, 2) }}</td>
-                  <td style="padding:10px 8px;text-align:center;font-size:13px;font-weight:800;color:#16A34A;border-top:1px solid #E2E8F0;">
-                    {{ number_format($ticketOrder->margin, 2) }}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          {{-- Payment / Clearance / Notes --}}
+          {{-- Cost — compact chips, one per pax type that's actually non-zero,
+               plus ATOL/SAFI when it applies and Total. Nothing stretches to
+               fill three even columns when only one or two are ever used. --}}
+          @php
+            $costChips = collect([
+              ['label' => 'Adult', 'value' => $ticketOrder->cost_adult, 'color' => '#332E9E'],
+              ['label' => 'Child', 'value' => $ticketOrder->cost_child, 'color' => '#0891B2'],
+              ['label' => 'Infant', 'value' => $ticketOrder->cost_infant, 'color' => '#C026D3'],
+            ])->filter(fn ($c) => (float) $c['value'] > 0)->values();
+            if ($ticketOrder->atol_safi_label) {
+              $costChips->push(['label' => $ticketOrder->atol_safi_label, 'value' => $ticketOrder->safi_charges, 'color' => '#D97706']);
+            }
+          @endphp
           <tr>
             <td style="padding:0 24px 22px 24px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              <div style="font-size:12px;font-weight:700;color:#332E9E;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 6px 0;">
+                Cost</div>
+              <table role="presentation" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;width:160px;vertical-align:top;">
-                    Payment</td>
-                  <td style="padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:14px;color:#1E293B;">
-                    GBP {{ number_format($ticketOrder->payment_amount, 2) }}</td>
-                </tr>
-                <tr>
-                  <td style="padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;vertical-align:top;">
-                    Clearance Date</td>
-                  <td style="padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:14px;color:#1E293B;">
-                    {{ $ticketOrder->clearance_date?->format('d M y') ?: '—' }}</td>
-                </tr>
-                <tr>
-                  <td style="padding:6px 0;font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;vertical-align:top;">
-                    Notes</td>
-                  <td style="padding:6px 0;font-size:14px;color:#1E293B;white-space:pre-wrap;line-height:1.4;">
-                    {{ $ticketOrder->notes ?: '—' }}</td>
+                  @foreach ($costChips as $chip)
+                    <td style="background:{{ $chip['color'] }}12;border:1px solid {{ $chip['color'] }}33;border-radius:10px;padding:8px 16px;text-align:center;">
+                      <div style="font-size:10px;font-weight:700;color:{{ $chip['color'] }};text-transform:uppercase;letter-spacing:0.04em;">{{ $chip['label'] }}</div>
+                      <div style="font-size:14px;font-weight:800;color:#1E293B;white-space:nowrap;">GBP {{ number_format($chip['value'], 2) }}</div>
+                    </td>
+                    <td width="8"></td>
+                  @endforeach
+                  <td style="background:#16A34A12;border:1px solid #16A34A33;border-radius:10px;padding:8px 16px;text-align:center;">
+                    <div style="font-size:10px;font-weight:700;color:#16A34A;text-transform:uppercase;letter-spacing:0.04em;">Total</div>
+                    <div style="font-size:14px;font-weight:800;color:#16A34A;white-space:nowrap;">GBP {{ number_format($ticketOrder->total_cost, 2) }}</div>
+                  </td>
                 </tr>
               </table>
             </td>

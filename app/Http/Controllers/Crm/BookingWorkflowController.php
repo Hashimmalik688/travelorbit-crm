@@ -80,9 +80,18 @@ class BookingWorkflowController extends Controller
         return back()->with('success', "Booking #{$booking->booking_number} rejected from issuance queue.");
     }
 
-    public function markTicketInProcess(Booking $booking)
+    public function markTicketInProcess(Booking $booking, Request $request)
     {
         $this->authorize('markTicketInProcess', $booking);
+
+        if ($request->boolean('send_ticket_order')) {
+            $request->validate([
+                'ticket_order_to' => 'required|string',
+                'ticket_order_cc' => 'nullable|string',
+                'ticket_order_bcc' => 'nullable|string',
+            ]);
+        }
+
         $processedDate = request('processed_date', now()->toDateString());
         $booking->update([
             'booking_status'       => Booking::STATUS_TICKET_IN_PROCESS,
@@ -105,8 +114,14 @@ class BookingWorkflowController extends Controller
         // see TicketOrderService::createAndSend for why it only ever shows
         // up as a comment badge.
         $sentTicketOrder = false;
-        if (request()->boolean('send_ticket_order')) {
-            TicketOrderService::createAndSend($booking, Auth::user());
+        if ($request->boolean('send_ticket_order')) {
+            TicketOrderService::createAndSend(
+                $booking,
+                Auth::user(),
+                to: $request->input('ticket_order_to'),
+                cc: $request->input('ticket_order_cc'),
+                bcc: $request->input('ticket_order_bcc'),
+            );
             $sentTicketOrder = true;
         }
 

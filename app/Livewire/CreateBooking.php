@@ -512,6 +512,16 @@ class CreateBooking extends Component
     /* ── Auto-detect previous booking ── */
     private ?string $lastMatchedBookerKey = null;
 
+    // Run the lookup live as each identifying field is filled in (all four
+    // are wire:model.lazy, so this fires on blur) — previously this only ran
+    // from nextStep() when leaving the Lead & Caller step, by which point the
+    // Old Booking Reference field the user was looking at had already
+    // scrolled off screen, so it never visibly populated.
+    public function updatedBookerFirstName(): void { $this->checkPreviousBooking(); }
+    public function updatedBookerLastName(): void { $this->checkPreviousBooking(); }
+    public function updatedBookerMobile(): void { $this->checkPreviousBooking(); }
+    public function updatedBookerEmail(): void { $this->checkPreviousBooking(); }
+
     public function checkPreviousBooking(): void
     {
         $firstName = trim($this->booker_first_name);
@@ -519,7 +529,7 @@ class CreateBooking extends Component
         $mobile    = trim($this->booker_mobile);
         $email     = trim($this->booker_email);
 
-        if (empty($firstName) && empty($lastName) && empty($mobile)) return;
+        if (empty($firstName) && empty($lastName) && empty($mobile) && empty($email)) return;
 
         // Skip if we already ran against these exact values
         $key = $firstName.'|'.$lastName.'|'.$mobile.'|'.$email;
