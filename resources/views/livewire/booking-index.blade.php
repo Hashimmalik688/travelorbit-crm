@@ -68,6 +68,7 @@
                 <thead>
                     <tr>
                         <th>Booking #</th>
+                        <th>Booking Date</th>
                         <th>Booker</th>
                         <th>Agent</th>
                         <th>Pax</th>
@@ -86,6 +87,7 @@
                             <td>
                                 <span class="fw-semibold">#{{ $booking->booking_number }}</span>
                             </td>
+                            <td class="text-muted">{{ $booking->created_at->format('d M Y') }}</td>
                             <td>
                                 <div>
                                     <span class="fw-semibold d-block">{{ $booking->booker_name }}</span>
@@ -158,7 +160,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11">
+                            <td colspan="12">
                                 <div class="to-empty">
                                     <div class="to-empty-icon"><i class="ph ph-book-open"></i></div>
                                     <h5>No bookings found</h5>
