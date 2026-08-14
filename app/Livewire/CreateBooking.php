@@ -138,8 +138,12 @@ class CreateBooking extends Component
     public $debit_card_change = false;
 
     // Cost & margins
-    public $cc_charges = '';
-    public $cc_charge_rate = '';
+    // CC charges are no longer set at booking creation — a card/BNPL fee isn't
+    // real until a payment is actually charged, which happens later via the
+    // Request Payment Charge flow on the booking page (BookingShow::chargeCcRate/
+    // chargeCcAmount). Entering one here duplicated that, with no cap tying it
+    // to the sale price — see booking #28, where a stray full-sale-price entry
+    // here silently produced a -£1,100 "margin".
     public $safi_charges = '';
 
     // Card payment fields
@@ -250,31 +254,6 @@ class CreateBooking extends Component
         if ($this->payment_mode_2) {
             $this->logActivity('Payment mode 2 set to ' . $this->payment_mode_2, '', 'updated');
         }
-    }
-
-    public function updatedPaymentMethod(): void
-    {
-        $cardRates = [
-            'debit_card'  => 1.5,
-            'credit_card' => 2.5,
-            'amex'        => 2.5,
-            // Travel Orbit: BNPL providers carry a flat 6% card charge.
-            'klarna'      => 6.0,
-            'clearpay'    => 6.0,
-        ];
-        if (isset($cardRates[$this->payment_method])) {
-            $this->cc_charge_rate = $cardRates[$this->payment_method];
-            $this->cc_charges     = round($this->totalSoldPrice * $this->cc_charge_rate / 100, 2);
-        } else {
-            $this->cc_charge_rate = '';
-            $this->cc_charges     = 0;
-        }
-    }
-
-    public function updatedCcChargeRate(): void
-    {
-        $rate = (float) $this->cc_charge_rate;
-        $this->cc_charges = $rate > 0 ? round($this->totalSoldPrice * $rate / 100, 2) : 0;
     }
 
     public function updatedDebitCardChange(): void
@@ -1203,11 +1182,6 @@ class CreateBooking extends Component
         return $this->totalSoldPrice - $this->totalCostPrice;
     }
 
-    public function getTotalMarginProperty(): float
-    {
-        return $this->totalSoldPrice - $this->totalCostPrice - (float) ($this->cc_charges ?: 0);
-    }
-
     public function getHotelMarginProperty(): float
     {
         return collect($this->hotels)->sum(function ($h) {
@@ -1606,7 +1580,10 @@ class CreateBooking extends Component
                 'is_deposit_nonrefundable' => $bookingPlan === 'dnpl',
                 'payment_mode'   => $primaryMethod ?: 'none',
                 'payment_mode_2' => null,
-                'cc_charges'     => $this->cc_charges ?: 0,
+                // No CC charge at creation time — nothing has actually been charged
+                // yet. The real fee is set later, per approved payment, via the
+                // booking page's Request Payment Charge flow.
+                'cc_charges'     => 0,
                 'invoice_generated' => false,
             ]);
 

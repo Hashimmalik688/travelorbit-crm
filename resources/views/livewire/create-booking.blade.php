@@ -1271,31 +1271,6 @@
                     </div>
                     @endif
 
-                    {{-- CC Charges (auto-applied for card payments, editable) --}}
-                    @if(in_array($payment_method, ['amex','credit_card','debit_card','klarna','clearpay']))
-                    <div class="mb-3" style="border-radius:12px;border:1.5px solid rgba(220,38,38,.15);overflow:hidden;">
-                      <div style="padding:10px 16px;background:rgba(220,38,38,.04);border-bottom:1px solid rgba(220,38,38,.10);display:flex;align-items:center;justify-content:space-between;">
-                        <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#DC2626;">CC Charges</span>
-                        @if($cc_charges > 0)
-                          <span style="font-size:0.78rem;font-weight:800;color:#DC2626;">–£{{ number_format($cc_charges,2) }}</span>
-                        @endif
-                      </div>
-                      <div class="p-3">
-                        <div class="row g-2 align-items-end">
-                          <div class="col-6">
-                            <label class="form-label fw-semibold mb-1" style="font-size:0.84rem;color:#5A6080;">Rate (%)</label>
-                            <input type="number" wire:model.live="cc_charge_rate" class="form-control form-control-sm" style="border-radius:8px;" placeholder="e.g. 1.5" min="0" max="10" step="0.1">
-                          </div>
-                          <div class="col-6">
-                            <label class="form-label fw-semibold mb-1" style="font-size:0.84rem;color:#5A6080;">Amount (£)</label>
-                            <input type="number" wire:model.live="cc_charges" class="form-control form-control-sm" style="border-radius:8px;" placeholder="0.00" min="0" step="0.01">
-                          </div>
-                        </div>
-                        <div style="font-size:0.72rem;color:#475569;margin-top:6px;">Auto-calculated from sold price. Adjust if needed.</div>
-                      </div>
-                    </div>
-                    @endif
-
                     {{-- Booking Notes --}}
                     <div class="mb-3">
                       <label class="form-label fw-semibold mb-1" style="font-size:0.84rem;color:#5A6080;">Booking Notes <span style="color:#DC2626;">*</span></label>
@@ -1355,7 +1330,6 @@
                       $visaSold    = collect($visas)->sum(fn($v)=>(float)($v['selling_price']??0));
                       $excCost     = (float)($excursion_actual_cost ?: 0);
                       $excSold     = (float)($excursion_selling_price ?: 0);
-                      $ccAmt       = (float)($cc_charges ?: 0);
                     @endphp
                     <div style="border-radius:14px;border:1px solid rgba(51,46,158,.10);overflow:hidden;background:#fff;box-shadow:0 2px 12px rgba(51,46,158,.06);">
 
@@ -1498,13 +1472,15 @@
                         </div>
                       @endif
 
-                      {{-- ── Totals + CC + Dual Margin ── --}}
+                      {{-- ── Totals + Margin ── --}}
+                      {{-- No CC charge here — that's only real once a payment is
+                           actually charged, via the booking page's Request Payment
+                           Charge flow (which shows its own rate/fee at that point). --}}
                       @php
                         $totCost  = $flightCost + $this->atolSafiTax + $hotelCost + $visaCost + $excCost;
                         $totSold  = $flightSold + $hotelSold + $visaSold + $excSold;
                         $grossMgn = $totSold - $totCost;
-                        $netMgn   = $grossMgn - $ccAmt;
-                        $netPct   = $totSold > 0 ? round(($netMgn / $totSold) * 100, 1) : 0;
+                        $netPct   = $totSold > 0 ? round(($grossMgn / $totSold) * 100, 1) : 0;
                       @endphp
                       <div style="padding:14px 16px;border-top:2px solid rgba(51,46,158,.08);">
                         <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
@@ -1516,32 +1492,11 @@
                           <span style="font-size:0.84rem;font-weight:700;color:#1E293B;">£{{ number_format($totSold,2) }}</span>
                         </div>
 
-                        {{-- CC Charges row (auto-applied for card payments) --}}
-                        @if($ccAmt > 0)
-                          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);margin-bottom:10px;">
-                            <div>
-                              <span style="font-size:0.744rem;font-weight:700;color:#DC2626;">CC Charges</span>
-                              @if($cc_charge_rate)
-                                <span style="font-size:0.672rem;color:#475569;margin-left:4px;">({{ $cc_charge_rate }}%)</span>
-                              @endif
-                            </div>
-                            <span style="font-size:0.864rem;font-weight:800;color:#DC2626;">–£{{ number_format($ccAmt,2) }}</span>
-                          </div>
-                        @endif
-
-                        {{-- Margin without CC --}}
-                        @if($ccAmt > 0)
-                          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;background:rgba(51,46,158,.04);border:1px solid rgba(51,46,158,.08);margin-bottom:8px;">
-                            <span style="font-size:0.72rem;font-weight:700;color:#475569;">Margin (excl. CC)</span>
-                            <span style="font-size:0.84rem;font-weight:700;color:{{ $grossMgn >= 0 ? '#16A34A' : '#DC2626' }};">£{{ number_format($grossMgn,2) }}</span>
-                          </div>
-                        @endif
-
-                        {{-- Net Margin box --}}
-                        <div style="padding:14px;border-radius:12px;{{ $netMgn >= 0 ? 'background:linear-gradient(135deg,rgba(22,163,74,.12),rgba(22,163,74,.05));border:2px solid rgba(22,163,74,.22);' : 'background:linear-gradient(135deg,rgba(220,38,38,.12),rgba(220,38,38,.05));border:2px solid rgba(220,38,38,.22);' }}">
-                          <div style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $netMgn >= 0 ? '#15803D' : '#DC2626' }};margin-bottom:2px;">{{ $ccAmt > 0 ? 'Net Margin (incl. CC)' : 'Total Margin' }}</div>
-                          <div style="font-size:1.6rem;font-weight:800;color:{{ $netMgn >= 0 ? '#16A34A' : '#DC2626' }};line-height:1;letter-spacing:-.02em;">£{{ number_format($netMgn,2) }}</div>
-                          <div style="font-size:0.744rem;font-weight:700;color:{{ $netMgn >= 0 ? '#16A34A' : '#DC2626' }};margin-top:3px;opacity:.8;">{{ $netPct }}% margin</div>
+                        {{-- Total Margin box --}}
+                        <div style="padding:14px;border-radius:12px;{{ $grossMgn >= 0 ? 'background:linear-gradient(135deg,rgba(22,163,74,.12),rgba(22,163,74,.05));border:2px solid rgba(22,163,74,.22);' : 'background:linear-gradient(135deg,rgba(220,38,38,.12),rgba(220,38,38,.05));border:2px solid rgba(220,38,38,.22);' }}">
+                          <div style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:{{ $grossMgn >= 0 ? '#15803D' : '#DC2626' }};margin-bottom:2px;">Total Margin</div>
+                          <div style="font-size:1.6rem;font-weight:800;color:{{ $grossMgn >= 0 ? '#16A34A' : '#DC2626' }};line-height:1;letter-spacing:-.02em;">£{{ number_format($grossMgn,2) }}</div>
+                          <div style="font-size:0.744rem;font-weight:700;color:{{ $grossMgn >= 0 ? '#16A34A' : '#DC2626' }};margin-top:3px;opacity:.8;">{{ $netPct }}% margin</div>
                         </div>
                       </div>
 
