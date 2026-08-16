@@ -11,11 +11,12 @@ use Illuminate\Support\Facades\Mail;
 
 /**
  * Builds a Ticket Order straight off a booking's own stored data (no manual
- * form) and emails it — used by the issuance queue's "Send Ticket Order"
- * checkbox (see BookingWorkflowController::markTicketInProcess). The
- * agent-editable version of this same flow lives in BookingShow::requestTicketOrder/
- * submitTicketOrder, which prefills the same way but lets the agent adjust
- * before sending; this one goes straight from booking to email.
+ * form) and emails it — used exclusively by the Issuance Queue's "Send
+ * Ticket Order" checkbox inside the Process/Approve dialog (see
+ * BookingWorkflowController::markTicketInProcess). There is deliberately no
+ * other way to trigger a ticket order: no button on the booking page, no
+ * standalone form — only issuance.manage permission holders can send one,
+ * and only once a booking has actually reached the issuance queue.
  */
 class TicketOrderService
 {

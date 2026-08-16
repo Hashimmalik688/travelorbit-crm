@@ -83,7 +83,11 @@
                 </thead>
                 <tbody>
                     @forelse ($bookings as $booking)
-                        <tr @if($booking->hasActiveRefund()) style="background:rgba(239,68,68,0.08);" @endif>
+                        @php $isFullyRefunded = $booking->isFullyRefunded(); @endphp
+                        <tr
+                            @if($isFullyRefunded) style="background:rgba(234,179,8,0.12);"
+                            @elseif($booking->hasActiveRefund()) style="background:rgba(239,68,68,0.08);"
+                            @endif>
                             <td>
                                 <span class="fw-semibold">#{{ $booking->booking_number }}</span>
                             </td>
@@ -125,6 +129,11 @@
                                 <span class="badge bg-label-{{ $colorMap[$displayStatus] ?? 'secondary' }}">
                                     {{ ucfirst(str_replace('_', ' ', $displayStatus)) }}
                                 </span>
+                                {{-- Purely visual — booking_status itself never changes on a full
+                                     refund, see Booking::isFullyRefunded(). --}}
+                                @if ($isFullyRefunded)
+                                    <span class="badge" style="background:#EAB308;color:#fff;">Full Refund</span>
+                                @endif
                             </td>
                             <td>
                                 @php
