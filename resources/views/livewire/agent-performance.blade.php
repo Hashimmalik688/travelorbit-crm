@@ -38,14 +38,21 @@
                     </div>
                 </div>
             @endif
-            <div class="ms-auto text-end text-muted" style="font-size:0.96rem;">
-                <div>
+            <div class="ms-auto d-flex flex-column align-items-end gap-2">
+                <div class="text-muted" style="font-size:0.96rem;">
                     Showing <span class="fw-semibold" style="color:#332E9E;">{{ $monthLabel }}</span>
                     · <span class="fw-semibold">{{ $totals['count'] }}</span> booking{{ $totals['count'] === 1 ? '' : 's' }}
                 </div>
                 {{-- Net Booking = Total - Date Change - Cancellation - Full Refund - Refund Booking. --}}
-                <div style="font-size:0.816rem;">
-                    Net booking <span class="fw-semibold" style="color:#16A34A;">{{ $totals['netCount'] }}</span>
+                <div class="d-inline-flex align-items-center gap-2"
+                    title="Net Booking = Total Booking − Date Change − Cancellation − Full Refund − Refund Booking"
+                    style="background:linear-gradient(135deg,rgba(22,163,74,.12),rgba(22,163,74,.04));border:1px solid rgba(22,163,74,.28);border-radius:20px;padding:4px 8px 4px 6px;box-shadow:0 1px 3px rgba(22,163,74,.08);">
+                    <span class="d-inline-flex align-items-center justify-content-center"
+                        style="width:20px;height:20px;border-radius:50%;background:#16A34A;flex-shrink:0;">
+                        <i class="ph ph-trend-up" style="font-size:0.72rem;color:#fff;"></i>
+                    </span>
+                    <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#15803D;">Net Booking</span>
+                    <span style="font-size:1.02rem;font-weight:800;color:#16A34A;line-height:1;">{{ $totals['netCount'] }}</span>
                 </div>
             </div>
         </div>
