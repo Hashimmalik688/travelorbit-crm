@@ -38,9 +38,15 @@
                     </div>
                 </div>
             @endif
-            <div class="ms-auto text-muted" style="font-size:0.96rem;">
-                Showing <span class="fw-semibold" style="color:#332E9E;">{{ $monthLabel }}</span>
-                · <span class="fw-semibold">{{ $totals['count'] }}</span> booking{{ $totals['count'] === 1 ? '' : 's' }}
+            <div class="ms-auto text-end text-muted" style="font-size:0.96rem;">
+                <div>
+                    Showing <span class="fw-semibold" style="color:#332E9E;">{{ $monthLabel }}</span>
+                    · <span class="fw-semibold">{{ $totals['count'] }}</span> booking{{ $totals['count'] === 1 ? '' : 's' }}
+                </div>
+                {{-- Net Booking = Total - Date Change - Cancellation - Full Refund - Refund Booking. --}}
+                <div style="font-size:0.816rem;">
+                    Net booking <span class="fw-semibold" style="color:#16A34A;">{{ $totals['netCount'] }}</span>
+                </div>
             </div>
         </div>
     </div>

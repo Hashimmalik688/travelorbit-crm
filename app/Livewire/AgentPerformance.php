@@ -375,10 +375,24 @@ class AgentPerformance extends Component
         $deductions  = $this->deductionsTotal();
         $claims      = $this->claimsTotal();
 
+        // Net Booking = Total Booking - Date Change - Cancellation - Full
+        // Refund - Refund Booking. A booking is excluded once even if it
+        // matches more than one of those reasons (e.g. a refund_booking that
+        // also ended up fully refunded), so this can never go negative.
+        // Cancelled bookings never actually reach $rows (only issued/invoiced
+        // statuses do — see soldStatuses()), so that term is a no-op today,
+        // kept for when a booking's status changes after being counted here.
+        $netBookingCount = $rows->reject(fn ($r) => $r['isDateChange']
+            || $r['booking']->booking_status === Booking::STATUS_CANCELLED
+            || $r['booking']->lead_nature === 'refund_booking'
+            || $r['booking']->isFullyRefunded()
+        )->count();
+
         return view('livewire.agent-performance', [
             'rows'       => $rows,
             'totals'     => [
                 'count'         => $rows->count(),
+                'netCount'      => $netBookingCount,
                 'cost'          => (float) $rows->sum('cost'),
                 'sold'          => (float) $rows->sum('sold'),
                 'ccCharges'     => (float) $rows->sum('ccCharges'),
