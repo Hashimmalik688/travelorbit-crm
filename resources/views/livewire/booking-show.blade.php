@@ -2984,7 +2984,7 @@
                  to this one — see CreateBooking::mount($fromBookingId). --}}
               @if (Auth::user()->hasPermission('bookings.date_change'))
                 <div style="margin-top:10px;">
-                  <a href="{{ route('bookings.create', ['from' => $booking->id]) }}" class="w-100"
+                  <a href="{{ route('bookings.create', ['from' => $booking->id]) }}" target="_blank" rel="noopener" class="w-100"
                     style="background:rgba(14,116,144,.08);color:#0E7490;border:1px solid rgba(14,116,144,.2);border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;">
                     <i class="ph ph-calendar-x"></i> Date Change
                   </a>
