@@ -221,6 +221,7 @@ class Booking extends Model
 
     protected $fillable = [
         'booking_number',
+        'original_booking_id',
         'customer_id',
         'user_id',
         'booking_type',
@@ -299,6 +300,18 @@ class Booking extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    /** The booking this one is a Date Change of, if any. */
+    public function originalBooking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class, 'original_booking_id');
+    }
+
+    /** Date-change bookings created from this one. */
+    public function dateChangeBookings(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'original_booking_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -345,6 +358,48 @@ class Booking extends Model
         return (float) $this->paymentHistory->where('status', 'approved')->sum('amount');
     }
 
+    /**
+     * Every approved payment that isn't itself a refund payout — i.e. what
+     * the customer actually paid in, before any money went back out. Used
+     * as the "full amount" baseline for isFullyRefunded().
+     */
+    public function totalPaidByCustomer(): float
+    {
+        return (float) $this->paymentHistory
+            ->where('status', 'approved')
+            ->filter(fn ($ph) => !($ph->payment_details['refund_payout'] ?? false))
+            ->sum('amount');
+    }
+
+    /**
+     * Total actually paid back to the customer via approved "Refund to
+     * Customer" payouts (see BookingShow::submitRefundChargePayment) —
+     * stored as negative payment_history rows, so this is the positive sum.
+     */
+    public function totalRefundedToCustomer(): float
+    {
+        return (float) $this->paymentHistory
+            ->where('status', 'approved')
+            ->filter(fn ($ph) => $ph->payment_details['refund_payout'] ?? false)
+            ->sum(fn ($ph) => abs((float) $ph->amount));
+    }
+
+    /**
+     * True once accounts has paid the customer back everything they ever
+     * paid in on this booking. Purely visual (yellow "Full Refund" badge) —
+     * booking_status is never touched by it, unlike hasActiveRefund() which
+     * this de-activates once a refund is actually complete.
+     */
+    public function isFullyRefunded(): bool
+    {
+        $paid = $this->totalPaidByCustomer();
+        if ($paid <= 0) {
+            return false;
+        }
+
+        return round($this->totalRefundedToCustomer(), 2) >= round($paid, 2);
+    }
+
     public function marginShares(): HasMany
     {
         return $this->hasMany(BookingMarginShare::class);
@@ -361,9 +416,17 @@ class Booking extends Model
      * since an invoiced/issued booking keeps that status while a refund
      * against it is requested/reviewed/processed (see RefundIndex::changeStatus,
      * which only flips booking_status on 'processed' or 'rejected').
+     * Excludes fully-refunded bookings (see isFullyRefunded) — those get the
+     * yellow "Full Refund" badge instead of the red "active refund" one;
+     * once everything paid in has been paid back out, nothing is "active"
+     * anymore even if the underlying Refund row is technically non-rejected.
      */
     public function hasActiveRefund(): bool
     {
+        if ($this->isFullyRefunded()) {
+            return false;
+        }
+
         if ($this->booking_status === self::STATUS_REFUND_QUEUE) {
             return true;
         }

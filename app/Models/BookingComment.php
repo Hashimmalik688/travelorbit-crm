@@ -35,6 +35,13 @@ class BookingComment extends Model
             'short' => 'Manager Info',
             'color' => '#DC2626',
         ],
+        // System-generated only (see CreateBooking::save()'s Date Change
+        // cross-reference comments) — left out of the manual preset picker.
+        'date_change' => [
+            'label' => 'Date Change',
+            'short' => 'Date Change',
+            'color' => '#0E7490',
+        ],
         // System-generated only (see TicketOrderService::createAndSend) — not
         // offered as a pickable preset when writing a manual comment, so it's
         // deliberately left out of getCommentPresetsProperty's list.

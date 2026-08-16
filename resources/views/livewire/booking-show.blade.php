@@ -706,8 +706,16 @@
     @endif
     {{-- A refund request is a Refund row, not a booking_status — the booking keeps
        its real status and this badge is the prominent sign one is in flight.
-       Wording tracks which side of the money movement it's currently on. --}}
-    @if ($this->activeRefund)
+       Wording tracks which side of the money movement it's currently on.
+       Full Refund (yellow) takes priority once everything paid in has been
+       paid back out — see Booking::isFullyRefunded(); purely visual, the
+       booking's real status/badges above are untouched. --}}
+    @if ($booking->isFullyRefunded())
+      <span
+        style="font-size:0.744rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#EAB308;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px;">
+        <i class="ph ph-check-circle"></i> Full Refund
+      </span>
+    @elseif ($this->activeRefund)
       <span
         style="font-size:0.744rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:#DC2626;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px;box-shadow:0 0 0 3px rgba(220,38,38,.25);">
         <i class="ph ph-arrows-counter-clockwise"></i>
@@ -818,16 +826,6 @@
         </button>
       @endif
 
-      {{-- Create Ticket Order: placeholder trigger, placed alongside Request
-         Refund for now — location/condition to be finalised once it's clear
-         which booking action should actually launch it. --}}
-      @if (!in_array($role, ['accounts', 'issuance']))
-        <button type="button" x-data="{ open: @entangle('showTicketOrderModal') }" @click="open = true" wire:click="requestTicketOrder" class="bv-action"
-          style="background:rgba(51,46,158,.06);border-color:rgba(51,46,158,.2);color:#332E9E;">
-          <i class="ph ph-airplane-tilt"></i> Create Ticket Order
-        </button>
-      @endif
-
       {{-- Cancel PNR: operations/manager/admin when form is editable --}}
       @if (in_array($role, ['admin', 'manager', 'operations']) && $canEditCore)
         <button type="button" wire:click="cancelPnr" wire:confirm="Cancel all PNR segments? This cannot be undone."
@@ -931,7 +929,25 @@
                 ],
                 'locked' => !$isPrivileged,
                 'editingVar' => 'sectionEditing',
-            ])</div>
+            ])
+              {{-- Cross-reference badges for the Date Change flow — shown either
+                 direction: this booking IS a date change (links back to the
+                 original), or this booking HAS BEEN date-changed (links
+                 forward to the newest one created from it). --}}
+              @if ($booking->originalBooking)
+                <a href="{{ route('bookings.show', $booking->originalBooking) }}"
+                  class="mt-1"
+                  style="font-size:0.72rem;font-weight:700;color:#B45309;background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.18);border-radius:20px;padding:3px 10px;display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                  <i class="ph ph-arrow-bend-up-left"></i> Date change of #{{ $booking->originalBooking->booking_number }}
+                </a>
+              @elseif ($booking->dateChangeBookings->isNotEmpty())
+                <a href="{{ route('bookings.show', $booking->dateChangeBookings->sortByDesc('created_at')->first()) }}"
+                  class="mt-1"
+                  style="font-size:0.72rem;font-weight:700;color:#B45309;background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.18);border-radius:20px;padding:3px 10px;display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                  <i class="ph ph-arrow-bend-up-right"></i> Date changed &rarr; #{{ $booking->dateChangeBookings->sortByDesc('created_at')->first()->booking_number }}
+                </a>
+              @endif
+            </div>
             <div class="col-md-4">@include('livewire.partials.editable-field', [
                 'label' => 'Booking Type',
                 'model' => 'booking_type',
@@ -2963,6 +2979,17 @@
                   </button>
                 </div>
               @endif
+
+              {{-- Date Change: starts a new, pre-filled booking that links back
+                 to this one — see CreateBooking::mount($fromBookingId). --}}
+              @if (Auth::user()->hasPermission('bookings.date_change'))
+                <div style="margin-top:10px;">
+                  <a href="{{ route('bookings.create', ['from' => $booking->id]) }}" class="w-100"
+                    style="background:rgba(14,116,144,.08);color:#0E7490;border:1px solid rgba(14,116,144,.2);border-radius:10px;padding:8px;font-size:0.816rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;">
+                    <i class="ph ph-calendar-x"></i> Date Change
+                  </a>
+                </div>
+              @endif
             </div>
           </div>
 
@@ -3500,132 +3527,6 @@ $visiblePaymentHistory = $booking->paymentHistory?->reject(fn($ph) => $ph->statu
           <button type="button" wire:click="submitRefund"
             style="background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;border:none;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(220,38,38,.25);">Submit
             Refund Request</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {{-- TICKET ORDER MODAL --}}
-  <div x-data="{ open: @entangle('showTicketOrderModal') }" x-show="open" x-cloak class="refund-overlay"
-    style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;padding:16px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"
-    @click="open = false" @keydown.escape.window="open = false">
-    <div
-      style="background:#fff;border-radius:18px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);"
-      @click.stop>
-      <div
-        style="background:linear-gradient(135deg,#332E9E,#4A45B5);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1;">
-        <h5 class="fw-bold mb-0" style="font-size:1.02rem;color:#fff;display:flex;align-items:center;gap:8px;"><i
-            class="ph ph-airplane-tilt" style="font-size:1.14rem;"></i> Create Ticket Order</h5>
-        <button type="button" @click="open = false"
-          style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;">✕</button>
-      </div>
-      <div class="p-3">
-        <div class="mb-3 px-3 py-2"
-          style="background:#FAFBFF;border-radius:10px;border:1px solid rgba(51,46,158,.08);font-size:0.8rem;color:#475569;">
-          <strong style="color:#1E293B;">{{ $booking->booker_name ?: 'N/A' }}</strong>
-          <span class="text-muted"> · Booking #{{ $booking->booking_number ?? $booking->id }}</span>
-          <span class="text-muted"> · Agent: {{ Auth::user()->name }}</span>
-        </div>
-
-        <div class="mb-3">
-          <label class="bv-label">To (consolidator) <span style="color:#DC2626;">*</span></label>
-          <input type="text" wire:model="ticketOrderIssuedTo" class="rf-input" placeholder="e.g. Crystal Travel">
-          @error('ticketOrderIssuedTo')
-            <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
-          @enderror
-        </div>
-
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span
-            style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Pax
-            Name(s)</span>
-        </div>
-        @foreach ($ticketOrderPassengers as $pi => $pax)
-          <div class="refund-card">
-            <div class="row g-3 align-items-end">
-              <div class="col-md-6">
-                <label class="bv-label">Name</label>
-                <input type="text" wire:model="ticketOrderPassengers.{{ $pi }}.name" class="rf-input">
-                @error("ticketOrderPassengers.{$pi}.name")
-                  <div style="font-size:0.75rem;color:#DC2626;margin-top:3px;">{{ $message }}</div>
-                @enderror
-              </div>
-              <div class="col-md-3">
-                <label class="bv-label">DOB</label>
-                <input type="date" wire:model="ticketOrderPassengers.{{ $pi }}.date_of_birth" class="rf-input">
-              </div>
-              <div class="col-md-3">
-                <label class="bv-label">Passport</label>
-                <input type="text" wire:model="ticketOrderPassengers.{{ $pi }}.passport_number" class="rf-input">
-              </div>
-            </div>
-          </div>
-        @endforeach
-
-        <div class="d-flex align-items-center justify-content-between mb-2 mt-3">
-          <span
-            style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Flight
-            Details</span>
-          <button type="button" wire:click="addTicketOrderSegment"
-            style="background:rgba(51,46,158,.06);border:1.5px dashed rgba(51,46,158,.25);color:#332E9E;border-radius:7px;padding:2px 9px;font-size:0.72rem;font-weight:600;cursor:pointer;">+
-            Add Segment</button>
-        </div>
-
-        @foreach ($ticketOrderSegments as $si => $seg)
-          <div class="refund-card">
-            <div class="refund-card-title">
-              <div>Segment {{ $si + 1 }}</div>
-              @if (count($ticketOrderSegments) > 1)
-                <button type="button" wire:click="removeTicketOrderSegment({{ $si }})"
-                  class="refund-remove-btn">Remove</button>
-              @endif
-            </div>
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="bv-label">Locator</label>
-                <input type="text" wire:model="ticketOrderSegments.{{ $si }}.locator" class="rf-input">
-              </div>
-              <div class="col-md-4">
-                <label class="bv-label">Booked In (GDS)</label>
-                <input type="text" wire:model="ticketOrderSegments.{{ $si }}.booked_in" class="rf-input">
-              </div>
-              <div class="col-md-4">
-                <label class="bv-label">Issue From</label>
-                <input type="text" wire:model="ticketOrderSegments.{{ $si }}.issue_from" class="rf-input">
-              </div>
-            </div>
-            <div class="row g-3 mt-2">
-              <div class="col-md-4">
-                <label class="bv-label">Airline</label>
-                <input type="text" wire:model="ticketOrderSegments.{{ $si }}.airline" class="rf-input">
-              </div>
-              <div class="col-md-8">
-                <label class="bv-label">PNR (raw itinerary lines)</label>
-                <textarea wire:model="ticketOrderSegments.{{ $si }}.pnr" rows="2" class="rf-input"
-                  style="resize:vertical;font-family:'Courier New',monospace;font-size:0.8rem;"></textarea>
-              </div>
-            </div>
-          </div>
-        @endforeach
-
-        <div class="mb-2 mt-3">
-          <span
-            style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;">Cost
-            (£)</span>
-        </div>
-        <div class="row g-2 mb-3">
-          <div class="col-md-3"><label class="bv-label">Cost Adult</label><input type="number" step="0.01" wire:model="ticketOrderCostAdult" class="rf-input"></div>
-          <div class="col-md-3"><label class="bv-label">Cost Child</label><input type="number" step="0.01" wire:model="ticketOrderCostChild" class="rf-input"></div>
-          <div class="col-md-3"><label class="bv-label">Cost Infant</label><input type="number" step="0.01" wire:model="ticketOrderCostInfant" class="rf-input"></div>
-          <div class="col-md-3"><label class="bv-label">ATOL/SAFI Charges</label><input type="number" step="0.01" wire:model="ticketOrderSafiCharges" class="rf-input"></div>
-        </div>
-
-        <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top:1px solid rgba(51,46,158,.06);">
-          <button type="button" @click="open = false"
-            style="background:transparent;border:1.5px solid rgba(51,46,158,.15);color:#475569;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:600;cursor:pointer;">Cancel</button>
-          <button type="button" wire:click="submitTicketOrder"
-            style="background:linear-gradient(135deg,#332E9E,#4A45B5);color:#fff;border:none;border-radius:10px;padding:7px 20px;font-size:0.84rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(51,46,158,.25);">Create
-            &amp; Send</button>
         </div>
       </div>
     </div>

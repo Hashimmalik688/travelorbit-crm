@@ -22,7 +22,9 @@ class BookingController extends Controller
 
     public function create()
     {
-        return view('content.bookings.create');
+        // ?from=<booking id> starts the Date Change flow — see
+        // CreateBooking::mount() for the pre-fill/lock behavior.
+        return view('content.bookings.create', ['fromBookingId' => request('from')]);
     }
 
     public function store()

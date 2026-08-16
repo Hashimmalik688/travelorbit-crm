@@ -13,7 +13,8 @@ class SellingBoard extends Component
         // managers/operations don't belong on it (matches Agents Performance,
         // which is also agent-only).
         $allAgents = User::where('role', 'agent')
-            ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())])
+            ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())
+                ->whereNotIn('lead_nature', ['date_change', 'refund_booking'])])
             ->get();
 
         $sellingToday = $allAgents->where('today_bookings', '>', 0)->sortByDesc('today_bookings')->values();

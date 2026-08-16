@@ -76,6 +76,12 @@ return [
             'icon'        => 'ph ph-calendar-check',
             'description' => "See your own Payment Plan and Payment Awaiting lists (issued bookings still owing).",
         ],
+        'bookings.date_change' => [
+            'label'       => 'Date change a booking',
+            'group'       => 'Bookings',
+            'icon'        => 'ph ph-calendar-x',
+            'description' => 'Start a Date Change from an existing booking — opens a new, pre-filled booking linked back to the original.',
+        ],
 
         // ── Customers ─────────────────────────────────────────────
         'customers.view' => [

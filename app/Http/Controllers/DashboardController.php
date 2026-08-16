@@ -251,8 +251,9 @@ class DashboardController extends Controller
 
         // Booking-type counts always reflect the FULL list (ignoring $type
         // itself) so switching the type filter doesn't hide how many bookings
-        // exist in every other type.
-        $typeCounts = $baseQuery()->get()->countBy('booking_type');
+        // exist in every other type. Date change / refund follow-ups don't
+        // count as new bookings here, though they still appear in the table below.
+        $typeCounts = $baseQuery()->whereNotIn('lead_nature', ['date_change', 'refund_booking'])->get()->countBy('booking_type');
 
         // No balance filter — a booking stays in its payment-plan/awaiting status
         // even once fully paid, so settled bookings stay visible here (shown
@@ -375,7 +376,9 @@ class DashboardController extends Controller
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
         $freshMarginThisMonth = (float) $freshBookings->sum($netMargin);
-        $freshCountThisMonth  = $freshBookings->count();
+        // Date change / refund follow-ups aren't new sales — they keep their
+        // margin in the sum above but don't inflate the "bookings made" count.
+        $freshCountThisMonth  = $freshBookings->whereNotIn('lead_nature', ['date_change', 'refund_booking'])->count();
 
         // ── ISSUED: net margin from issued & invoiced bookings that are FULLY
         //    PAID, created this month. ──
@@ -385,7 +388,7 @@ class DashboardController extends Controller
             ->get()
             ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
         $issuedMarginThisMonth = (float) $issuedBookingsThisMonth->sum($netMargin);
-        $issuedCountThisMonth  = $issuedBookingsThisMonth->count();
+        $issuedCountThisMonth  = $issuedBookingsThisMonth->whereNotIn('lead_nature', ['date_change', 'refund_booking'])->count();
 
         // ── PENDING: the not-yet-issued slice of Fresh, this month. ──
         $pendingBookingsThisMonth = Booking::whereNotIn('booking_status', array_merge($issuedStatuses, $deadStatuses))
@@ -393,7 +396,7 @@ class DashboardController extends Controller
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
         $pendingMarginThisMonth = (float) $pendingBookingsThisMonth->sum($netMargin);
-        $pendingCountThisMonth  = $pendingBookingsThisMonth->count();
+        $pendingCountThisMonth  = $pendingBookingsThisMonth->whereNotIn('lead_nature', ['date_change', 'refund_booking'])->count();
 
         // Outstanding balance is scoped to bookings that have actually been
         // issued and are still being paid off — Payment Awaiting / Payment
@@ -484,7 +487,8 @@ class DashboardController extends Controller
         $cutoffPassed   = now()->day >= 20;
 
         $agentsPerformance = \App\Models\User::where('role', 'agent')
-            ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())])
+            ->withCount(['bookings as today_bookings' => fn ($q) => $q->whereDate('created_at', today())
+                ->whereNotIn('lead_nature', ['date_change', 'refund_booking'])])
             ->orderBy('name')->get()
             ->map(function ($agent) use ($startOfMonth, $endOfMonth, $deadStatuses, $marginStatuses, $cutoffPassed) {
                 $bookingsThisMonth = Booking::where('user_id', $agent->id)
@@ -510,7 +514,9 @@ class DashboardController extends Controller
                     'profile_photo_path' => $agent->profile_photo_path,
                     'made_booking_today' => $agent->today_bookings > 0,
                     'margin'             => (float) $relevant->sum(fn (Booking $b) => $b->netMargin()),
-                    'count'              => $relevant->count(),
+                    // Date change / refund follow-ups keep their margin above
+                    // but don't count as a "booking made" for leaderboard ranking.
+                    'count'              => $relevant->whereNotIn('lead_nature', ['date_change', 'refund_booking'])->count(),
                     // Earliest booking in the relevant set, as a raw unix
                     // timestamp (not a Carbon instance — comparing Carbon
                     // objects with <=> doesn't reliably order chronologically).
@@ -544,8 +550,14 @@ class DashboardController extends Controller
         $eom    = $now->copy()->endOfMonth();
 
         // ── This month counts ──
-        $myTotalBookings = Booking::where('user_id', $userId)->whereBetween('created_at', [$som, $eom])->count();
-        $myTodayBookings = Booking::where('user_id', $userId)->whereDate('created_at', today())->count();
+        // Date change / refund follow-ups aren't new sales — excluded here so
+        // they don't inflate "bookings made" (they still light up the calendar
+        // heatmap below, date_change only, and still earn margin further down).
+        $countableNatures = ['date_change', 'refund_booking'];
+        $myTotalBookings = Booking::where('user_id', $userId)->whereBetween('created_at', [$som, $eom])
+            ->whereNotIn('lead_nature', $countableNatures)->count();
+        $myTodayBookings = Booking::where('user_id', $userId)->whereDate('created_at', today())
+            ->whereNotIn('lead_nature', $countableNatures)->count();
 
         // "Has been issued at all" — used only to exclude issued bookings from
         // the two Pending figures, both of which are labelled "not yet issued".
@@ -575,7 +587,7 @@ class DashboardController extends Controller
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
         $myFresh = (float) $freshBookings->sum($netMargin);
-        $myFreshCount = $freshBookings->count();
+        $myFreshCount = $freshBookings->whereNotIn('lead_nature', $countableNatures)->count();
 
         // ── ISSUED: net margin from issued & invoiced bookings that are FULLY
         //    PAID, created this month ──
@@ -590,7 +602,7 @@ class DashboardController extends Controller
             ->get()
             ->filter(fn (Booking $b) => $b->total_sale_price - $b->totalReceived() <= 0.005);
         $myIssued = (float) $issuedBookings->sum($netMargin);
-        $myIssuedCount = $issuedBookings->count();
+        $myIssuedCount = $issuedBookings->whereNotIn('lead_nature', $countableNatures)->count();
 
         // ── PENDING (THIS MONTH): the not-yet-issued slice of Fresh — bookings
         //    created this month that aren't issued yet (and aren't cancelled). Once
@@ -601,7 +613,7 @@ class DashboardController extends Controller
             ->with(['flightDetail', 'passengers', 'hotels', 'visas', 'payment'])
             ->get();
         $myPending = (float) $pendingBookings->sum($netMargin);
-        $myPendingCount = $pendingBookings->count();
+        $myPendingCount = $pendingBookings->whereNotIn('lead_nature', $countableNatures)->count();
 
         // ── PENDING (ALL TIME): the same "not yet issued at all" rule as Fresh/Pending,
         //    just without the month restriction — never resets. Bookings that are
@@ -613,14 +625,17 @@ class DashboardController extends Controller
             ->orderByDesc('created_at')
             ->get();
         $myPendingAllTime = (float) $allTimeNotYetIssuedBookings->sum($netMargin);
-        $myPendingAllTimeCount = $allTimeNotYetIssuedBookings->count();
+        $myPendingAllTimeCount = $allTimeNotYetIssuedBookings->whereNotIn('lead_nature', $countableNatures)->count();
 
         // Note: issued-but-unpaid bookings (payment plan / payment awaiting) have their
         // own dedicated report pages now — see DashboardController::issuedPaymentReport().
 
         // ── Current month calendar ──
+        // The heatmap still turns a day green for a date_change — it's real
+        // activity on that day — but a refund_booking doesn't light it up.
         $calendarDays = Booking::where('user_id', $userId)
             ->whereBetween('created_at', [$som, $eom])
+            ->whereNotIn('lead_nature', ['refund_booking'])
             ->selectRaw('DATE(created_at) as day, count(*) as total')
             ->groupBy('day')
             ->pluck('total', 'day')
@@ -652,7 +667,9 @@ class DashboardController extends Controller
         //    the breakdown chips don't collapse to one number once a type is
         //    picked); the KPI card above stays unfiltered too — only the table
         //    itself narrows down when a type is selected. ──
-        $pendingTypeCounts = $allTimeNotYetIssuedBookings->countBy('booking_type');
+        $pendingTypeCounts = $allTimeNotYetIssuedBookings
+            ->whereNotIn('lead_nature', ['date_change', 'refund_booking'])
+            ->countBy('booking_type');
         $pendingTypeFilter = request('type');
         $pendingBookingsForTab = $pendingTypeFilter
             ? $allTimeNotYetIssuedBookings->where('booking_type', $pendingTypeFilter)->values()
@@ -661,7 +678,8 @@ class DashboardController extends Controller
 
         // ── All agents with today's booking count ──
         $allAgents = \App\Models\User::where('role', 'agent')
-            ->withCount(['bookings' => fn ($q) => $q->whereDate('created_at', today())])
+            ->withCount(['bookings' => fn ($q) => $q->whereDate('created_at', today())
+                ->whereNotIn('lead_nature', ['date_change', 'refund_booking'])])
             ->orderBy('name')
             ->get();
 

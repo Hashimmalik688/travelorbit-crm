@@ -204,7 +204,7 @@
             {{-- ── Lead source / booking type breakdown ── --}}
             <div class="card animate-in" style="flex:2 1 480px;">
                 <div class="card-body py-2">
-                    @if (count($breakdown['leadSource']) || $breakdown['dateChange'])
+                    @if (count($breakdown['leadSource']))
                         <div class="text-muted mb-1" style="font-size:0.768rem;font-weight:700;letter-spacing:.02em;text-transform:uppercase;">Lead Source</div>
                         <div class="d-flex flex-wrap gap-2 mb-3">
                             @foreach ($breakdown['leadSource'] as $label => $count)
@@ -213,12 +213,6 @@
                                     <span class="fw-bold" style="color:#332E9E;">{{ $count }}</span>
                                 </span>
                             @endforeach
-                            @if ($breakdown['dateChange'])
-                                <span class="d-flex align-items-center gap-1" style="font-size:0.816rem;background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.14);border-radius:8px;padding:4px 10px;">
-                                    <span class="text-muted">Date Change</span>
-                                    <span class="fw-bold" style="color:#B45309;">{{ $breakdown['dateChange'] }}</span>
-                                </span>
-                            @endif
                         </div>
                     @endif
 

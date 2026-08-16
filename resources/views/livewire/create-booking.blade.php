@@ -9,6 +9,15 @@
         <div class="alert alert-danger border-0 rounded-0 m-0 py-3 px-4 fw-semibold">{{ session('error') }}</div>
       @endif
 
+      @if ($fromBookingId && !($booking_ref && !$errors->any()))
+        <div class="d-flex align-items-center gap-2 py-2 px-4"
+          style="background:rgba(14,116,144,.08);border-bottom:1px solid rgba(14,116,144,.15);color:#0E7490;font-size:0.876rem;font-weight:600;">
+          <i class="ph ph-calendar-x"></i>
+          Date Change from <a href="{{ route('bookings.show', $fromBookingId) }}" style="color:#0E7490;text-decoration:underline;">Booking #{{ $fromBookingNumber }}</a>
+          — everything below is pre-filled from it; enter the new PNR/date and adjust as needed.
+        </div>
+      @endif
+
       @if ($booking_ref && !$errors->any())
         <div class="text-center py-5">
           <div class="mb-3" style="font-size:3rem;">✓</div>
@@ -93,13 +102,22 @@
                   </div>
                   <div class="col-md-4">
                     <label class="form-label fw-semibold mb-1" style="font-size:0.876rem; color:#5A6080;">Lead Nature <span class="text-danger">*</span></label>
-                    <x-styled-select modelName="lead_nature" :placeholder="'Select nature'" :optgroup="false" :options="[
-                      ['value' => 'new_booking', 'label' => 'New Booking'],
-                      ['value' => 'date_change', 'label' => 'Date Change'],
-                      ['value' => 'refund_booking', 'label' => 'Refund Booking'],
-                      ['value' => 'previous_booking', 'label' => 'Previous Booking'],
-                    ]" />
-                    @error('lead_nature') <small class="text-danger fw-semibold">{{ $message }}</small> @enderror
+                    @if ($fromBookingId)
+                      {{-- Locked: this wizard was opened via "Date Change" on
+                         Booking #{{ $fromBookingNumber }} — see CreateBooking::mount(). --}}
+                      <div style="height:44px;border-radius:10px;background:rgba(14,116,144,.08);border:1px solid rgba(14,116,144,.2);display:flex;align-items:center;gap:6px;padding:0 14px;color:#0E7490;font-weight:700;font-size:0.96rem;">
+                        <i class="ph ph-calendar-x"></i> Date Change
+                        <i class="ph ph-lock-simple ms-auto" style="font-size:0.9rem;opacity:.6;" title="Locked — started from Booking #{{ $fromBookingNumber }}"></i>
+                      </div>
+                    @else
+                      <x-styled-select modelName="lead_nature" :placeholder="'Select nature'" :optgroup="false" :options="[
+                        ['value' => 'new_booking', 'label' => 'New Booking'],
+                        ['value' => 'date_change', 'label' => 'Date Change'],
+                        ['value' => 'refund_booking', 'label' => 'Refund Booking'],
+                        ['value' => 'previous_booking', 'label' => 'Previous Booking'],
+                      ]" />
+                      @error('lead_nature') <small class="text-danger fw-semibold">{{ $message }}</small> @enderror
+                    @endif
                   </div>
                   <div class="col-md-4">
                     <label class="form-label fw-semibold mb-1" style="font-size:0.876rem; color:#5A6080;">Booking Type <span class="text-danger">*</span></label>
@@ -280,9 +298,18 @@
                                   @endif
                                 </span>
                               </div>
-                              <div @click.stop>
-                                <i :class="open ? 'ph ph-caret-up' : 'ph ph-caret-down'"
-                                  style="font-size:1.08rem;color:{{ $typeColor }};cursor:pointer;opacity:0.6;" @click="open = !open"></i>
+                              <div class="d-flex align-items-center gap-3">
+                                @if ($fromBookingId)
+                                  {{-- Cosmetic only — wording of the cross-reference comment, see save(). --}}
+                                  <label class="d-flex align-items-center gap-1" @click.stop style="font-size:0.816rem;font-weight:600;color:#0E7490;cursor:pointer;">
+                                    <input type="checkbox" wire:model="dateChangeSelectedPassengers.{{ $i }}" style="accent-color:#0E7490;">
+                                    Date changing
+                                  </label>
+                                @endif
+                                <div @click.stop>
+                                  <i :class="open ? 'ph ph-caret-up' : 'ph ph-caret-down'"
+                                    style="font-size:1.08rem;color:{{ $typeColor }};cursor:pointer;opacity:0.6;" @click="open = !open"></i>
+                                </div>
                               </div>
                             </div>
 

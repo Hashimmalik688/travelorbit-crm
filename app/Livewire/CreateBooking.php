@@ -172,8 +172,24 @@ class CreateBooking extends Component
     public $refund_queue = false;
     public $booking_ref = '';
 
-    public function mount(): void
+    // ── Date Change flow ─────────────────────────────────────────────
+    // Set when this wizard was opened via "Date Change" on an existing
+    // booking (see BookingController::create / CreateBooking::mount()).
+    // Locks lead_nature to date_change and links the new booking back to
+    // $fromBookingId on save.
+    public ?int $fromBookingId = null;
+    public ?string $fromBookingNumber = null;
+    // Passenger indexes the agent flagged as "date changing" on this pass —
+    // purely cosmetic, only used to word the auto cross-reference comment
+    // (every passenger is still carried over into the new booking either way).
+    public array $dateChangeSelectedPassengers = [];
+
+    public function mount($fromBookingId = null): void
     {
+        if ($fromBookingId) {
+            $this->prefillFromDateChange((int) $fromBookingId);
+        }
+
         $this->reconcilePassengers();
         $this->recalcSteps();
         $this->updateCurrentStepId();
@@ -181,7 +197,156 @@ class CreateBooking extends Component
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count() + 1;
-        $this->logActivity('Opened new booking form', '', 'navigated');
+        $this->logActivity(
+            $this->fromBookingId
+                ? "Opened Date Change form from Booking #{$this->fromBookingNumber}"
+                : 'Opened new booking form',
+            '', 'navigated'
+        );
+    }
+
+    /**
+     * Pre-fills the wizard from an existing booking for the Date Change flow
+     * (see BookingShow's "Date Change" button). lead_nature is forced to
+     * date_change — that's what CreateBooking::save() reads to link the new
+     * booking back via original_booking_id and post the cross-reference
+     * comments. Every passenger is carried over as an editable row; the agent
+     * only ticks dateChangeSelectedPassengers to word the auto comment, per
+     * the flow's "carry everyone over, tag who actually changed" design.
+     */
+    private function prefillFromDateChange(int $originalBookingId): void
+    {
+        $original = Booking::with(['passengers', 'flightDetails', 'flightCosts', 'hotels.rooms', 'transfers', 'visas'])
+            ->find($originalBookingId);
+
+        if (!$original) {
+            return;
+        }
+
+        $this->fromBookingId = $original->id;
+        $this->fromBookingNumber = (string) $original->booking_number;
+
+        // Step 1
+        $this->lead_source = $original->lead_source ?? '';
+        $this->lead_nature = 'date_change';
+        $this->booking_type = $original->booking_type ?? '';
+        $this->old_booking_reference = $this->fromBookingNumber;
+        $this->previous_booking_type = $original->booking_type ?? '';
+
+        // Step 2 — caller
+        $this->booker_title = $original->booker_title;
+        $this->booker_first_name = $original->booker_first_name ?? '';
+        $this->booker_last_name = $original->booker_last_name ?? '';
+        $this->booker_mobile = $original->booker_mobile ?? '';
+        $this->booker_landline = $original->booker_landline ?? '';
+        $this->booker_email = $original->booker_email ?? '';
+        $this->booker_address = $original->booker_address ?? '';
+        $this->booker_postcode = $original->booker_postcode ?? '';
+        $this->booker_country = $original->booker_country ?: 'UK';
+
+        // Step 3 — every passenger carried over as an editable row
+        $counts = ['adult' => 0, 'gbe' => 0, 'child' => 0, 'infant' => 0];
+        $passengers = [];
+        foreach ($original->passengers as $p) {
+            $type = in_array($p->passenger_type, array_keys($counts), true) ? $p->passenger_type : 'adult';
+            $counts[$type]++;
+            $passengers[] = [
+                'type' => $type,
+                'title' => $p->title ?? '', 'first_name' => $p->first_name ?? '', 'last_name' => $p->last_name ?? '',
+                'passport_number' => $p->passport_number ?? '', 'passport_country_code' => $p->passport_country_code ?? '',
+                'passport_issuing_country' => $p->passport_issuing_country ?? '', 'national_id_number' => $p->national_id_number ?? '',
+                'nationality' => $p->nationality ?? '', 'date_of_birth' => $p->date_of_birth?->toDateString() ?? '',
+                'contact_number' => $p->contact_number ?? '',
+                'cost_per_pax' => $p->cost_per_pax ?? '',
+                'sold_per_pax' => $p->sold_per_pax ?? '',
+                'frequent_flyer_number' => $p->frequent_flyer_number ?? '', 'e_ticket_number' => '',
+                'ptc' => $p->ptc ?? '', 'passenger_status_label' => $p->passenger_status_label ?? '',
+            ];
+        }
+        $this->adultCount = $counts['adult'];
+        $this->gbeCount = $counts['gbe'];
+        $this->childCount = $counts['child'];
+        $this->infantCount = $counts['infant'];
+        $this->passengers = $passengers;
+        $this->dateChangeSelectedPassengers = array_fill(0, count($passengers), false);
+
+        // Step 4 — flight: PNR/dates carried over too, since the agent edits
+        // them in place for the new date rather than starting from blank.
+        if ($original->flightDetails->isNotEmpty()) {
+            $this->flightSegments = $original->flightDetails->map(fn ($seg) => [
+                'pnr'                => $seg->pnr ?? '',
+                'locator'            => $seg->locator ?? '',
+                'airline_locator'    => $seg->airline_locator ?? '',
+                'type_issuer'        => $seg->type_issuer ?? '',
+                'reservation_status' => $seg->reservation_status ?? '',
+                'flight_type'        => $seg->flight_type ?? 'return',
+                'airline'            => $seg->airline ?? '',
+                'vendor'             => $seg->vendor ?? '',
+                'gds'                => $seg->gds ?? '',
+                'cabin'              => $seg->cabin ?? '',
+                'ticket_issue_limit' => optional($seg->ticket_issue_limit)->format('Y-m-d\TH:i') ?? '',
+                'passenger_costs'    => $seg->passenger_costs ?? [],
+                'departure_airport'  => $seg->departure_airport ?? '',
+                'arrival_airport'    => $seg->arrival_airport ?? '',
+                'departure_date'     => $seg->departure_date?->toDateString() ?? '',
+                'return_date'        => $seg->return_date?->toDateString() ?? '',
+                'cost'               => $seg->cost ?? '',
+                'sold'               => $seg->sold ?? '',
+            ])->all();
+            $this->flight_folder_number = $original->flightDetails->first()->folder_number ?? '';
+            $this->flight_atol = (bool) $original->flightDetails->first()->atol;
+            $this->flight_safi = (bool) $original->flightDetails->first()->safi;
+            $this->flight_selling_price = $original->flightDetails->first()->selling_price ?? '';
+        }
+        foreach ($original->flightCosts as $fc) {
+            if (isset($this->flight_costs[$fc->cost_type])) {
+                $this->flight_costs[$fc->cost_type] = [
+                    'cost' => $fc->cost, 'qty' => $fc->quantity, 'sold' => $fc->sold_price,
+                ];
+            }
+        }
+
+        // Hotels / transfers / visas — carried over the same way.
+        foreach ($original->hotels as $hotel) {
+            $this->hotels[] = [
+                'hotel_name' => $hotel->hotel_name ?? '', 'city' => $hotel->city ?? '',
+                'status' => $hotel->booking_status ?? 'confirmed',
+                'check_in' => $hotel->check_in?->toDateString() ?? '', 'check_out' => $hotel->check_out?->toDateString() ?? '',
+                'actual_cost' => $hotel->actual_cost ?? '', 'selling_price' => $hotel->selling_price ?? '',
+                'number_of_rooms' => max(1, $hotel->rooms->count()),
+                'rooms' => $hotel->rooms->isNotEmpty()
+                    ? $hotel->rooms->map(fn ($r) => [
+                        'room_type' => $r->room_type ?? '', 'occupants' => $r->occupants ?? 1,
+                        'meal_basis' => $r->meal_basis ?? 'room_only',
+                    ])->all()
+                    : [['room_type' => '', 'occupants' => 1, 'meal_basis' => 'room_only']],
+            ];
+        }
+        foreach ($original->transfers->where('type', 'pickup') as $t) {
+            $this->transferPickups[] = [
+                'location' => $t->location ?? '', 'date_time' => $t->date_time ?? '', 'flight_number' => $t->flight_number ?? '',
+                'route' => $t->route ?? '', 'vehicle_type' => $t->vehicle_type ?? '', 'supplier' => $t->supplier ?? '',
+                'actual_cost' => $t->actual_cost ?? '', 'selling_price' => $t->selling_price ?? '',
+                'status' => $t->status ?? 'confirmed', 'notes' => $t->notes ?? '',
+            ];
+        }
+        foreach ($original->transfers->where('type', 'dropoff') as $t) {
+            $this->transferDropoffs[] = [
+                'location' => $t->location ?? '', 'date_time' => $t->date_time ?? '', 'flight_number' => $t->flight_number ?? '',
+                'route' => $t->route ?? '', 'vehicle_type' => $t->vehicle_type ?? '', 'supplier' => $t->supplier ?? '',
+                'actual_cost' => $t->actual_cost ?? '', 'selling_price' => $t->selling_price ?? '',
+                'status' => $t->status ?? 'confirmed', 'notes' => $t->notes ?? '',
+            ];
+        }
+        foreach ($original->visas as $v) {
+            $this->visas[] = [
+                'passenger_name' => $v->passenger_name ?? '', 'visa_type' => $v->visa_type ?? 'umrah',
+                'visa_reference' => $v->visa_reference ?? '', 'visa_number' => $v->visa_number ?? '',
+                'application_date' => $v->application_date ?? '', 'issue_date' => $v->issue_date ?? '', 'expiry_date' => $v->expiry_date ?? '',
+                'status' => 'pending', 'actual_cost' => $v->actual_cost ?? '', 'selling_price' => $v->selling_price ?? '',
+                'notes' => $v->notes ?? '',
+            ];
+        }
     }
 
     public function getBookingCountThisMonthProperty(): int
@@ -1346,6 +1511,7 @@ class CreateBooking extends Component
 
             $booking = Booking::create([
                 'customer_id' => 1,
+                'original_booking_id' => $this->fromBookingId,
                 'user_id' => Auth::id(),
                 'booking_type' => $this->booking_type ?: 'flight',
                 'lead_source' => $this->lead_source ?: null,
@@ -1641,6 +1807,42 @@ class CreateBooking extends Component
                         ]);
                     }
                 }
+            }
+
+            // Date Change cross-reference — a comment on each side pointing
+            // at the other, so the trail is visible without following the
+            // original_booking_id link. Selected passengers only affect the
+            // wording, not which passengers are on the booking (see
+            // dateChangeSelectedPassengers doc comment above).
+            if ($this->fromBookingId) {
+                $user = Auth::user();
+                $changedNames = collect($this->dateChangeSelectedPassengers)
+                    ->filter()
+                    ->keys()
+                    ->map(fn ($i) => trim(($this->passengers[$i]['first_name'] ?? '') . ' ' . ($this->passengers[$i]['last_name'] ?? '')))
+                    ->filter()
+                    ->implode(', ');
+                $suffix = $changedNames ? " ({$changedNames})" : '';
+
+                BookingComment::create([
+                    'booking_id' => $booking->id,
+                    'user_id'    => $user->id,
+                    'agent_name' => $user->name,
+                    'avatar_url' => $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null,
+                    'action'     => 'date_change',
+                    'comment'    => "Date change from Booking #{$this->fromBookingNumber}{$suffix}.",
+                    'preset'     => 'date_change',
+                ]);
+
+                BookingComment::create([
+                    'booking_id' => $this->fromBookingId,
+                    'user_id'    => $user->id,
+                    'agent_name' => $user->name,
+                    'avatar_url' => $user->profile_photo_path ? asset('storage/' . $user->profile_photo_path) : null,
+                    'action'     => 'date_change',
+                    'comment'    => "Date changed \u{2192} Booking #{$booking->booking_number}{$suffix}.",
+                    'preset'     => 'date_change',
+                ]);
             }
 
             return $booking;

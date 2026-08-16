@@ -48,9 +48,12 @@ class SalesReport extends Component
         $bookings = $this->filteredBookings();
         $count = $bookings->count();
         $margin = (float) $bookings->sum(fn (Booking $b) => $b->total_margin);
+        // Date change / refund follow-ups still carry real revenue/margin —
+        // only the "bookings made" figure below excludes them.
+        $bookingCount = $bookings->whereNotIn('lead_nature', ['date_change', 'refund_booking'])->count();
 
         return [
-            'totalBookings' => $count,
+            'totalBookings' => $bookingCount,
             'totalRevenue' => (float) $bookings->sum(fn (Booking $b) => $b->total_sale_price),
             'totalCost' => (float) $bookings->sum(fn (Booking $b) => $b->total_cost_price),
             'totalMargin' => $margin,
@@ -70,6 +73,7 @@ class SalesReport extends Component
             ->when($this->dateFrom, fn($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->dateTo, fn($q) => $q->whereDate('created_at', '<=', $this->dateTo))
             ->when($this->agentId, fn($q) => $q->where('user_id', $this->agentId))
+            ->whereNotIn('lead_nature', ['date_change', 'refund_booking'])
             ->get()
             ->countBy('booking_type');
     }

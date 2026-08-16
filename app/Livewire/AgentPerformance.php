@@ -295,10 +295,13 @@ class AgentPerformance extends Component
         session()->flash('success', 'Deduction removed.');
     }
 
-    /** Counts by lead source / lead nature / booking type, for the breakdown strip. */
+    /** Counts by lead source / booking type, for the breakdown strip. */
     private function breakdown($rows): array
     {
         $bookings = $rows->pluck('booking');
+        // Date change / refund follow-ups aren't new sales — they stay in the
+        // table and margin totals, they just don't inflate these count chips.
+        $countableBookings = $bookings->whereNotIn('lead_nature', ['date_change', 'refund_booking']);
 
         $leadSourceLabels = [
             'to_returning'     => 'TO Returning',
@@ -316,7 +319,7 @@ class AgentPerformance extends Component
             'personal'         => 'Personal',
         ];
 
-        $bySource = $bookings->countBy(fn ($b) => $b->lead_source)->all();
+        $bySource = $countableBookings->countBy(fn ($b) => $b->lead_source)->all();
         $leadSource = [];
         foreach ($leadSourceLabels as $key => $label) {
             if (!empty($bySource[$key])) {
@@ -327,7 +330,6 @@ class AgentPerformance extends Component
         return [
             'leadSource'  => $leadSource,
             'bookingType' => $this->typeCounts(),
-            'dateChange'  => $bookings->filter(fn ($b) => $b->lead_nature === 'date_change')->count(),
         ];
     }
 
@@ -349,6 +351,7 @@ class AgentPerformance extends Component
             ->whereIn('booking_status', $this->soldStatuses())
             ->whereDate('last_issue_date', '>=', $from)
             ->whereDate('last_issue_date', '<=', $to)
+            ->whereNotIn('lead_nature', ['date_change', 'refund_booking'])
             ->get()
             ->countBy('booking_type');
 

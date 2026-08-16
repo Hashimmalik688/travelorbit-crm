@@ -3,5 +3,5 @@
 @section('title', 'Create Booking')
 
 @section('content')
-    @livewire('create-booking')
+    @livewire('create-booking', ['fromBookingId' => $fromBookingId ?? null])
 @endsection
